@@ -1,0 +1,13 @@
+-Q theories LocalComp
+
+theories/Util.v
+
+theories/BasicAST.v
+
+theories/autosubst/core.v
+theories/autosubst/unscoped.v
+theories/autosubst/AST.v
+theories/autosubst/RAsimpl.v
+theories/autosubst/AST_rasimpl.v
+
+# theories/SubstNotations.v
