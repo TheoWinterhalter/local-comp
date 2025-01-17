@@ -10,4 +10,4 @@ theories/autosubst/AST.v
 theories/autosubst/RAsimpl.v
 theories/autosubst/AST_rasimpl.v
 
-# theories/SubstNotations.v
+theories/SubstNotations.v
