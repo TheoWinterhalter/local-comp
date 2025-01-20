@@ -20,5 +20,3 @@ app : term -> term -> term
 
 const : gref -> term
 assm : eref -> aref -> term
-
--- TODO
