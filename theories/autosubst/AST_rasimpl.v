@@ -1,7 +1,8 @@
 (** GAST support for rasimpl **)
 
 From Coq Require Import Utf8 List.
-From LocalComp.autosubst Require Import core unscoped AST RAsimpl.
+From LocalComp.autosubst
+Require Import core unscoped AST RAsimpl SubstNotations.
 From Coq Require Import Setoid Morphisms Relation_Definitions.
 Import ListNotations.
 

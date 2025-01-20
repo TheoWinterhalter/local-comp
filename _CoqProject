@@ -8,8 +8,7 @@ theories/autosubst/core.v
 theories/autosubst/unscoped.v
 theories/autosubst/AST.v
 theories/autosubst/RAsimpl.v
+theories/autosubst/SubstNotations.v
 theories/autosubst/AST_rasimpl.v
-
-theories/SubstNotations.v
 
 theories/Env.v
