@@ -1,3 +1,5 @@
+list : Functor
+
 -- Global references
 gref : Type
 
@@ -18,5 +20,5 @@ Pi : term -> (bind term in term) -> term
 lam : term -> (bind term in term) -> term
 app : term -> term -> term
 
-const : gref -> term
+const : gref -> "list" ("list" (term)) -> term
 assm : eref -> aref -> term

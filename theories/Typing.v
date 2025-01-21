@@ -3,6 +3,7 @@
 From Coq Require Import Utf8 List.
 From LocalComp.autosubst Require Import AST SubstNotations RAsimpl AST_rasimpl.
 From LocalComp Require Import BasicAST Env.
+Import ListNotations.
 
 Open Scope subst_scope.
 
@@ -23,6 +24,8 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
 | conv_beta :
     ∀ A t u,
       Γ ⊢ app (lam A t) u ≡ t <[ u .. ]
+
+(* TODO Custom rules *)
 
 (** Congruence rules **)
 
@@ -63,6 +66,33 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
 
 where "Γ ⊢ u ≡ v" := (conversion Γ u v).
 
+(** Instance typing (relative to typing for now) **)
+Section Inst.
+
+  Context (typing : ctx → term → term → Prop).
+
+  Notation "Γ ⊢ u : A" := (typing Γ u A).
+
+  Inductive typings Γ : list term → ctx → Prop :=
+  | type_nil : typings Γ [] ∙
+  | type_cons Δ σ t A :
+      typings Γ σ Δ →
+      Γ ⊢ t : A → (* TODO Missing substitution *)
+      typings Γ (t :: σ) (Δ ,, A).
+
+  Inductive inst_typing Γ : eargs → ectx → Prop :=
+  | inst_nil : inst_typing Γ [] []
+  | inst_cons σ ξ E ξ' Ξ' Ξ'' Δ R :
+      nth_error Σ E = Some (Ext Ξ'' Δ R) →
+      inst_typing Γ ξ Ξ' →
+      (* TODO: Do we need to check ξ' : Ξ''? *)
+      (* TODO: Typing for σ needs subst by ξ and ξ' *)
+      typings Γ σ Δ →
+      (* TODO: verification of equations *)
+      inst_typing Γ (σ :: ξ) ((E,ξ') :: Ξ').
+
+End Inst.
+
 Inductive typing (Γ : ctx) : term → term → Prop :=
 
 | type_var :
@@ -95,6 +125,19 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
       Γ ,, A ⊢ B : Sort j →
       Γ ⊢ app t u : B <[ u .. ]
 
+| type_const :
+    ∀ c ξ Ξ' A t,
+      nth_error Σ c = Some (Def Ξ' A t) →
+      inst_typing typing Γ ξ Ξ' →
+      Γ ⊢ const c ξ : A (* TODO: Subst *)
+
+| type_assm :
+    ∀ M x E ξ Ξ' Δ R A,
+      nth_error Ξ M = Some (E, ξ) →
+      nth_error Σ E = Some (Ext Ξ' Δ R) →
+      nth_error Δ x = Some A →
+      Γ ⊢ assm M x : A (* TODO: Subst *)
+
 | type_conv :
     ∀ i A B t,
       Γ ⊢ t : A →
@@ -123,3 +166,5 @@ Notation "Σ | Ξ | Γ ⊢ u ≡ v" :=
 Notation "Σ | Ξ | Γ ⊢ t : A" :=
   (typing Σ Ξ Γ t A)
   (at level 80, t, A at next level, format "Σ | Ξ | Γ  ⊢  t  :  A").
+
+(* TODO: Environment typing *)
