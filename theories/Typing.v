@@ -53,6 +53,11 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
       Γ ⊢ v ≡ v' →
       Γ ⊢ app u v ≡ app u' v'
 
+| cong_const :
+    ∀ c ξ ξ',
+      (* TODO: Add conversion for ξ, similar to its typing *)
+      Γ ⊢ const c ξ ≡ const c ξ'
+
 (** Structural rules **)
 
 | conv_refl :
@@ -180,7 +185,8 @@ Notation "Σ | Ξ | Γ ⊢ t : A" :=
 Create HintDb conv discriminated.
 Create HintDb type discriminated.
 
-Hint Resolve conv_beta conv_unfold cong_Pi cong_lam cong_app conv_refl
+Hint Resolve conv_beta conv_unfold cong_Pi cong_lam cong_app cong_const
+  conv_refl
 : gtt_conv.
 
 Hint Resolve type_var type_sort type_pi type_lam type_app type_const type_assm
