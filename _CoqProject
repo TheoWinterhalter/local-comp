@@ -12,3 +12,4 @@ theories/autosubst/SubstNotations.v
 theories/autosubst/AST_rasimpl.v
 
 theories/Env.v
+theories/Typing.v

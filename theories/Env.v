@@ -51,3 +51,16 @@ Record crule := {
 Inductive gdecl :=
 | Ext (Ξ : ectx) (Δ : ctx) (R : list crule)
 | Def (Ξ : ectx) (A : term) (t : term).
+
+Definition gctx : Type := list gdecl.
+
+(** Notations **)
+
+Notation "'∙'" :=
+  (@nil term).
+
+Notation "Γ ,, d" :=
+  (@cons term d Γ) (at level 20, d at next level).
+
+Notation "Γ ,,, Δ" :=
+  (@app term Δ Γ) (at level 25, Δ at next level, left associativity).
