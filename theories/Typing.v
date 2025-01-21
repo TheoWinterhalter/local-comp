@@ -25,7 +25,13 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
     ∀ A t u,
       Γ ⊢ app (lam A t) u ≡ t <[ u .. ]
 
-(* TODO Custom rules *)
+| conv_unfold :
+    ∀ c ξ Ξ' A t,
+      nth_error Σ c = Some (Def Ξ' A t) →
+      Γ ⊢ const c ξ ≡ t (* TODO subst *)
+
+(* | conv_red :
+    ∀  *) (* TODO *)
 
 (** Congruence rules **)
 
