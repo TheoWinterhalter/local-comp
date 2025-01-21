@@ -174,3 +174,20 @@ Notation "Σ | Ξ | Γ ⊢ t : A" :=
   (at level 80, t, A at next level, format "Σ | Ξ | Γ  ⊢  t  :  A").
 
 (* TODO: Environment typing *)
+
+(** Automation **)
+
+Create HintDb conv discriminated.
+Create HintDb type discriminated.
+
+Hint Resolve conv_beta conv_unfold cong_Pi cong_lam cong_app conv_refl
+: gtt_conv.
+
+Hint Resolve type_var type_sort type_pi type_lam type_app type_const type_assm
+: gtt_type.
+
+Ltac ttconv :=
+  unshelve typeclasses eauto with conv shelvedb ; shelve_unifiable.
+
+Ltac tttype :=
+  unshelve typeclasses eauto with type shelvedb ; shelve_unifiable.
