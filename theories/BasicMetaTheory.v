@@ -75,6 +75,62 @@ Proof.
   all: eauto.
 Defined.
 
+(** Better induction principle for [typing] **)
+
+Lemma typing_ind :
+  ∀ Σ Ξ (P : ctx → term → term → Prop),
+    (∀ Γ x A, nth_error Γ x = Some A → P Γ (var x) (Nat.add (S x) ⋅ A)) →
+    (∀ Γ i, P Γ (Sort i) (Sort (S i))) →
+    (∀ Γ i j A B,
+      Σ ;; Ξ | Γ ⊢ A : Sort i →
+      P Γ A (Sort i) →
+      Σ ;; Ξ | Γ,, A ⊢ B : Sort j →
+      P (Γ,, A) B (Sort j) →
+      P Γ (Pi A B) (Sort (Nat.max i j))
+    ) →
+    (∀ Γ i j A B t,
+      Σ ;; Ξ | Γ ⊢ A : Sort i →
+      P Γ A (Sort i) →
+      Σ ;; Ξ | Γ,, A ⊢ B : Sort j →
+      P (Γ,, A) B (Sort j) →
+      Σ ;; Ξ | Γ,, A ⊢ t : B →
+      P (Γ,, A) t B → P Γ (lam A t) (Pi A B)
+    ) →
+    (∀ Γ i j A B t u,
+      Σ ;; Ξ | Γ ⊢ t : Pi A B →
+      P Γ t (Pi A B) →
+      Σ ;; Ξ | Γ ⊢ u : A →
+      P Γ u A → Σ ;; Ξ | Γ ⊢ A : Sort i →
+      P Γ A (Sort i) → Σ ;; Ξ | Γ,, A ⊢ B : Sort j →
+      P (Γ,, A) B (Sort j) →
+      P Γ (app t u) (B <[ u..])
+    ) →
+    (∀ Γ c ξ Ξ' A t,
+      nth_error Σ c = Some (Def Ξ' A t) →
+      inst_typing Σ (typing Σ Ξ) Γ ξ Ξ' →
+      P Γ (const c ξ) A
+    ) →
+    (∀ Γ M x E ξ Ξ' Δ R A,
+      nth_error Ξ M = Some (E, ξ) →
+      nth_error Σ E = Some (Ext Ξ' Δ R) →
+      nth_error Δ x = Some A → P Γ (assm M x) A
+    ) →
+    (∀ Γ i A B t,
+      Σ ;; Ξ | Γ ⊢ t : A →
+      P Γ t A →
+      Σ ;; Ξ | Γ ⊢ A ≡ B →
+      Σ ;; Ξ | Γ ⊢ B : Sort i →
+      P Γ B (Sort i) →
+      P Γ t B
+    ) →
+    ∀ Γ t A, Σ ;; Ξ | Γ ⊢ t : A → P Γ t A.
+Proof.
+  intros Σ Ξ P hvar hsort hpi hlam happ hconst hassm hconv.
+  fix aux 4. move aux at top.
+  intros Γ t A h. destruct h.
+  (* all: match goal with h : _ |- _ => eapply h ; eauto end. *)
+Abort.
+
 (** Renaming preserves typing **)
 
 Definition rtyping (Γ : ctx) (ρ : nat → nat) (Δ : ctx) : Prop :=
@@ -195,6 +251,9 @@ Proof.
     (* The problem now is that we don't actually know that t is closed
       It would be best if we could avoid having to require typing of Σ for that.
       We could also add the closed requirement directly to the conversion rule.
+
+      Another option is to lift the term by the size of Γ in the rule but it's
+      a bit arbitrary.
     *)
     ttconv.
     admit.
