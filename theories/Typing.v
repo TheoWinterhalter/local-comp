@@ -2,7 +2,7 @@
 
 From Coq Require Import Utf8 List.
 From LocalComp.autosubst Require Import AST SubstNotations RAsimpl AST_rasimpl.
-From LocalComp Require Import Util BasicAST Env.
+From LocalComp Require Import Util BasicAST Env Inst.
 Import ListNotations.
 
 Open Scope subst_scope.
@@ -28,7 +28,7 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
 | conv_unfold :
     ∀ c ξ Ξ' A t,
       nth_error Σ c = Some (Def Ξ' A t) →
-      Γ ⊢ const c ξ ≡ t (* TODO subst *)
+      Γ ⊢ const c ξ ≡ einst ξ t
 
 | conv_red :
     ∀ E Ξ' Δ R M ξ' n rule,

@@ -3,7 +3,7 @@
 From Coq Require Import Utf8 List.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
-From LocalComp Require Import Util BasicAST Env Typing.
+From LocalComp Require Import Util BasicAST Env Inst Typing.
 From Coq Require Import Setoid Morphisms Relation_Definitions.
 
 Import ListNotations.
@@ -107,6 +107,20 @@ Proof.
   eexists. split. 1: eassumption.
   rasimpl. reflexivity.
 Qed.
+
+Lemma ren_inst :
+  ∀ ρ ξ t,
+    ρ ⋅ (einst ξ t) = einst (map (map (ren_term ρ)) ξ) (ρ ⋅ t).
+Proof.
+  intros ρ ξ t.
+  induction t in ρ |- *. all: try solve [ eauto ].
+  - cbn. f_equal. 1: eauto.
+    rewrite IHt2. f_equal.
+    (* This is wrong, need to figure out who lives where.
+      It seems it doesn't make sense for an argument to einst to feature
+      free variables.
+    *)
+Abort.
 
 Lemma conv_ren :
   ∀ Σ Ξ Γ Δ ρ u v,

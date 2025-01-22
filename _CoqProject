@@ -12,5 +12,6 @@ theories/autosubst/SubstNotations.v
 theories/autosubst/AST_rasimpl.v
 
 theories/Env.v
+theories/Inst.v
 theories/Typing.v
 theories/BasicMetaTheory.v
