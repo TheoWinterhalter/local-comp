@@ -38,3 +38,34 @@ Ltac wlog_iff_using tac :=
 
 Ltac wlog_iff :=
   wlog_iff_using firstorder.
+
+Inductive All {A} (P : A → Type) : list A → Type :=
+| All_nil : All P []
+| All_cons a l : P a → All P l → All P (a :: l).
+
+Lemma All_Forall :
+  ∀ A (P : A → Prop) l,
+    All P l →
+    Forall P l.
+Proof.
+  intros A P l h.
+  induction h. all: eauto.
+Qed.
+
+Lemma map_ext_All :
+  ∀ A B (f g : A → B) l,
+    All (λ x, f x = g x) l →
+    map f l = map g l.
+Proof.
+  intros A B f g l h.
+  apply map_ext_Forall. apply All_Forall. assumption.
+Qed.
+
+Lemma All_impl A (P Q : A → Type) l :
+  (∀ a, P a → Q a) →
+  All P l →
+  All Q l.
+Proof.
+  intros hPQ hP.
+  induction hP. all: constructor ; eauto.
+Qed.

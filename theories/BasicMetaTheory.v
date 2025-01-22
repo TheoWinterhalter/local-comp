@@ -46,6 +46,35 @@ Proof.
   intros Σ Ξ Γ u ? <-. ttconv.
 Qed.
 
+(** Better induction principle for [term] **)
+
+Lemma term_rect :
+   ∀ (P : term → Type),
+    (∀ n, P (var n)) →
+    (∀ i, P (Sort i)) →
+    (∀ A, P A → ∀ B, P B → P (Pi A B)) →
+    (∀ A, P A → ∀ t, P t → P (lam A t)) →
+    (∀ u, P u → ∀ v, P v → P (app u v)) →
+    (∀ (c : gref) (ξ : eargs), All (All P) ξ → P (const c ξ)) →
+    (∀ (M : eref) (x : aref), P (assm M x)) →
+    ∀ t, P t.
+Proof.
+  intros P hvar hsort hpi hlam happ hconst hassm.
+  fix aux 1. move aux at top.
+  intro t. destruct t.
+  6:{
+    eapply hconst.
+    revert l. fix aux1 1.
+    intro ξ. destruct ξ as [| σ ξ]. 1: constructor.
+    constructor. 2: eauto.
+    revert σ. fix aux2 1.
+    intro σ. destruct σ. 1: constructor.
+    constructor. all: eauto.
+  }
+  all: match goal with h : _ |- _ => eapply h end.
+  all: eauto.
+Defined.
+
 (** Renaming preserves typing **)
 
 Definition rtyping (Γ : ctx) (ρ : nat → nat) (Δ : ctx) : Prop :=
@@ -133,17 +162,22 @@ Lemma ren_inst :
     ρ ⋅ (einst ξ t) = einst (ren_eargs ρ ξ) (ρ ⋅ t).
 Proof.
   intros ρ ξ t.
-  induction t in ρ, ξ |- *.
+  induction t using term_rect in ρ, ξ |- *.
   all: try solve [ cbn ; rewrite ?lift_ren_eargs ; f_equal ; eauto ].
-  - cbn. f_equal. (* TODO Stronger induction *)
-    admit.
+  - cbn. f_equal.
+    rewrite !map_map. apply map_ext_All.
+    eapply All_impl. 2: eassumption.
+    intros σ h.
+    rewrite !map_map. apply map_ext_All.
+    eapply All_impl. 2: eassumption.
+    cbn. intros t ht. auto.
   - cbn. unfold eget. unfold ren_eargs.
     rewrite nth_error_map.
     destruct (nth_error ξ _) as [σ |]. 2: reflexivity.
     cbn. rewrite nth_error_map.
     destruct (nth_error σ _) as [t |]. 2: reflexivity.
     cbn. reflexivity.
-Admitted.
+Qed.
 
 Lemma conv_ren :
   ∀ Σ Ξ Γ Δ ρ u v,
