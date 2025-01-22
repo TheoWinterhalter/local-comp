@@ -2,7 +2,7 @@
 
 From Coq Require Import Utf8 List.
 From LocalComp.autosubst Require Import AST SubstNotations RAsimpl AST_rasimpl.
-From LocalComp Require Import BasicAST Env.
+From LocalComp Require Import Util BasicAST Env.
 Import ListNotations.
 
 Open Scope subst_scope.
@@ -30,8 +30,12 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
       nth_error Σ c = Some (Def Ξ' A t) →
       Γ ⊢ const c ξ ≡ t (* TODO subst *)
 
-(* | conv_red :
-    ∀  *) (* TODO *)
+| conv_red :
+    ∀ E Ξ' Δ R M ξ' n rule,
+      nth_error Σ E = Some (Ext Ξ' Δ R) →
+      nth_error Ξ M = Some (E, ξ') →
+      nth_error R n = Some rule →
+      Γ ⊢ rule.(cr_rep) ≡ rule.(cr_rep) (* TODO subst + lhs *)
 
 (** Congruence rules **)
 
@@ -170,13 +174,13 @@ Inductive wf : ctx → Prop :=
 
 End Typing.
 
-Notation "Σ | Ξ | Γ ⊢ u ≡ v" :=
+Notation "Σ ;; Ξ | Γ ⊢ u ≡ v" :=
   (conversion Σ Ξ Γ u v)
-  (at level 80, u, v at next level, format "Σ | Ξ | Γ  ⊢  u  ≡  v").
+  (at level 80, u, v at next level, format "Σ  ;;  Ξ  |  Γ  ⊢  u  ≡  v").
 
-Notation "Σ | Ξ | Γ ⊢ t : A" :=
+Notation "Σ ;; Ξ | Γ ⊢ t : A" :=
   (typing Σ Ξ Γ t A)
-  (at level 80, t, A at next level, format "Σ | Ξ | Γ  ⊢  t  :  A").
+  (at level 80, t, A at next level, format "Σ  ;;  Ξ  |  Γ  ⊢  t  :  A").
 
 (* TODO: Environment typing *)
 
@@ -187,10 +191,10 @@ Create HintDb type discriminated.
 
 Hint Resolve conv_beta conv_unfold cong_Pi cong_lam cong_app cong_const
   conv_refl
-: gtt_conv.
+: conv.
 
 Hint Resolve type_var type_sort type_pi type_lam type_app type_const type_assm
-: gtt_type.
+: type.
 
 Ltac ttconv :=
   unshelve typeclasses eauto with conv shelvedb ; shelve_unifiable.

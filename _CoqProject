@@ -13,3 +13,4 @@ theories/autosubst/AST_rasimpl.v
 
 theories/Env.v
 theories/Typing.v
+theories/BasicMetaTheory.v
