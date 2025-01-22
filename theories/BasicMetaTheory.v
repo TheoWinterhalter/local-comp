@@ -108,16 +108,42 @@ Proof.
   rasimpl. reflexivity.
 Qed.
 
+Lemma ren_eargs_comp :
+  ∀ ρ ρ' ξ,
+    ren_eargs ρ (ren_eargs ρ' ξ) = ren_eargs (ρ' >> ρ) ξ.
+Proof.
+  intros ρ ρ' ξ.
+  unfold ren_eargs. rewrite map_map.
+  apply map_ext. intro σ.
+  rewrite map_map.
+  apply map_ext. intro t.
+  rasimpl. reflexivity.
+Qed.
+
+Lemma lift_ren_eargs :
+  ∀ ρ ξ,
+    lift_eargs (ren_eargs ρ ξ) = ren_eargs (upRen_term_term ρ) (lift_eargs ξ).
+Proof.
+  intros ρ ξ.
+  rewrite !ren_eargs_comp. reflexivity.
+Qed.
+
 Lemma ren_inst :
   ∀ ρ ξ t,
-    ρ ⋅ (einst ξ t) = einst (map (map (ren_term ρ)) ξ) t.
+    ρ ⋅ (einst ξ t) = einst (ren_eargs ρ ξ) (ρ ⋅ t).
 Proof.
   intros ρ ξ t.
-  induction t in ρ |- *. all: try solve [ eauto ].
-  - cbn. f_equal. 1: eauto.
-    rewrite IHt2. f_equal.
-    (* Still wrong? *)
-Abort.
+  induction t in ρ, ξ |- *.
+  all: try solve [ cbn ; rewrite ?lift_ren_eargs ; f_equal ; eauto ].
+  - cbn. f_equal. (* TODO Stronger induction *)
+    admit.
+  - cbn. unfold eget. unfold ren_eargs.
+    rewrite nth_error_map.
+    destruct (nth_error ξ _) as [σ |]. 2: reflexivity.
+    cbn. rewrite nth_error_map.
+    destruct (nth_error σ _) as [t |]. 2: reflexivity.
+    cbn. reflexivity.
+Admitted.
 
 Lemma conv_ren :
   ∀ Σ Ξ Γ Δ ρ u v,
@@ -131,7 +157,13 @@ Proof.
   - rasimpl. eapply meta_conv_trans_r. 1: econstructor.
     rasimpl. reflexivity.
   - rasimpl. eapply conv_trans. 1: econstructor. 1: eassumption.
-    admit. (* The corresponding rule is wrong *)
+    rewrite ren_inst.
+    (* The problem now is that we don't actually know that t is closed
+      It would be best if we could avoid having to require typing of Σ for that.
+      We could also add the closed requirement directly to the conversion rule.
+    *)
+    ttconv.
+    admit.
 Admitted.
 
 Lemma typing_ren :
