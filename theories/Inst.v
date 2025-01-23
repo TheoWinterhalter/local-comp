@@ -1,9 +1,11 @@
-(** Extension instantiation **)
+(** Extension and pattern instantiation **)
 
 From Coq Require Import Utf8 List.
 From LocalComp.autosubst Require Import AST SubstNotations RAsimpl AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env.
 Import ListNotations.
+
+(** Extension instantiation **)
 
 Definition eget (ξ : eargs) M x :=
   let default := assm M x in (* Could also be a dummy *)
@@ -31,3 +33,31 @@ Fixpoint einst (ξ : eargs) (t : term) :=
   | const c ξ' => const c (map (map (einst ξ)) ξ')
   | assm M x => eget ξ M x
   end.
+
+(** n-ary application **)
+
+Fixpoint apps (u : term) (l : list term) :=
+  match l with
+  | [] => u
+  | v :: l => apps (app u v) l
+  end.
+
+(** Pattern linear instantiation **)
+
+Definition plinst_args (plinst_arg : parg → nat → term * nat) (l : list parg) n :=
+  fold_left (λ '(acc, k) p,
+    let '(t,m) := plinst_arg p k in (t :: acc, m)
+  ) l ([], n).
+
+Fixpoint plinst_arg M (p : parg) n : term * nat :=
+  match p with
+  | pvar => (var n, S n)
+  | pforce t => (t, n)
+  | psymb x l =>
+      let '(l', m) := plinst_args (plinst_arg M) l n in
+      (apps (assm M x) (rev l'), m)
+  end.
+
+Definition plinst M (p : pat) : term :=
+  let '(l,_) := plinst_args (plinst_arg M) p.(pat_args) 0 in
+  apps (assm M p.(pat_head)) l.
