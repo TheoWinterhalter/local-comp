@@ -31,11 +31,11 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
       Γ ⊢ const c ξ ≡ einst ξ t
 
 | conv_red :
-    ∀ E Ξ' Δ R M ξ' n rule,
+    ∀ E Ξ' Δ R M ξ' n rule σ,
       nth_error Σ E = Some (Ext Ξ' Δ R) →
       nth_error Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
-      Γ ⊢ plinst M rule.(cr_pat) ≡ delocal M rule.(cr_rep) (* TODO subst by arbitrary σ *)
+      Γ ⊢ (plinst M rule.(cr_pat)) <[ σ ] ≡ (delocal M rule.(cr_rep)) <[ σ ]
 
 (** Congruence rules **)
 
