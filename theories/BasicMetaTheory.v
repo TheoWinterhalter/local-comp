@@ -108,6 +108,11 @@ Lemma typing_ind :
     (∀ Γ c ξ Ξ' A t,
       nth_error Σ c = Some (Def Ξ' A t) →
       inst_typing Σ (typing Σ Ξ) Γ ξ Ξ' →
+      Forall2 (λ σ '(E,ξ'),
+        ∀ Ξ'' Δ R,
+          nth_error Σ E = Some (Ext Ξ'' Δ R) →
+          Forall2 (P Γ) σ Δ
+      ) ξ Ξ' →
       P Γ (const c ξ) A
     ) →
     (∀ Γ M x E ξ Ξ' Δ R A,
@@ -128,8 +133,14 @@ Proof.
   intros Σ Ξ P hvar hsort hpi hlam happ hconst hassm hconv.
   fix aux 4. move aux at top.
   intros Γ t A h. destruct h.
-  (* all: match goal with h : _ |- _ => eapply h ; eauto end. *)
-Abort.
+  6:{
+    eapply hconst. 1,2: eassumption.
+    (* TODO: Need to fix the def of inst_typing and typings first *)
+    admit.
+  }
+  all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
+  Guarded.
+Admitted.
 
 (** Renaming preserves typing **)
 
