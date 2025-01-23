@@ -42,6 +42,15 @@ Fixpoint apps (u : term) (l : list term) :=
   | v :: l => apps (app u v) l
   end.
 
+(** Delocalising a term
+
+  That is replacing all local variables x by M.x.
+
+**)
+
+Definition delocal M t :=
+  subst_term (λ x, assm M x) t.
+
 (** Pattern linear instantiation **)
 
 Definition plinst_args (plinst_arg : parg → nat → term * nat) (l : list parg) n :=
@@ -52,7 +61,7 @@ Definition plinst_args (plinst_arg : parg → nat → term * nat) (l : list parg
 Fixpoint plinst_arg M (p : parg) n : term * nat :=
   match p with
   | pvar => (var n, S n)
-  | pforce t => (t, n)
+  | pforce t => (delocal M t, n)
   | psymb x l =>
       let '(l', m) := plinst_args (plinst_arg M) l n in
       (apps (assm M x) (rev l'), m)
@@ -60,4 +69,4 @@ Fixpoint plinst_arg M (p : parg) n : term * nat :=
 
 Definition plinst M (p : pat) : term :=
   let '(l,_) := plinst_args (plinst_arg M) p.(pat_args) 0 in
-  apps (assm M p.(pat_head)) l.
+  apps (assm M p.(pat_head)) (rev l).

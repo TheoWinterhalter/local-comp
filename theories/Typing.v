@@ -35,7 +35,7 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
       nth_error Σ E = Some (Ext Ξ' Δ R) →
       nth_error Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
-      Γ ⊢ rule.(cr_rep) ≡ rule.(cr_rep) (* TODO subst + lhs *)
+      Γ ⊢ plinst M rule.(cr_pat) ≡ delocal M rule.(cr_rep) (* TODO subst by arbitrary σ *)
 
 (** Congruence rules **)
 
