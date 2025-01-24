@@ -178,12 +178,7 @@ Lemma typing_ind :
     (∀ Γ c ξ Ξ' A t,
       nth_error Σ c = Some (Def Ξ' A t) →
       inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
-      (* TODO: We cannot use Forall2 I think because of einst *)
-      Forall2 (λ σ '(E,ξ'),
-        ∀ Ξ'' Δ R,
-          nth_error Σ E = Some (Ext Ξ'' Δ R) →
-          Forall2 (P Γ) σ Δ
-      ) ξ Ξ' →
+      inst_typing Σ Ξ P Γ ξ Ξ' →
       P Γ (const c ξ) (einst ξ A)
     ) →
     (∀ Γ M x E ξ Ξ' Δ R A,
@@ -206,11 +201,20 @@ Proof.
   intros Γ t A h. destruct h.
   6:{
     eapply hconst. 1,2: eassumption.
-    (* TODO Fix hconst first *)
-    admit.
+    clear H. revert ξ Ξ' H0. fix aux1 3. intros ξ Ξ' h.
+    destruct h as [| σ ξ E ξ' Ξ' Ξ'' Δ R hE h ht heq]. 1: constructor.
+    econstructor. 1,4: eassumption. 1: eauto.
+    clear - aux aux1 ht. revert ht. fix aux2 1. intro ht.
+    remember (map (einst _ >> _) _) as A eqn: e.
+    Guarded.
+    destruct ht.
+    Fail Guarded. (* Noooo *)
+    (* 1: constructor.
+    constructor. all: eauto. *)
+    all: admit.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
-  Guarded.
+  Fail Guarded.
 Admitted.
 
 (** Renaming preserves typing **)
