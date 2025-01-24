@@ -63,4 +63,4 @@ Notation "Γ ,, d" :=
   (@cons term d Γ) (at level 20, d at next level).
 
 Notation "Γ ,,, Δ" :=
-  (@app term Δ Γ) (at level 25, Δ at next level, left associativity).
+  (@List.app term Δ Γ) (at level 25, Δ at next level, left associativity).

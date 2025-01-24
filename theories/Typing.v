@@ -108,6 +108,12 @@ Fixpoint slist (l : list term) :=
   | u :: l => u .: slist l
   end.
 
+Fixpoint ups n σ :=
+  match n with
+  | 0 => σ
+  | S n => up_term (ups n σ)
+  end.
+
 (** Instance typing (relative to typing for now) **)
 Section Inst.
 
@@ -115,12 +121,22 @@ Section Inst.
 
   Notation "Γ ⊢ u : A" := (typing Γ u A).
 
+  (** Redundant with [styping] later, not sure what to do here **)
   Inductive typings Γ : list term → ctx → Prop :=
   | type_nil : typings Γ [] ∙
   | type_cons Δ σ t A :
       typings Γ σ Δ →
       Γ ⊢ t : A <[ slist σ ] →
       typings Γ (t :: σ) (Δ ,, A).
+
+  Definition inst_equations Γ M σ R ξ ξ' :=
+    ∀ n rule,
+      nth_error R n = Some rule →
+      let n := length rule.(cr_env) in
+      let Θ := map (einst ξ' >> einst ξ) rule.(cr_env) in
+      let lhs := (einst ξ (einst ξ' (plinst M rule.(cr_pat)))) <[ ups n σ ] in
+      let rhs := (einst ξ (einst ξ' (delocal M rule.(cr_rep)))) <[ ups n σ ] in
+      Γ ,,, Θ ⊢ lhs ≡ rhs.
 
   Inductive inst_typing Γ : eargs → ectx → Prop :=
   | inst_nil : inst_typing Γ [] []
@@ -129,7 +145,7 @@ Section Inst.
       inst_typing Γ ξ Ξ' →
       (* TODO: Do we need to check ξ' : Ξ''? *)
       typings Γ σ (map (einst ξ' >> einst ξ) Δ) →
-      (* TODO: verification of equations *)
+      inst_equations Γ E (slist σ) R ξ ξ' →
       inst_typing Γ (σ :: ξ) ((E,ξ') :: Ξ').
 
 End Inst.

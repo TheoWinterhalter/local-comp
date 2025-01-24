@@ -177,7 +177,7 @@ Lemma typing_ind :
     ) →
     (∀ Γ c ξ Ξ' A t,
       nth_error Σ c = Some (Def Ξ' A t) →
-      inst_typing Σ (typing Σ Ξ) Γ ξ Ξ' →
+      inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
       Forall2 (λ σ '(E,ξ'),
         ∀ Ξ'' Δ R,
           nth_error Σ E = Some (Ext Ξ'' Δ R) →
