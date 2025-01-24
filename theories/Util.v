@@ -92,3 +92,32 @@ Proof.
   inversion hQ. subst.
   constructor. all: eauto.
 Qed.
+
+Lemma Forall2_map_l :
+  ∀ A B C (f : A → B) R l (l' : list C),
+    Forall2 R (map f l) l' ↔ Forall2 (λ x y, R (f x) y) l l'.
+Proof.
+  intros A B C f R l l'.
+  split.
+  - intro h. remember (map f l) as l'' eqn: e.
+    induction h in l, e |- *.
+    + destruct l. 2: discriminate.
+      constructor.
+    + destruct l. 1: discriminate.
+      inversion e. subst.
+      constructor. all: auto.
+  - intro h. induction h. 1: constructor.
+    cbn. constructor. all: auto.
+Qed.
+
+Lemma Forall2_map_r :
+  ∀ A B C (f : A → B) R (l : list C) l',
+    Forall2 R l (map f l') ↔ Forall2 (λ x y, R x (f y)) l l'.
+Proof.
+  intros A B C f R l l'.
+  split.
+  - intro h. apply Forall2_flip in h. rewrite Forall2_map_l in h.
+    apply Forall2_flip. assumption.
+  - intro h. apply Forall2_flip in h.
+    apply Forall2_flip. rewrite Forall2_map_l. assumption.
+Qed.

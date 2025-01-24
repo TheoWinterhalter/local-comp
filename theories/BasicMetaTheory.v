@@ -374,15 +374,21 @@ Lemma conv_ren :
     Σ ;; Ξ | Γ ⊢ ρ ⋅ u ≡ ρ ⋅ v.
 Proof.
   intros Σ Ξ Γ Δ ρ u v hρ h.
-  induction h in Γ, ρ, hρ |- *.
+  induction h using conversion_ind in Γ, ρ, hρ |- *.
   all: try solve [ rasimpl ; econstructor ; eauto using rtyping_shift ].
   - rasimpl. eapply meta_conv_trans_r. 1: econstructor.
     rasimpl. reflexivity.
   - rasimpl. eapply conv_trans. 1: econstructor. 1,2: eassumption.
     rewrite ren_inst. rewrite closed_ren. 2: assumption.
     ttconv.
-  - admit.
-Admitted.
+  - cbn. constructor.
+    rewrite Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    intros σ σ' h.
+    rewrite Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    cbn. intros u v ih. eauto.
+Qed.
 
 Lemma typing_ren :
   ∀ Σ Ξ Γ Δ ρ t A,
