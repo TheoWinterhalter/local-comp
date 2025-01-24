@@ -1,9 +1,12 @@
 (** Typing **)
 
 From Coq Require Import Utf8 List Arith Bool.
-From LocalComp.autosubst Require Import AST SubstNotations RAsimpl AST_rasimpl.
+From LocalComp.autosubst
+Require Import core unscoped AST SubstNotations RAsimpl AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst.
+
 Import ListNotations.
+Import CombineNotations.
 
 Open Scope subst_scope.
 
@@ -97,6 +100,14 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
 
 where "Γ ⊢ u ≡ v" := (conversion Γ u v).
 
+(** Turn list into parallel substitution **)
+
+Fixpoint slist (l : list term) :=
+  match l with
+  | [] => ids
+  | u :: l => u .: slist l
+  end.
+
 (** Instance typing (relative to typing for now) **)
 Section Inst.
 
@@ -108,7 +119,7 @@ Section Inst.
   | type_nil : typings Γ [] ∙
   | type_cons Δ σ t A :
       typings Γ σ Δ →
-      Γ ⊢ t : A → (* TODO Missing substitution *)
+      Γ ⊢ t : A <[ slist σ ] →
       typings Γ (t :: σ) (Δ ,, A).
 
   Inductive inst_typing Γ : eargs → ectx → Prop :=
@@ -117,8 +128,7 @@ Section Inst.
       nth_error Σ E = Some (Ext Ξ'' Δ R) →
       inst_typing Γ ξ Ξ' →
       (* TODO: Do we need to check ξ' : Ξ''? *)
-      (* TODO: Typing for σ needs subst by ξ and ξ' *)
-      typings Γ σ Δ →
+      typings Γ σ (map (einst ξ' >> einst ξ) Δ) →
       (* TODO: verification of equations *)
       inst_typing Γ (σ :: ξ) ((E,ξ') :: Ξ').
 
