@@ -1,6 +1,6 @@
 (** Basic meta-theory **)
 
-From Coq Require Import Utf8 List.
+From Coq Require Import Utf8 List Arith.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst Typing.
@@ -246,22 +246,29 @@ Proof.
     cbn. reflexivity.
 Qed.
 
-Lemma scoped_ren :
-  ∀ k t ρ,
-    scoped k t = true →
-    ρ ⋅ t = t.
+Definition shift k (ρ : nat → nat) : nat → nat :=
+  λ n, if n <=? k then n else ρ n.
+
+Lemma up_shift k ρ :
+  pointwise_relation _ eq (upRen_term_term (shift k ρ)) (shift (S k) ρ).
 Proof.
-  intros k t ρ h.
-  induction t in k, ρ, h |- *.
-  3:{
-    cbn in *. rasimpl.
-    (* TODO: Maybe use Prop for scoped *)
-    (* TODO: Assumption on ρ or do we use iterated ups? *)
-    admit.
-  }
-  - cbn in *. admit.
+  intros [| n].
   - reflexivity.
-  -
+  - cbn. core.unfold_funcomp.
+    unfold shift. cbn.
+    destruct (_ <=? _) eqn:e. 1: reflexivity.
+Abort.
+
+Lemma scoped_ren :
+  ∀ ρ k t,
+    scoped k t = true →
+    (shift k ρ) ⋅ t = t.
+Proof.
+  intros ρ k t h.
+  induction t in k, h |- *.
+  all: try solve [ cbn in * ; intuition eauto using andb_prop ].
+  - cbn in *. unfold shift. rewrite h. reflexivity.
+  - cbn in *. apply andb_prop in h as [].
 Abort.
 
 Lemma conv_ren :
