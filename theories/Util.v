@@ -69,3 +69,26 @@ Proof.
   intros hPQ hP.
   induction hP. all: constructor ; eauto.
 Qed.
+
+Lemma forallb_All :
+  ∀ A p l,
+    @forallb A p l = true →
+    All (λ x, p x = true) l.
+Proof.
+  intros A p l h.
+  induction l as [| a l ih]. 1: constructor.
+  cbn in h. apply andb_prop in h as [].
+  constructor. all: auto.
+Qed.
+
+Lemma All_prod :
+  ∀ A P Q l,
+    All (A := A) P l →
+    All Q l →
+    All (λ a, P a * Q a)%type l.
+Proof.
+  intros A P Q l hP hQ.
+  induction hP. 1: constructor.
+  inversion hQ. subst.
+  constructor. all: eauto.
+Qed.

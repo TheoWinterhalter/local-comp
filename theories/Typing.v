@@ -11,7 +11,7 @@ Open Scope subst_scope.
 
 Fixpoint scoped n t :=
   match t with
-  | var m => m <=? n
+  | var m => m <? n
   | Sort _ => true
   | Pi A B => scoped n A && scoped (S n) B
   | lam A t => scoped n A && scoped (S n) t

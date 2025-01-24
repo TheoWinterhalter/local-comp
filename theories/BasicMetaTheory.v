@@ -1,6 +1,6 @@
 (** Basic meta-theory **)
 
-From Coq Require Import Utf8 List Arith.
+From Coq Require Import Utf8 List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst Typing.
@@ -246,30 +246,56 @@ Proof.
     cbn. reflexivity.
 Qed.
 
-Definition shift k (ρ : nat → nat) : nat → nat :=
-  λ n, if n <=? k then n else ρ n.
-
-Lemma up_shift k ρ :
-  pointwise_relation _ eq (upRen_term_term (shift k ρ)) (shift (S k) ρ).
-Proof.
-  intros [| n].
-  - reflexivity.
-  - cbn. core.unfold_funcomp.
-    unfold shift. cbn.
-    destruct (_ <=? _) eqn:e. 1: reflexivity.
-Abort.
+Fixpoint uprens k (ρ : nat → nat) :=
+  match k with
+  | 0 => ρ
+  | S k => upRen_term_term (uprens k ρ)
+  end.
 
 Lemma scoped_ren :
   ∀ ρ k t,
     scoped k t = true →
-    (shift k ρ) ⋅ t = t.
+    (uprens k ρ) ⋅ t = t.
 Proof.
   intros ρ k t h.
-  induction t in k, h |- *.
-  all: try solve [ cbn in * ; intuition eauto using andb_prop ].
-  - cbn in *. unfold shift. rewrite h. reflexivity.
-  - cbn in *. apply andb_prop in h as [].
-Abort.
+  induction t using term_rect in k, h |- *.
+  all: try solve [ cbn ; eauto ].
+  all: try solve [
+    cbn ;
+    apply andb_prop in h as [] ;
+    change (upRen_term_term (uprens ?k ?ρ)) with (uprens (S k) ρ) ;
+    f_equal ;
+    eauto
+  ].
+  - cbn - ["<?"] in *. f_equal.
+    apply Nat.ltb_lt in h.
+    induction n as [| n ih] in k, h |- *.
+    + destruct k. 1: lia.
+      reflexivity.
+    + destruct k. 1: lia.
+      cbn. core.unfold_funcomp. f_equal.
+      apply ih. lia.
+  - cbn in *. f_equal.
+    rewrite <- map_id. apply map_ext_All.
+    apply forallb_All in h. move h at top.
+    eapply All_prod in h. 2: eassumption.
+    eapply All_impl. 2: eassumption. clear.
+    cbn. intros σ [h1 h2].
+    rewrite <- map_id. apply map_ext_All.
+    apply forallb_All in h2.
+    eapply All_prod in h1. 2: eassumption.
+    eapply All_impl. 2: eassumption. clear.
+    cbn. intros t [h1 h2]. eauto.
+Qed.
+
+Corollary closed_ren :
+  ∀ ρ t,
+    closed t = true →
+    ρ ⋅ t = t.
+Proof.
+  intros ρ t h.
+  eapply scoped_ren in h. eauto.
+Qed.
 
 Lemma conv_ren :
   ∀ Σ Ξ Γ Δ ρ u v,
