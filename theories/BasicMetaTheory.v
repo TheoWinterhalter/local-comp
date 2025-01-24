@@ -75,6 +75,69 @@ Proof.
   all: eauto.
 Defined.
 
+(** Better induction principle for [conversion] **)
+
+Lemma conversion_ind :
+  ∀ Σ Ξ (P : ctx → term → term → Prop),
+    (∀ Γ A t u, P Γ (app (lam A t) u) (t <[ u.. ])) →
+    (∀ Γ c ξ Ξ' A t,
+      nth_error Σ c = Some (Def Ξ' A t) →
+      closed t = true →
+      P Γ (const c ξ) (einst ξ t)
+    ) →
+    (∀ Γ E Ξ' Δ R M ξ' n rule σ,
+      nth_error Σ E = Some (Ext Ξ' Δ R) →
+      nth_error Ξ M = Some (E, ξ') →
+      nth_error R n = Some rule →
+      P Γ ((plinst M (cr_pat rule)) <[ σ]) ((delocal M (cr_rep rule)) <[ σ])
+    ) →
+    (∀ Γ A A' B B',
+      Σ ;; Ξ | Γ ⊢ A ≡ A' →
+      P Γ A A' →
+      Σ ;; Ξ | Γ,, A ⊢ B ≡ B' →
+      P (Γ,, A) B B' →
+      P Γ (Pi A B) (Pi A' B')
+    ) →
+    (∀ Γ A A' t t',
+      Σ ;; Ξ | Γ ⊢ A ≡ A' →
+      P Γ A A' →
+      Σ ;; Ξ | Γ,, A ⊢ t ≡ t' →
+      P (Γ,, A) t t' →
+      P Γ (lam A t) (lam A' t')
+    ) →
+    (∀ Γ u u' v v',
+      Σ ;; Ξ | Γ ⊢ u ≡ u' →
+      P Γ u u' →
+      Σ ;; Ξ | Γ ⊢ v ≡ v' →
+      P Γ v v' →
+      P Γ (app u v) (app u' v')
+    ) →
+    (∀ Γ c ξ ξ',
+      Forall2 (Forall2 (conversion Σ Ξ Γ)) ξ ξ' →
+      Forall2 (Forall2 (P Γ)) ξ ξ' →
+      P Γ (const c ξ) (const c ξ')
+    ) →
+    (∀ Γ u, P Γ u u) →
+    (∀ Γ u v, Σ ;; Ξ | Γ ⊢ u ≡ v → P Γ u v → P Γ v u) →
+    (∀ Γ u v w,
+      Σ ;; Ξ | Γ ⊢ u ≡ v →
+      P Γ u v →
+      Σ ;; Ξ | Γ ⊢ v ≡ w →
+      P Γ v w →
+      P Γ u w
+    ) →
+    ∀ Γ u v, Σ ;; Ξ | Γ ⊢ u ≡ v → P Γ u v.
+Proof.
+  intros Σ Ξ P hbeta hunfold hred hpi hlam happ hconst hrefl hsym htrans.
+  fix aux 4. move aux at top.
+  intros Γ u v h. destruct h.
+  7:{
+    admit.
+  }
+  all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
+  Guarded.
+Admitted.
+
 (** Better induction principle for [typing] **)
 
 Lemma typing_ind :
@@ -311,7 +374,8 @@ Proof.
   - rasimpl. eapply conv_trans. 1: econstructor. 1,2: eassumption.
     rewrite ren_inst. rewrite closed_ren. 2: assumption.
     ttconv.
-Qed.
+  - admit.
+Admitted.
 
 Lemma typing_ren :
   ∀ Σ Ξ Γ Δ ρ t A,

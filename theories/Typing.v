@@ -75,11 +75,7 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
 
 | cong_const :
     ∀ c ξ ξ',
-      (* TODO: Add conversion for ξ, similar to its typing
-        Could/should we implement those as actual substitutions?
-        Would that make some things easier? Like no need to do the einst thing
-        which has to lift manually in the end.
-      *)
+      Forall2 (Forall2 (conversion Γ)) ξ ξ' →
       Γ ⊢ const c ξ ≡ const c ξ'
 
 (** Structural rules **)
