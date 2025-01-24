@@ -132,11 +132,18 @@ Proof.
   fix aux 4. move aux at top.
   intros Γ u v h. destruct h.
   7:{
-    admit.
+    eapply hconst. 1: assumption.
+    revert ξ ξ' H.
+    fix aux1 3.
+    intros ξ ξ' h. destruct h as [| σ σ' ξ ξ' hσ hξ].
+    - constructor.
+    - constructor. 2: eauto.
+      revert σ σ' hσ. fix aux2 3. intros σ σ' hσ.
+      destruct hσ as [| t t' σ σ' ht hσ]. 1: constructor.
+      constructor. all: eauto.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
-  Guarded.
-Admitted.
+Qed.
 
 (** Better induction principle for [typing] **)
 
