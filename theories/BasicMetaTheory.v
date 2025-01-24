@@ -309,17 +309,9 @@ Proof.
   - rasimpl. eapply meta_conv_trans_r. 1: econstructor.
     rasimpl. reflexivity.
   - rasimpl. eapply conv_trans. 1: econstructor. 1,2: eassumption.
-    rewrite ren_inst.
-    (* The problem now is that we don't actually know that t is closed
-      It would be best if we could avoid having to require typing of Σ for that.
-      We could also add the closed requirement directly to the conversion rule.
-
-      Another option is to lift the term by the size of Γ in the rule but it's
-      a bit arbitrary.
-    *)
+    rewrite ren_inst. rewrite closed_ren. 2: assumption.
     ttconv.
-    admit.
-Admitted.
+Qed.
 
 Lemma typing_ren :
   ∀ Σ Ξ Γ Δ ρ t A,
