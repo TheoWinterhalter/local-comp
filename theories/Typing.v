@@ -186,14 +186,14 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
     ∀ c ξ Ξ' A t,
       nth_error Σ c = Some (Def Ξ' A t) →
       inst_typing typing Γ ξ Ξ' →
-      Γ ⊢ const c ξ : A (* TODO: Subst *)
+      Γ ⊢ const c ξ : einst ξ A
 
 | type_assm :
     ∀ M x E ξ Ξ' Δ R A,
       nth_error Ξ M = Some (E, ξ) →
       nth_error Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
-      Γ ⊢ assm M x : A (* TODO: Subst *)
+      Γ ⊢ assm M x : einst ξ (delocal M A)
 
 | type_conv :
     ∀ i A B t,

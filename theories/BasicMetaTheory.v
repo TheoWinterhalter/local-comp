@@ -178,17 +178,18 @@ Lemma typing_ind :
     (∀ Γ c ξ Ξ' A t,
       nth_error Σ c = Some (Def Ξ' A t) →
       inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
+      (* TODO: We cannot use Forall2 I think because of einst *)
       Forall2 (λ σ '(E,ξ'),
         ∀ Ξ'' Δ R,
           nth_error Σ E = Some (Ext Ξ'' Δ R) →
           Forall2 (P Γ) σ Δ
       ) ξ Ξ' →
-      P Γ (const c ξ) A
+      P Γ (const c ξ) (einst ξ A)
     ) →
     (∀ Γ M x E ξ Ξ' Δ R A,
       nth_error Ξ M = Some (E, ξ) →
       nth_error Σ E = Some (Ext Ξ' Δ R) →
-      nth_error Δ x = Some A → P Γ (assm M x) A
+      nth_error Δ x = Some A → P Γ (assm M x) (einst ξ (delocal M A))
     ) →
     (∀ Γ i A B t,
       Σ ;; Ξ | Γ ⊢ t : A →
@@ -205,7 +206,7 @@ Proof.
   intros Γ t A h. destruct h.
   6:{
     eapply hconst. 1,2: eassumption.
-    (* TODO: Need to fix the def of inst_typing and typings first *)
+    (* TODO Fix hconst first *)
     admit.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
