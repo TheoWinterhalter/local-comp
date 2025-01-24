@@ -1,11 +1,26 @@
 (** Typing **)
 
-From Coq Require Import Utf8 List.
+From Coq Require Import Utf8 List Arith Bool.
 From LocalComp.autosubst Require Import AST SubstNotations RAsimpl AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst.
 Import ListNotations.
 
 Open Scope subst_scope.
+
+(** Closedness property **)
+
+Fixpoint scoped n t :=
+  match t with
+  | var m => m <=? n
+  | Sort _ => true
+  | Pi A B => scoped n A && scoped (S n) B
+  | lam A t => scoped n A && scoped (S n) t
+  | app u v => scoped n u && scoped n v
+  | const c ξ => forallb (forallb (scoped n)) ξ
+  | assm M x => true
+  end.
+
+Notation closed t := (scoped 0 t).
 
 Section Typing.
 
@@ -28,6 +43,7 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
 | conv_unfold :
     ∀ c ξ Ξ' A t,
       nth_error Σ c = Some (Def Ξ' A t) →
+      closed t = true →
       Γ ⊢ const c ξ ≡ einst ξ t
 
 | conv_red :
@@ -59,7 +75,11 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
 
 | cong_const :
     ∀ c ξ ξ',
-      (* TODO: Add conversion for ξ, similar to its typing *)
+      (* TODO: Add conversion for ξ, similar to its typing
+        Could/should we implement those as actual substitutions?
+        Would that make some things easier? Like no need to do the einst thing
+        which has to lift manually in the end.
+      *)
       Γ ⊢ const c ξ ≡ const c ξ'
 
 (** Structural rules **)

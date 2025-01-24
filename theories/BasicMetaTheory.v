@@ -246,6 +246,24 @@ Proof.
     cbn. reflexivity.
 Qed.
 
+Lemma scoped_ren :
+  ∀ k t ρ,
+    scoped k t = true →
+    ρ ⋅ t = t.
+Proof.
+  intros k t ρ h.
+  induction t in k, ρ, h |- *.
+  3:{
+    cbn in *. rasimpl.
+    (* TODO: Maybe use Prop for scoped *)
+    (* TODO: Assumption on ρ or do we use iterated ups? *)
+    admit.
+  }
+  - cbn in *. admit.
+  - reflexivity.
+  -
+Abort.
+
 Lemma conv_ren :
   ∀ Σ Ξ Γ Δ ρ u v,
     rtyping Γ ρ Δ →
@@ -257,7 +275,7 @@ Proof.
   all: try solve [ rasimpl ; econstructor ; eauto using rtyping_shift ].
   - rasimpl. eapply meta_conv_trans_r. 1: econstructor.
     rasimpl. reflexivity.
-  - rasimpl. eapply conv_trans. 1: econstructor. 1: eassumption.
+  - rasimpl. eapply conv_trans. 1: econstructor. 1,2: eassumption.
     rewrite ren_inst.
     (* The problem now is that we don't actually know that t is closed
       It would be best if we could avoid having to require typing of Σ for that.
