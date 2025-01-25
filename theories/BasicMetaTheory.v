@@ -398,7 +398,7 @@ Lemma typing_ren :
     Σ ;; Ξ | Γ ⊢ ρ ⋅ t : ρ ⋅ A.
 Proof.
   intros Σ Ξ Γ Δ ρ t A hρ ht.
-  induction ht in Γ, ρ, hρ |- *.
+  induction ht using typing_ind in Γ, ρ, hρ |- *.
   all: try solve [ rasimpl ; econstructor ; eauto using rtyping_shift ].
   - rasimpl. eapply hρ in H as [B [? eB]].
     rasimpl in eB. rewrite eB.
@@ -407,12 +407,15 @@ Proof.
     eapply meta_conv. 1: econstructor. all: eauto.
     1:{ eauto using rtyping_shift. }
     rasimpl. reflexivity.
-  - rasimpl. eapply meta_conv. 1: econstructor. 1: eassumption.
-    (* TODO: Prove a stronger induction principle that also concludes on
-      inst_typing *)
-    all: admit.
+  - rasimpl. eapply meta_conv. 1: econstructor.
+    + eassumption.
+    + admit. (* Need high-level inst_typing lemmas like All *)
+    + rewrite ren_inst. f_equal.
+      (* TODO: We need closedness here too right? *)
+      admit.
   - rasimpl. eapply meta_conv.
     1:{ econstructor. all: eassumption. }
+    rewrite ren_inst.
     admit.
   - rasimpl. rasimpl in IHht2.
     econstructor. all: eauto.
