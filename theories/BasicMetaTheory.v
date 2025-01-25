@@ -204,18 +204,14 @@ Proof.
     clear H. revert ξ Ξ' H0. fix aux1 3. intros ξ Ξ' h.
     destruct h as [| σ ξ E ξ' Ξ' Ξ'' Δ R hE h ht heq]. 1: constructor.
     econstructor. 1,4: eassumption. 1: eauto.
-    clear - aux aux1 ht. revert ht. fix aux2 1. intro ht.
-    remember (map (einst _ >> _) _) as A eqn: e.
-    Guarded.
-    destruct ht.
-    Fail Guarded. (* Noooo *)
-    (* 1: constructor.
-    constructor. all: eauto. *)
-    all: admit.
+    clear - aux aux1 ht.
+    remember (map (einst _ >> _) _) as A eqn: e. clear e.
+    revert σ A ht. fix aux2 3. intros σ A ht.
+    destruct ht. 1: constructor.
+    constructor. all: eauto.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
-  Fail Guarded.
-Admitted.
+Qed.
 
 (** Renaming preserves typing **)
 
