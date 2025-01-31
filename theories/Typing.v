@@ -243,3 +243,51 @@ Ltac ttconv :=
 
 Ltac tttype :=
   unshelve typeclasses eauto with type shelvedb ; shelve_unifiable.
+
+(** Util **)
+
+Lemma typings_and P Q Γ σ Δ :
+  typings P Γ σ Δ →
+  typings Q Γ σ Δ →
+  typings (λ Θ t A, P Θ t A ∧ Q Θ t A) Γ σ Δ.
+Proof.
+  intros h1 h2.
+  induction h1. 1: constructor.
+  inversion h2. subst.
+  constructor. all: eauto.
+Qed.
+
+Lemma inst_typing_and Σ Ξ Γ P Q ξ Ξ' :
+  inst_typing Σ Ξ P Γ ξ Ξ' →
+  inst_typing Σ Ξ Q Γ ξ Ξ' →
+  inst_typing Σ Ξ (λ Δ t A, P Δ t A ∧ Q Δ t A) Γ ξ Ξ'.
+Proof.
+  intros h1 h2.
+  induction h1. 1: constructor.
+  inversion h2. subst.
+  econstructor. all: eauto.
+  rewrite H7 in H. inversion H. subst.
+  eapply typings_and. all: eauto.
+Qed.
+
+Lemma typings_impl P Q Γ σ Δ :
+  typings P Γ σ Δ →
+  (∀ Θ t A, P Θ t A → Q Θ t A) →
+  typings Q Γ σ Δ.
+Proof.
+  intros h hi.
+  induction h. 1: constructor.
+  constructor. 1: assumption.
+  eauto.
+Qed.
+
+Lemma inst_typing_impl Σ Ξ Γ P Q ξ Ξ' :
+  inst_typing Σ Ξ P Γ ξ Ξ' →
+  (∀ Δ t A, P Δ t A → Q Δ t A) →
+  inst_typing Σ Ξ Q Γ ξ Ξ'.
+Proof.
+  intros h hi.
+  induction h. 1: constructor.
+  econstructor. all: eauto.
+  eapply typings_impl. all: eauto.
+Qed.

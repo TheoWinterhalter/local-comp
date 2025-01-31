@@ -391,14 +391,60 @@ Proof.
     cbn. intros u v ih. eauto.
 Qed.
 
+Lemma typings_ren Σ Ξ Δ Γ ρ σ Θ :
+  rtyping Δ ρ Γ →
+  typings (λ Δ t A,
+    Σ ;; Ξ | Δ ⊢ t : A ∧ ∀ Θ ρ, rtyping Θ ρ Δ → Σ ;; Ξ | Θ ⊢ ρ ⋅ t : ρ ⋅ A
+  ) Γ σ Θ →
+  typings (typing Σ Ξ) Δ (map (ren_term ρ) σ) Θ.
+Proof.
+  intros hi h.
+  induction h as [| Θ σ t A h1 h2 h3 ]. 1: constructor.
+  cbn. constructor. 1: eauto.
+  rasimpl in h3. rasimpl.
+  (* Should we somehow exploit closedness or something? *)
+Abort.
+
+Lemma rtyping_uprens :
+  ∀ Γ Δ Θ ρ,
+    rtyping Δ ρ Γ →
+    rtyping (Δ ,,, map (ren_term ρ) Θ) (uprens (length Θ) ρ) (Γ ,,, Θ).
+Proof.
+  intros Γ Δ Θ ρ h.
+  induction Θ as [| A Θ ih].
+  - cbn. assumption.
+  - cbn. eapply rtyping_shift in ih.
+  (* We need to have a proper renaming for the context, will have to think about
+    the best way to do that.
+   *)
+Abort.
+
+Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
+  rtyping Δ ρ Γ →
+  inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
+  inst_typing Σ Ξ (λ Γ t A,
+    ∀ Δ ρ, rtyping Δ ρ Γ → Σ ;; Ξ | Δ ⊢ ρ ⋅ t : ρ ⋅ A
+  ) Γ ξ Ξ' →
+  inst_typing Σ Ξ (typing Σ Ξ) Δ (map (map (ren_term ρ)) ξ) Ξ'.
+Proof.
+  intros hρ hξ ih.
+  eapply inst_typing_and in ih. 2: eapply hξ. clear hξ.
+  induction ih as [| σ ξ E ξ' Ξ' Ξ'' Θ R hE h1 h2 h3 h4 ]. 1: constructor.
+  cbn. econstructor. all: eauto.
+  - admit.
+  - intros n rule hr. cbn. (* m Θ' lhs rhs. *)
+    specialize (h4 n rule hr). cbn in h4.
+    eapply conv_ren in h4.
+Abort.
+
 Lemma typing_ren :
   ∀ Σ Ξ Γ Δ ρ t A,
-    rtyping Γ ρ Δ →
-    Σ ;; Ξ | Δ ⊢ t : A →
-    Σ ;; Ξ | Γ ⊢ ρ ⋅ t : ρ ⋅ A.
+    rtyping Δ ρ Γ →
+    Σ ;; Ξ | Γ ⊢ t : A →
+    Σ ;; Ξ | Δ ⊢ ρ ⋅ t : ρ ⋅ A.
 Proof.
   intros Σ Ξ Γ Δ ρ t A hρ ht.
-  induction ht using typing_ind in Γ, ρ, hρ |- *.
+  induction ht using typing_ind in Δ, ρ, hρ |- *.
   all: try solve [ rasimpl ; econstructor ; eauto using rtyping_shift ].
   - rasimpl. eapply hρ in H as [B [? eB]].
     rasimpl in eB. rewrite eB.
@@ -409,7 +455,7 @@ Proof.
     rasimpl. reflexivity.
   - rasimpl. eapply meta_conv. 1: econstructor.
     + eassumption.
-    + admit. (* Need high-level inst_typing lemmas like All *)
+    + admit.
     + rewrite ren_inst. f_equal.
       (* TODO: We need closedness here too right? *)
       admit.
