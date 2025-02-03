@@ -224,7 +224,23 @@ Notation "Σ ;; Ξ | Γ ⊢ t : A" :=
   (typing Σ Ξ Γ t A)
   (at level 80, t, A at next level, format "Σ  ;;  Ξ  |  Γ  ⊢  t  :  A").
 
-(* TODO: Environment typing *)
+(* TODO: Environment typing
+
+  DO IT NEXT!
+
+  Probably we'll add some closed assumptions for the types in inst_typing too.
+
+  I'm guessing we'll actually assume the context Θ is closed in inst_typing and
+  then show ren_ctx does nothing on it. No change to typings.
+
+  In fact, it's probably a good idea to also get rid of list term in the syntax
+  and use nat → term instead so it's already a substitution and there's no
+  useless dupplication.
+  Might as well do it for the other one too. It makes more sense probably to
+  have a more efficient representation for implementation, but for tying, it's
+  better not to.
+
+*)
 
 (** Automation **)
 
