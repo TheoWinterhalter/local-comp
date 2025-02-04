@@ -138,6 +138,7 @@ Section Inst.
       let rhs := (einst ξ (einst ξ' (delocal M rule.(cr_rep)))) <[ ups n σ ] in
       Γ ,,, Θ ⊢ lhs ≡ rhs.
 
+  (* TODO: Add Θ is closed and show ren_ctx on it is id? *)
   Inductive inst_typing Γ : eargs → ectx → Prop :=
   | inst_nil : inst_typing Γ [] []
   | inst_cons σ ξ E ξ' Ξ' Ξ'' Δ R :
@@ -224,23 +225,33 @@ Notation "Σ ;; Ξ | Γ ⊢ t : A" :=
   (typing Σ Ξ Γ t A)
   (at level 80, t, A at next level, format "Σ  ;;  Ξ  |  Γ  ⊢  t  :  A").
 
-(* TODO: Environment typing
+(** Extension context typing **)
 
-  DO IT NEXT!
+Inductive ewf (Σ : gctx) : ectx → Prop :=
+| ewf_nil : ewf Σ []
+| ewf_cons Ξ E ξ' Ξ' Δ R :
+    ewf Σ Ξ →
+    nth_error Σ E = Some (Ext Ξ' Δ R) →
+    inst_typing Σ Ξ (typing Σ Ξ) ∙ ξ' Ξ' →
+    ewf Σ ((E, ξ') :: Ξ).
 
-  Probably we'll add some closed assumptions for the types in inst_typing too.
+(** Global environment typing **)
 
-  I'm guessing we'll actually assume the context Θ is closed in inst_typing and
-  then show ren_ctx does nothing on it. No change to typings.
+Inductive gwf : gctx → Prop :=
+| gwf_nil : gwf []
 
-  In fact, it's probably a good idea to also get rid of list term in the syntax
-  and use nat → term instead so it's already a substitution and there's no
-  useless dupplication.
-  Might as well do it for the other one too. It makes more sense probably to
-  have a more efficient representation for implementation, but for tying, it's
-  better not to.
+| gwf_ext Σ Ξ Δ R :
+    gwf Σ →
+    ewf Σ Ξ →
+    wf Σ Ξ Δ →
+    (* TODO Something about R that ensures all typed instances factor through *)
+    gwf (Ext Ξ Δ R :: Σ)
 
-*)
+| gwf_def Σ Ξ A t :
+    gwf Σ →
+    ewf Σ Ξ →
+    Σ ;; Ξ | ∙ ⊢ t : A →
+    gwf (Def Ξ A t :: Σ).
 
 (** Automation **)
 
