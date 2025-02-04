@@ -4,6 +4,7 @@ From Coq Require Import Utf8 List Arith Bool.
 From LocalComp.autosubst
 Require Import core unscoped AST SubstNotations RAsimpl AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst.
+From Coq Require Import Setoid Morphisms Relation_Definitions.
 
 Import ListNotations.
 Import CombineNotations.
@@ -121,13 +122,13 @@ Section Inst.
 
   Notation "Γ ⊢ u : A" := (typing Γ u A).
 
-  (** Redundant with [styping] later, not sure what to do here **)
-  Inductive typings Γ : list term → ctx → Prop :=
-  | type_nil : typings Γ [] ∙
-  | type_cons Δ σ t A :
-      typings Γ σ Δ →
-      Γ ⊢ t : A <[ slist σ ] →
-      typings Γ (t :: σ) (Δ ,, A).
+  (** Substitution typing **)
+  Inductive styping_ (Γ : ctx) (σ : nat → term) : ctx → Prop :=
+  | type_nil : styping_ Γ σ ∙
+  | type_cons Δ A :
+      styping_ Γ (S >> σ) Δ →
+      Γ ⊢ σ 0 : A <[ S >> σ ] →
+      styping_ Γ σ (Δ ,, A).
 
   Definition inst_equations Γ M σ R ξ ξ' :=
     ∀ n rule,
@@ -145,7 +146,7 @@ Section Inst.
       nth_error Σ E = Some (Ext Ξ'' Δ R) →
       inst_typing Γ ξ Ξ' →
       (* TODO: Do we need to check ξ' : Ξ''? *)
-      typings Γ σ (map (einst ξ' >> einst ξ) Δ) →
+      styping_ Γ (slist σ) (map (einst ξ' >> einst ξ) Δ) →
       inst_equations Γ E (slist σ) R ξ ξ' →
       inst_typing Γ (σ :: ξ) ((E,ξ') :: Ξ').
 
@@ -273,10 +274,71 @@ Ltac tttype :=
 
 (** Util **)
 
-Lemma typings_and P Q Γ σ Δ :
-  typings P Γ σ Δ →
-  typings Q Γ σ Δ →
-  typings (λ Θ t A, P Θ t A ∧ Q Θ t A) Γ σ Δ.
+Lemma meta_conv :
+  ∀ Σ Ξ Γ t A B,
+    Σ ;; Ξ | Γ ⊢ t : A →
+    A = B →
+    Σ ;; Ξ | Γ ⊢ t : B.
+Proof.
+  intros Σ Ξ Γ t A B h ->. assumption.
+Qed.
+
+Lemma meta_conv_trans_l :
+  ∀ Σ Ξ Γ u v w,
+    u = v →
+    Σ ;; Ξ | Γ ⊢ v ≡ w →
+    Σ ;; Ξ | Γ ⊢ u ≡ w.
+Proof.
+  intros Σ Ξ Γ ??? <- h. assumption.
+Qed.
+
+Lemma meta_conv_trans_r :
+  ∀ Σ Ξ Γ u v w,
+    Σ ;; Ξ | Γ ⊢ u ≡ v →
+    v = w →
+    Σ ;; Ξ | Γ ⊢ u ≡ w.
+Proof.
+  intros Σ Ξ Γ u v ? h <-. assumption.
+Qed.
+
+Lemma meta_conv_refl :
+  ∀ Σ Ξ Γ u v,
+    u = v →
+    Σ ;; Ξ | Γ ⊢ u ≡ v.
+Proof.
+  intros Σ Ξ Γ u ? <-. ttconv.
+Qed.
+
+Notation styping Σ Ξ := (styping_ (typing Σ Ξ)).
+
+#[export] Instance styping_morphism Σ Ξ :
+  Proper (eq ==> pointwise_relation _ eq ==> eq ==> iff) (styping Σ Ξ).
+Proof.
+  intros Γ ? <- σ σ' e Δ ? <-.
+  revert σ σ' e. wlog_iff. intros σ σ' e h.
+  induction h as [| ? ? ? ? ih ? ] in σ', e |- *.
+  - constructor.
+  - constructor.
+    + apply ih. intros n. apply e.
+    + rewrite <- e. assumption.
+Qed.
+
+Lemma autosubst_simpl_styping :
+  ∀ Σ Ξ Γ Δ r s,
+    SubstSimplification r s →
+    styping Σ Ξ Γ r Δ ↔ styping Σ Ξ Γ s Δ.
+Proof.
+  intros Σ Ξ Γ Δ r s H.
+  apply styping_morphism. 1,3: reflexivity.
+  apply H.
+Qed.
+
+#[export] Hint Rewrite -> autosubst_simpl_styping : rasimpl_outermost.
+
+Lemma styping_and P Q Γ σ Δ :
+  styping_ P Γ σ Δ →
+  styping_ Q Γ σ Δ →
+  styping_ (λ Θ t A, P Θ t A ∧ Q Θ t A) Γ σ Δ.
 Proof.
   intros h1 h2.
   induction h1. 1: constructor.
@@ -294,13 +356,13 @@ Proof.
   inversion h2. subst.
   econstructor. all: eauto.
   rewrite H7 in H. inversion H. subst.
-  eapply typings_and. all: eauto.
+  eapply styping_and. all: eauto.
 Qed.
 
-Lemma typings_impl P Q Γ σ Δ :
-  typings P Γ σ Δ →
+Lemma styping_impl P Q Γ σ Δ :
+  styping_ P Γ σ Δ →
   (∀ Θ t A, P Θ t A → Q Θ t A) →
-  typings Q Γ σ Δ.
+  styping_ Q Γ σ Δ.
 Proof.
   intros h hi.
   induction h. 1: constructor.
@@ -316,5 +378,5 @@ Proof.
   intros h hi.
   induction h. 1: constructor.
   econstructor. all: eauto.
-  eapply typings_impl. all: eauto.
+  eapply styping_impl. all: eauto.
 Qed.

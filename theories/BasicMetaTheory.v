@@ -9,43 +9,6 @@ From Coq Require Import Setoid Morphisms Relation_Definitions.
 Import ListNotations.
 Import CombineNotations.
 
-(** Util **)
-
-Lemma meta_conv :
-  ∀ Σ Ξ Γ t A B,
-    Σ ;; Ξ | Γ ⊢ t : A →
-    A = B →
-    Σ ;; Ξ | Γ ⊢ t : B.
-Proof.
-  intros Σ Ξ Γ t A B h ->. assumption.
-Qed.
-
-Lemma meta_conv_trans_l :
-  ∀ Σ Ξ Γ u v w,
-    u = v →
-    Σ ;; Ξ | Γ ⊢ v ≡ w →
-    Σ ;; Ξ | Γ ⊢ u ≡ w.
-Proof.
-  intros Σ Ξ Γ ??? <- h. assumption.
-Qed.
-
-Lemma meta_conv_trans_r :
-  ∀ Σ Ξ Γ u v w,
-    Σ ;; Ξ | Γ ⊢ u ≡ v →
-    v = w →
-    Σ ;; Ξ | Γ ⊢ u ≡ w.
-Proof.
-  intros Σ Ξ Γ u v ? h <-. assumption.
-Qed.
-
-Lemma meta_conv_refl :
-  ∀ Σ Ξ Γ u v,
-    u = v →
-    Σ ;; Ξ | Γ ⊢ u ≡ v.
-Proof.
-  intros Σ Ξ Γ u ? <-. ttconv.
-Qed.
-
 (** Better induction principle for [term] **)
 
 Lemma term_rect :
@@ -206,7 +169,8 @@ Proof.
     econstructor. 1,4: eassumption. 1: eauto.
     clear - aux aux1 ht.
     remember (map (einst _ >> _) _) as A eqn: e. clear e.
-    revert σ A ht. fix aux2 3. intros σ A ht.
+    remember (slist σ) as θ eqn: e. clear e.
+    revert θ A ht. fix aux2 3. intros θ A ht.
     destruct ht. 1: constructor.
     constructor. all: eauto.
   }
@@ -391,7 +355,7 @@ Proof.
     cbn. intros u v ih. eauto.
 Qed.
 
-Lemma typings_ren Σ Ξ Δ Γ ρ σ Θ :
+(* Lemma typings_ren Σ Ξ Δ Γ ρ σ Θ :
   rtyping Δ ρ Γ →
   typings (λ Δ t A,
     Σ ;; Ξ | Δ ⊢ t : A ∧ ∀ Θ ρ, rtyping Θ ρ Δ → Σ ;; Ξ | Θ ⊢ ρ ⋅ t : ρ ⋅ A
@@ -403,7 +367,7 @@ Proof.
   cbn. constructor. 1: eauto.
   rasimpl in h3. rasimpl.
   (* Should we somehow exploit closedness or something? *)
-Abort.
+Abort. *)
 
 Lemma rtyping_uprens :
   ∀ Γ Δ Θ ρ,
