@@ -211,10 +211,10 @@ Qed.
 
 #[export] Hint Rewrite -> autosubst_simpl_rtyping : rasimpl_outermost.
 
-Lemma rtyping_shift :
+Lemma rtyping_up :
   ∀ Γ Δ A ρ,
     rtyping Γ ρ Δ →
-    rtyping (Γ ,, (ρ ⋅ A)) (0 .: ρ >> S) (Δ,, A).
+    rtyping (Γ ,, (ρ ⋅ A)) (upRen_term_term ρ) (Δ,, A).
 Proof.
   intros Γ Δ A ρ hρ.
   intros y B hy.
@@ -340,7 +340,7 @@ Lemma conv_ren :
 Proof.
   intros Σ Ξ Γ Δ ρ u v hρ h.
   induction h using conversion_ind in Γ, ρ, hρ |- *.
-  all: try solve [ rasimpl ; econstructor ; eauto using rtyping_shift ].
+  all: try solve [ rasimpl ; econstructor ; eauto using rtyping_up ].
   - rasimpl. eapply meta_conv_trans_r. 1: econstructor.
     rasimpl. reflexivity.
   - rasimpl. eapply conv_trans. 1: econstructor. 1,2: eassumption.
@@ -369,19 +369,22 @@ Proof.
   (* Should we somehow exploit closedness or something? *)
 Abort. *)
 
+Fixpoint ren_ctx ρ Γ {struct Γ} :=
+  match Γ with
+  | [] => ∙
+  | A :: Γ => (ren_ctx ρ Γ) ,, (uprens (length Γ) ρ ⋅ A)
+  end.
+
 Lemma rtyping_uprens :
   ∀ Γ Δ Θ ρ,
     rtyping Δ ρ Γ →
-    rtyping (Δ ,,, map (ren_term ρ) Θ) (uprens (length Θ) ρ) (Γ ,,, Θ).
+    rtyping (Δ ,,, ren_ctx ρ Θ) (uprens (length Θ) ρ) (Γ ,,, Θ).
 Proof.
   intros Γ Δ Θ ρ h.
   induction Θ as [| A Θ ih].
   - cbn. assumption.
-  - cbn. eapply rtyping_shift in ih.
-  (* We need to have a proper renaming for the context, will have to think about
-    the best way to do that.
-   *)
-Abort.
+  - cbn. rewrite app_comm_cons. cbn. eapply rtyping_up. assumption.
+Qed.
 
 Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →
@@ -409,13 +412,13 @@ Lemma typing_ren :
 Proof.
   intros Σ Ξ Γ Δ ρ t A hρ ht.
   induction ht using typing_ind in Δ, ρ, hρ |- *.
-  all: try solve [ rasimpl ; econstructor ; eauto using rtyping_shift ].
+  all: try solve [ rasimpl ; econstructor ; eauto using rtyping_up ].
   - rasimpl. eapply hρ in H as [B [? eB]].
     rasimpl in eB. rewrite eB.
     econstructor. eassumption.
   - rasimpl. rasimpl in IHht1. rasimpl in IHht4.
     eapply meta_conv. 1: econstructor. all: eauto.
-    1:{ eauto using rtyping_shift. }
+    1:{ eauto using rtyping_up. }
     rasimpl. reflexivity.
   - rasimpl. eapply meta_conv. 1: econstructor.
     + eassumption.
