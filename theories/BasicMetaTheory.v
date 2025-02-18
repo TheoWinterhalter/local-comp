@@ -398,19 +398,15 @@ Proof.
   admit. (* Only after typing_ren, we can prove the generalised version instead *)
 Admitted. (* Admitted for testing *)
 
-(* Quite painful, can we use something other than map?
-  I guess not really because of autosubst.
-  Probably change the def of slist so it works!
-*)
 Lemma slist_ren σ ρ n :
   slist (map (ren1 ρ) σ) n = (slist σ >> ren1 ρ) n.
 Proof.
   induction σ in ρ, n |- *.
-  - cbn. give_up.
+  - cbn. reflexivity.
   - cbn. destruct n.
     + cbn. reflexivity.
     + cbn. rewrite IHσ. reflexivity.
-Abort.
+Qed.
 
 Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →

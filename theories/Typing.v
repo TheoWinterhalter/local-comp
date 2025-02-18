@@ -103,9 +103,11 @@ where "Γ ⊢ u ≡ v" := (conversion Γ u v).
 
 (** Turn list into parallel substitution **)
 
+Definition dummy := (Sort 0).
+
 Fixpoint slist (l : list term) :=
   match l with
-  | [] => ids
+  | [] => λ _, dummy
   | u :: l => u .: slist l
   end.
 
