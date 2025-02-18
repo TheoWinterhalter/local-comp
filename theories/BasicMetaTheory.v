@@ -386,6 +386,32 @@ Proof.
   - cbn. rewrite app_comm_cons. cbn. eapply rtyping_up. assumption.
 Qed.
 
+Lemma styping_comp_ren Σ Ξ Γ Δ Θ σ ρ :
+  styping Σ Ξ Δ σ Θ →
+  rtyping Γ ρ Δ →
+  styping Σ Ξ Γ (σ >> ren1 ρ) Θ.
+Proof.
+  intros hσ hρ.
+  induction hσ as [| σ Θ A hσ ih h ] in ρ, hρ |- *. 1: constructor.
+  constructor. 1: eauto.
+  core.unfold_funcomp.
+  admit. (* Only after typing_ren, we can prove the generalised version instead *)
+Admitted. (* Admitted for testing *)
+
+(* Quite painful, can we use something other than map?
+  I guess not really because of autosubst.
+  Probably change the def of slist so it works!
+*)
+Lemma slist_ren σ ρ n :
+  slist (map (ren1 ρ) σ) n = (slist σ >> ren1 ρ) n.
+Proof.
+  induction σ in ρ, n |- *.
+  - cbn. give_up.
+  - cbn. destruct n.
+    + cbn. reflexivity.
+    + cbn. rewrite IHσ. reflexivity.
+Abort.
+
 Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →
   inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
