@@ -395,12 +395,14 @@ Proof.
   induction hσ as [| σ Θ A hσ ih h ] in ρ, hρ |- *. 1: constructor.
   constructor. 1: eauto.
   core.unfold_funcomp.
+  asimpl.
   admit. (* Only after typing_ren, we can prove the generalised version instead *)
 Admitted. (* Admitted for testing *)
 
-Lemma slist_ren σ ρ n :
-  slist (map (ren1 ρ) σ) n = (slist σ >> ren1 ρ) n.
+Lemma slist_ren σ ρ :
+  pointwise_relation _ eq (slist (map (ren_term ρ) σ)) (slist σ >> ren1 ρ).
 Proof.
+  intro n.
   induction σ in ρ, n |- *.
   - cbn. reflexivity.
   - cbn. destruct n.
@@ -420,7 +422,11 @@ Proof.
   eapply inst_typing_and in ih. 2: eapply hξ. clear hξ.
   induction ih as [| σ ξ E ξ' Ξ' Ξ'' Θ R hE h1 h2 h3 h4 ]. 1: constructor.
   cbn. econstructor. all: eauto.
-  - admit.
+  - setoid_rewrite slist_ren. eapply styping_comp_ren. 2: eassumption.
+    (* I guess we need first something to say ρ does nothing on Θ?
+      But this isn't really what's happening right?
+     *)
+    admit.
   - intros n rule hr. cbn. (* m Θ' lhs rhs. *)
     specialize (h4 n rule hr). cbn in h4.
     eapply conv_ren in h4.
