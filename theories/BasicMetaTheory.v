@@ -386,8 +386,8 @@ Proof.
   - cbn. rewrite app_comm_cons. cbn. eapply rtyping_up. assumption.
 Qed.
 
-Lemma styping_comp_ren Σ Ξ Γ Δ Θ σ ρ :
-  styping Σ Ξ Δ σ Θ →
+Lemma styping_comp_ren_ Σ Ξ Γ Δ Θ σ ρ :
+  styping_ (λ Δ t A, ∀ Θ ρ, rtyping Θ ρ Δ → Σ ;; Ξ | Θ ⊢ ρ ⋅ t : ρ ⋅ A) Δ σ Θ →
   rtyping Γ ρ Δ →
   styping Σ Ξ Γ (σ >> ren1 ρ) Θ.
 Proof.
@@ -395,9 +395,10 @@ Proof.
   induction hσ as [| σ Θ A hσ ih h ] in ρ, hρ |- *. 1: constructor.
   constructor. 1: eauto.
   core.unfold_funcomp.
-  asimpl.
-  admit. (* Only after typing_ren, we can prove the generalised version instead *)
-Admitted. (* Admitted for testing *)
+  eapply meta_conv.
+  - eapply h. assumption.
+  - asimpl. reflexivity.
+Qed.
 
 Lemma slist_ren σ ρ :
   pointwise_relation _ eq (slist (map (ren_term ρ) σ)) (slist σ >> ren1 ρ).
@@ -473,4 +474,12 @@ Proof.
   - rasimpl. rasimpl in IHht2.
     econstructor. all: eauto.
     eapply conv_ren. all: eassumption.
+Admitted.
+
+Lemma styping_comp_ren Σ Ξ Γ Δ Θ σ ρ :
+  styping Σ Ξ Δ σ Θ →
+  rtyping Γ ρ Δ →
+  styping Σ Ξ Γ (σ >> ren1 ρ) Θ.
+Proof.
+  intros hσ hρ.
 Admitted.
