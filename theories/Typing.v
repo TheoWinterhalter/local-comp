@@ -147,7 +147,7 @@ Section Inst.
   | inst_cons σ ξ E ξ' Ξ' Ξ'' Δ R :
       nth_error Σ E = Some (Ext Ξ'' Δ R) →
       inst_typing Γ ξ Ξ' →
-      (* TODO: Do we need to check ξ' : Ξ''? *)
+      (* TODO: Do we need to check Ξ' ⊢ ξ' : Ξ''? *)
       styping_ Γ (slist σ) (map (einst ξ' >> einst ξ) Δ) →
       inst_equations Γ E (slist σ) R ξ ξ' →
       inst_typing Γ (σ :: ξ) ((E,ξ') :: Ξ').

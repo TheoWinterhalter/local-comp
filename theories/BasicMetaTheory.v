@@ -422,9 +422,21 @@ Proof.
   eapply inst_typing_and in ih. 2: eapply hξ. clear hξ.
   induction ih as [| σ ξ E ξ' Ξ' Ξ'' Θ R hE h1 h2 h3 h4 ]. 1: constructor.
   cbn. econstructor. all: eauto.
-  - setoid_rewrite slist_ren. eapply styping_comp_ren. 2: eassumption.
+  - eapply styping_impl in h3.
+    2:{
+      intros ? t A [ht iht].
+      (* Whatever I do, I'll be stuck here because the context is abstract
+        so there is no hope to do anything from it!
+      *)
+      admit.
+    }
+    setoid_rewrite slist_ren. eapply styping_comp_ren. 2: eassumption.
     (* I guess we need first something to say ρ does nothing on Θ?
       But this isn't really what's happening right?
+      It seems it's not closed, only closed under Δ, hence ρ is actually
+      acting on it!
+
+      TODO: Prove that einst works as expected first maybe?
      *)
     admit.
   - intros n rule hr. cbn. (* m Θ' lhs rhs. *)
