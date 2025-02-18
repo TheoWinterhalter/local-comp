@@ -411,6 +411,16 @@ Proof.
     + cbn. rewrite IHσ. reflexivity.
 Qed.
 
+(* TODO REMOVE *)
+Lemma styping_map P Γ σ Δ f :
+  styping_ (λ Θ t A, P Θ t (f A)) Γ σ Δ →
+  styping_ P Γ σ (map f Δ).
+Proof.
+  intros h.
+  induction h. 1: constructor.
+  cbn. constructor. 1: assumption.
+Abort. (* Need f to commute with subst *)
+
 Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →
   inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
@@ -423,15 +433,20 @@ Proof.
   eapply inst_typing_and in ih. 2: eapply hξ. clear hξ.
   induction ih as [| σ ξ E ξ' Ξ' Ξ'' Θ R hE h1 h2 h3 h4 ]. 1: constructor.
   cbn. econstructor. all: eauto.
-  - eapply styping_impl in h3.
-    2:{
-      intros ? t A [ht iht].
-      (* Whatever I do, I'll be stuck here because the context is abstract
-        so there is no hope to do anything from it!
-      *)
-      admit.
-    }
-    setoid_rewrite slist_ren. eapply styping_comp_ren. 2: eassumption.
+  - (* setoid_rewrite slist_ren. eapply styping_comp_ren_. 2: eassumption. *)
+    (* Now we can prove some styping_map but on the end context, the one that gets destructed *)
+    (* It's not actually a map that's happening, rather a renaming inside the map *)
+    eapply styping_impl in h3.
+    2:{ intros ??? [_ h]. exact h. }
+    eapply styping_comp_ren_ in h3. 2: eassumption.
+
+    setoid_rewrite slist_ren.
+
+    (* Now why would these two be the same?
+      Must ξ be closed? It's not…
+    *)
+
+
     (* I guess we need first something to say ρ does nothing on Θ?
       But this isn't really what's happening right?
       It seems it's not closed, only closed under Δ, hence ρ is actually
