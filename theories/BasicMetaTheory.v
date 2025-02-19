@@ -505,18 +505,43 @@ Proof.
   - cbn. admit.
 Admitted.
 
+Lemma nth_error_ctx_einst ξ Γ x :
+  nth_error (ctx_einst ξ Γ) x =
+  option_map (einst (ren_eargs (plus (length Γ - S x)) ξ)) (nth_error Γ x).
+Proof.
+  induction Γ in ξ, x |- *.
+  - cbn. rewrite nth_error_nil. reflexivity.
+  - destruct x as [| x].
+    + cbn. replace (length Γ - 0) with (length Γ) by lia.
+      reflexivity.
+    + cbn. eauto.
+Qed.
+
+(* As long as I don't know how to even state the following, this won't fly. *)
 Lemma typing_einst Σ Ξ Ξ' Γ t A ξ :
   inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ t : A →
-  Σ ;; Ξ | Γ ⊢ einst ξ t : einst ξ A.
+  Σ ;; Ξ | ctx_einst ξ Γ ⊢ einst ξ t : einst ξ A.
 Proof.
   intros hξ ht.
   induction ht using typing_ind in Ξ, ξ, hξ |- *.
   all: try solve [ cbn ; econstructor ; eauto ].
   - cbn. eapply meta_conv.
-    + econstructor. eassumption.
-    + (* Using the same context is also broken because it should actually be
-      instantiated too! *)
+    + econstructor. rewrite nth_error_ctx_einst.
+      rewrite H. cbn. reflexivity.
+    + rewrite ren_inst. f_equal.
+      rewrite ren_eargs_comp.
+      (* The LHS is like plus (length Γ) so it's still not ok.
+
+        It makes sense that we have this problem because we instantiated the
+        context, but on the right, we kinda assume ξ already makes sense in Γ.
+
+       *)
+    (* Using the same context is also broken because it should actually be
+      instantiated too!
+      The weird thing is that then ξ should be typed in ctx_einst Γ too?
+      This seems very wrong.
+      *)
       admit.
   - admit.
   - admit.
