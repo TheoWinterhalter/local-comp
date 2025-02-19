@@ -9,6 +9,8 @@ From Coq Require Import Setoid Morphisms Relation_Definitions.
 Import ListNotations.
 Import CombineNotations.
 
+Set Default Goal Selector "!".
+
 (** Better induction principle for [term] **)
 
 Lemma term_rect :
@@ -164,12 +166,12 @@ Proof.
   fix aux 4. move aux at top.
   intros Γ t A h. destruct h.
   6:{
-    eapply hconst. 1,2: eassumption.
+    eapply hconst. 1,2,4: eassumption.
     clear H. revert ξ Ξ' H0. fix aux1 3. intros ξ Ξ' h.
     destruct h as [| σ ξ E ξ' Ξ' Ξ'' Δ R hE h ht heq]. 1: constructor.
     econstructor. 1,4: eassumption. 1: eauto.
     clear - aux aux1 ht.
-    remember (map (einst _ >> _) _) as A eqn: e. clear e.
+    remember (ctx_einst _ _) as A eqn: e. clear e.
     remember (slist σ) as θ eqn: e. clear e.
     revert θ A ht. fix aux2 3. intros θ A ht.
     destruct ht. 1: constructor.
@@ -355,20 +357,6 @@ Proof.
     eapply Forall2_impl. 2: eassumption.
     cbn. intros u v ih. eauto.
 Qed.
-
-(* Lemma typings_ren Σ Ξ Δ Γ ρ σ Θ :
-  rtyping Δ ρ Γ →
-  typings (λ Δ t A,
-    Σ ;; Ξ | Δ ⊢ t : A ∧ ∀ Θ ρ, rtyping Θ ρ Δ → Σ ;; Ξ | Θ ⊢ ρ ⋅ t : ρ ⋅ A
-  ) Γ σ Θ →
-  typings (typing Σ Ξ) Δ (map (ren_term ρ) σ) Θ.
-Proof.
-  intros hi h.
-  induction h as [| Θ σ t A h1 h2 h3 ]. 1: constructor.
-  cbn. constructor. 1: eauto.
-  rasimpl in h3. rasimpl.
-  (* Should we somehow exploit closedness or something? *)
-Abort. *)
 
 Fixpoint ren_ctx ρ Γ {struct Γ} :=
   match Γ with

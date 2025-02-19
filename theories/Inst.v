@@ -5,6 +5,8 @@ From LocalComp.autosubst Require Import AST SubstNotations RAsimpl AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env.
 Import ListNotations.
 
+Set Default Goal Selector "!".
+
 (** Extension instantiation **)
 
 Definition eget (ξ : eargs) M x :=
@@ -32,6 +34,14 @@ Fixpoint einst (ξ : eargs) (t : term) :=
   | app u v => app (einst ξ u) (einst ξ v)
   | const c ξ' => const c (map (map (einst ξ)) ξ')
   | assm M x => eget ξ M x
+  end.
+
+(** Instance for a context **)
+
+Fixpoint ctx_einst (ξ : eargs) (Γ : ctx) : ctx :=
+  match Γ with
+  | [] => []
+  | A :: Γ => ctx_einst ξ Γ ,, einst (ren_eargs (plus (length Γ)) ξ) A
   end.
 
 (** n-ary application **)

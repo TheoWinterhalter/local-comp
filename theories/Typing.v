@@ -9,6 +9,8 @@ From Coq Require Import Setoid Morphisms Relation_Definitions.
 Import ListNotations.
 Import CombineNotations.
 
+Set Default Goal Selector "!".
+
 Open Scope subst_scope.
 
 (** Closedness property **)
@@ -136,7 +138,7 @@ Section Inst.
     ∀ n rule,
       nth_error R n = Some rule →
       let n := length rule.(cr_env) in
-      let Θ := map (einst ξ' >> einst ξ) rule.(cr_env) in
+      let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
       let lhs := (einst ξ (einst ξ' (plinst M rule.(cr_pat)))) <[ ups n σ ] in
       let rhs := (einst ξ (einst ξ' (delocal M rule.(cr_rep)))) <[ ups n σ ] in
       Γ ,,, Θ ⊢ lhs ≡ rhs.
@@ -147,7 +149,7 @@ Section Inst.
       nth_error Σ E = Some (Ext Ξ'' Δ R) →
       inst_typing Γ ξ Ξ' →
       (* TODO: Do we need to check Ξ' ⊢ ξ' : Ξ''? *)
-      styping_ Γ (slist σ) (map (einst ξ' >> einst ξ) Δ) →
+      styping_ Γ (slist σ) (ctx_einst ξ (ctx_einst ξ' Δ)) →
       inst_equations Γ E (slist σ) R ξ ξ' →
       inst_typing Γ (σ :: ξ) ((E,ξ') :: Ξ').
 
