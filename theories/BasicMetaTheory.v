@@ -519,14 +519,14 @@ Admitted.
 
 Lemma typing_einst Σ Ξ Ξ' Γ t A ξ :
   inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
-  Σ ;; Ξ' | ∙ ⊢ t : A →
+  Σ ;; Ξ' | Γ ⊢ t : A →
   Σ ;; Ξ | Γ ⊢ einst ξ t : einst ξ A.
 Proof.
   intros hξ ht.
-  induction ht using typing_ind in Ξ, Γ, ξ, hξ |- *.
+  induction ht using typing_ind in Ξ, ξ, hξ |- *.
   all: try solve [ cbn ; econstructor ; eauto ].
   - cbn. eapply meta_conv.
-    + econstructor. (* Having the empty context is not going to work!
-      Not general enough
-    *)
+    + econstructor. eassumption.
+    + (* Using the same context is also broken because it should actually be
+      instantiated too! *)
 Abort.
