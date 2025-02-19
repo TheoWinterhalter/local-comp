@@ -529,4 +529,23 @@ Proof.
     + econstructor. eassumption.
     + (* Using the same context is also broken because it should actually be
       instantiated too! *)
+      admit.
+  - admit.
+  - admit.
+  - admit.
+  - cbn. eapply meta_conv.
+    + econstructor. 1,3: eassumption.
+      admit.
+    + admit.
+  - cbn.
+
+    (* Should we define inst_typing Σ Ξ Γ ξ Ξ' as
+
+      ∀ M x E ξ' Ξ'' Δ R,
+        nth_error Ξ' M = Some (E, ξ') →
+        nth_error Σ E = Some (Ext Ξ'' Δ R) →
+        nth_error Δ x = Some A →
+        Σ ;; Ξ | Γ ⊢ eget ξ M x : einst ξ (einst ξ' (delocal M A))
+
+     *)
 Abort.
