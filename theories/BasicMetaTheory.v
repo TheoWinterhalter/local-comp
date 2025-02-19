@@ -489,3 +489,44 @@ Lemma styping_comp_ren Σ Ξ Γ Δ Θ σ ρ :
 Proof.
   intros hσ hρ.
 Admitted.
+
+(** Instances preserve conversion and typing **)
+
+Definition subst_eargs σ (ξ : eargs) : eargs :=
+  map (map (subst_term σ)) ξ.
+
+Lemma subst_inst σ ξ t :
+  (einst ξ t) <[ σ ] = einst (subst_eargs σ ξ) (t <[ σ ]).
+Proof.
+  induction t using term_rect in σ, ξ |- *.
+  all: try solve [ cbn ; rewrite ?lift_ren_eargs ; f_equal ; eauto ].
+  - cbn. (* Unclear what it should be, maybe it would be good to have
+    a simpler way to represent instances.
+   *)
+Abort.
+
+Lemma conv_einst Σ Ξ Ξ' Γ u v ξ :
+  inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
+  Σ ;; Ξ' | ∙ ⊢ u ≡ v →
+  Σ ;; Ξ | Γ ⊢ einst ξ u ≡ einst ξ v.
+Proof.
+  intros hξ h.
+  induction h using conversion_ind in Γ, Ξ, ξ, hξ |- *.
+  all: try solve [ cbn ; econstructor ; eauto ].
+  - cbn. admit.
+  - cbn. admit.
+Admitted.
+
+Lemma typing_einst Σ Ξ Ξ' Γ t A ξ :
+  inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
+  Σ ;; Ξ' | ∙ ⊢ t : A →
+  Σ ;; Ξ | Γ ⊢ einst ξ t : einst ξ A.
+Proof.
+  intros hξ ht.
+  induction ht using typing_ind in Ξ, Γ, ξ, hξ |- *.
+  all: try solve [ cbn ; econstructor ; eauto ].
+  - cbn. eapply meta_conv.
+    + econstructor. (* Having the empty context is not going to work!
+      Not general enough
+    *)
+Abort.
