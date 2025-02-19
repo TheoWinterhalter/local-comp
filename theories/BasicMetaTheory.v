@@ -517,24 +517,32 @@ Proof.
     + cbn. eauto.
 Qed.
 
-(* As long as I don't know how to even state the following, this won't fly. *)
-Lemma typing_einst Σ Ξ Ξ' Γ t A ξ :
-  inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
+Lemma length_ctx_einst ξ Γ :
+  length (ctx_einst ξ Γ) = length Γ.
+Proof.
+  induction Γ in ξ |- *.
+  - reflexivity.
+  - cbn. eauto.
+Qed.
+
+Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
+  inst_typing Σ Ξ (typing Σ Ξ) Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ t : A →
-  Σ ;; Ξ | ctx_einst ξ Γ ⊢ einst ξ t : einst ξ A.
+  Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst ξ t : einst ξ A.
 Proof.
   intros hξ ht.
-  induction ht using typing_ind in Ξ, ξ, hξ |- *.
+  induction ht using typing_ind in Ξ, Δ, ξ, hξ |- *.
   all: try solve [ cbn ; econstructor ; eauto ].
   - cbn. eapply meta_conv.
-    + econstructor. rewrite nth_error_ctx_einst.
+    + econstructor. rewrite nth_error_app1.
+      2:{ rewrite length_ctx_einst. eapply nth_error_Some. congruence. }
+      rewrite nth_error_ctx_einst.
       rewrite H. cbn. reflexivity.
     + rewrite ren_inst. f_equal.
       rewrite ren_eargs_comp.
       (* The LHS is like plus (length Γ) so it's still not ok.
 
-        It makes sense that we have this problem because we instantiated the
-        context, but on the right, we kinda assume ξ already makes sense in Γ.
+        I guess we need to also lift everything?
 
        *)
     (* Using the same context is also broken because it should actually be
