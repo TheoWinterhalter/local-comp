@@ -543,6 +543,9 @@ Proof.
       (* The LHS is like plus (length Γ) so it's still not ok.
 
         I guess we need to also lift everything?
+        Again feels wrong, so it would be nice be able to use renaming in
+        general?
+        Also it is wrong, because lifting makes the variable a wrong reference.
 
        *)
     (* Using the same context is also broken because it should actually be
@@ -551,7 +554,13 @@ Proof.
       This seems very wrong.
       *)
       admit.
-  - admit.
+  - cbn. constructor. 1: eauto.
+    rewrite app_comm_cons.
+    (* change (ctx_einst ?ξ ?Γ ,, einst ?ξ ?A) with (ctx_einst ξ (Γ ,, A)). *)
+    (* eapply IHht2. *)
+    cbn in IHht2.
+    specialize IHht2 with (ξ := lift_eargs ξ).
+    (* Is ctx_einst wrong then? *)
   - admit.
   - admit.
   - cbn. eapply meta_conv.
