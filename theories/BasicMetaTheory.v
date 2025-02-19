@@ -142,6 +142,7 @@ Lemma typing_ind :
       nth_error Σ c = Some (Def Ξ' A t) →
       inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
       inst_typing Σ Ξ P Γ ξ Ξ' →
+      closed A = true →
       P Γ (const c ξ) (einst ξ A)
     ) →
     (∀ Γ M x E ξ Ξ' Δ R A,
@@ -469,9 +470,9 @@ Proof.
   - rasimpl. eapply meta_conv. 1: econstructor.
     + eassumption.
     + admit.
+    + assumption.
     + rewrite ren_inst. f_equal.
-      (* TODO: We need closedness here too right? *)
-      admit.
+      symmetry. apply closed_ren. assumption.
   - rasimpl. eapply meta_conv.
     1:{ econstructor. all: eassumption. }
     rewrite ren_inst.

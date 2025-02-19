@@ -189,6 +189,7 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
     ∀ c ξ Ξ' A t,
       nth_error Σ c = Some (Def Ξ' A t) →
       inst_typing typing Γ ξ Ξ' →
+      closed A = true →
       Γ ⊢ const c ξ : einst ξ A
 
 | type_assm :
