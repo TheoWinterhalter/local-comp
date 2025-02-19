@@ -389,7 +389,7 @@ Qed.
 Lemma styping_comp_ren_ Σ Ξ Γ Δ Θ σ ρ :
   styping_ (λ Δ t A, ∀ Θ ρ, rtyping Θ ρ Δ → Σ ;; Ξ | Θ ⊢ ρ ⋅ t : ρ ⋅ A) Δ σ Θ →
   rtyping Γ ρ Δ →
-  styping Σ Ξ Γ (σ >> ren1 ρ) Θ.
+  styping Σ Ξ Γ (σ >> ren_term ρ) Θ.
 Proof.
   intros hσ hρ.
   induction hσ as [| σ Θ A hσ ih h ] in ρ, hρ |- *. 1: constructor.
@@ -401,7 +401,7 @@ Proof.
 Qed.
 
 Lemma slist_ren σ ρ :
-  pointwise_relation _ eq (slist (map (ren_term ρ) σ)) (slist σ >> ren1 ρ).
+  pointwise_relation _ eq (slist (map (ren_term ρ) σ)) (slist σ >> ren_term ρ).
 Proof.
   intro n.
   induction σ in ρ, n |- *.
@@ -410,16 +410,6 @@ Proof.
     + cbn. reflexivity.
     + cbn. rewrite IHσ. reflexivity.
 Qed.
-
-(* TODO REMOVE *)
-Lemma styping_map P Γ σ Δ f :
-  styping_ (λ Θ t A, P Θ t (f A)) Γ σ Δ →
-  styping_ P Γ σ (map f Δ).
-Proof.
-  intros h.
-  induction h. 1: constructor.
-  cbn. constructor. 1: assumption.
-Abort. (* Need f to commute with subst *)
 
 Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →
@@ -494,7 +484,7 @@ Admitted.
 Lemma styping_comp_ren Σ Ξ Γ Δ Θ σ ρ :
   styping Σ Ξ Δ σ Θ →
   rtyping Γ ρ Δ →
-  styping Σ Ξ Γ (σ >> ren1 ρ) Θ.
+  styping Σ Ξ Γ (σ >> ren_term ρ) Θ.
 Proof.
   intros hσ hρ.
 Admitted.

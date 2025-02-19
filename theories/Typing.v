@@ -141,7 +141,6 @@ Section Inst.
       let rhs := (einst ξ (einst ξ' (delocal M rule.(cr_rep)))) <[ ups n σ ] in
       Γ ,,, Θ ⊢ lhs ≡ rhs.
 
-  (* TODO: Add Θ is closed and show ren_ctx on it is id? *)
   Inductive inst_typing Γ : eargs → ectx → Prop :=
   | inst_nil : inst_typing Γ [] []
   | inst_cons σ ξ E ξ' Ξ' Ξ'' Δ R :
