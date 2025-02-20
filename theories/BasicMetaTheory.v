@@ -525,6 +525,14 @@ Proof.
   - cbn. eauto.
 Qed.
 
+(**
+
+  So either we bite the bullet and have einst be combined with a weakening
+  or we try and stay abstract / more in line with renaming, and have ξ be typed
+  in Ξ, Δ and going to Ξ', Γ. And then we do the einst locally in Γ or
+  something. Need to think.
+
+ **)
 Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
   inst_typing Σ Ξ (typing Σ Ξ) Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ t : A →
