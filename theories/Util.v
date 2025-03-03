@@ -10,6 +10,16 @@ Notation "'∑' x .. y , p" := (sigT (λ x, .. (sigT (λ y, p%type)) ..))
    format "'[' '∑'  '/  ' x  ..  y ,  '/  ' p ']'")
   : type_scope.
 
+Ltac forward_gen h tac :=
+  match type of h with
+  | ?P → _ =>
+    let h' := fresh in
+    assert (h' : P) ; [ tac | specialize (h h') ; clear h' ]
+  end.
+
+Tactic Notation "forward" constr(H) := forward_gen H ltac:(idtac).
+Tactic Notation "forward" constr(H) "by" tactic(tac) := forward_gen H tac.
+
 Create HintDb shelvedb.
 
 Hint Extern 10000 => shelve : shelvedb.

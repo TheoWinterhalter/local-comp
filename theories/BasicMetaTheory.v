@@ -540,16 +540,6 @@ Axiom ren_eargs_id_ext : ∀ ρ ξ,
   (∀ n, ρ n = n) →
   ren_eargs ρ ξ = ξ.
 
-Ltac forward_gen h tac :=
-  match type of h with
-  | ?P → _ =>
-    let h' := fresh in
-    assert (h' : P) ; [ tac | specialize (h h') ; clear h' ]
-  end.
-
-Tactic Notation "forward" constr(H) := forward_gen H ltac:(idtac).
-Tactic Notation "forward" constr(H) "by" tactic(tac) := forward_gen H tac.
-
 Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
   inst_typing_gen Σ Ξ Δ ξ Ξ' Γ →
   Σ ;; Ξ' | Γ ⊢ t : A →
