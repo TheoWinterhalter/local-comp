@@ -142,8 +142,8 @@ Lemma typing_ind :
     ) →
     (∀ Γ c ξ Ξ' A t,
       nth_error Σ c = Some (Def Ξ' A t) →
-      inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
-      inst_typing Σ Ξ P Γ ξ Ξ' →
+      inst_typing Σ (typing Σ Ξ) Γ ξ Ξ' →
+      inst_typing Σ P Γ ξ Ξ' →
       closed A = true →
       P Γ (const c ξ) (einst ξ A)
     ) →
@@ -167,15 +167,7 @@ Proof.
   intros Γ t A h. destruct h.
   6:{
     eapply hconst. 1,2,4: eassumption.
-    clear H. revert ξ Ξ' H0. fix aux1 3. intros ξ Ξ' h.
-    destruct h as [| σ ξ E ξ' Ξ' Ξ'' Δ R hE h ht heq]. 1: constructor.
-    econstructor. 1,4: eassumption. 1: eauto.
-    clear - aux aux1 ht.
-    remember (ctx_einst _ _) as A eqn: e. clear e.
-    remember (slist σ) as θ eqn: e. clear e.
-    revert θ A ht. fix aux2 3. intros θ A ht.
-    destruct ht. 1: constructor.
-    constructor. all: eauto.
+    red. eauto.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
@@ -402,6 +394,18 @@ Qed.
 
 Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →
+  inst_typing Σ (typing Σ Ξ) Γ ξ Ξ' →
+  inst_typing Σ (λ Γ t A,
+    ∀ Δ ρ, rtyping Δ ρ Γ → Σ ;; Ξ | Δ ⊢ ρ ⋅ t : ρ ⋅ A
+  ) Γ ξ Ξ' →
+  inst_typing Σ (typing Σ Ξ) Δ (map (map (ren_term ρ)) ξ) Ξ'.
+Proof.
+  intros hρ hξ ih.
+  intros M x E ξ' Ξ'' Θ R A hM hE hx.
+Abort.
+
+(* Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
+  rtyping Δ ρ Γ →
   inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
   inst_typing Σ Ξ (λ Γ t A,
     ∀ Δ ρ, rtyping Δ ρ Γ → Σ ;; Ξ | Δ ⊢ ρ ⋅ t : ρ ⋅ A
@@ -437,7 +441,7 @@ Proof.
   - intros n rule hr. cbn. (* m Θ' lhs rhs. *)
     specialize (h4 n rule hr). cbn in h4.
     eapply conv_ren in h4.
-Abort.
+Abort. *)
 
 Lemma typing_ren :
   ∀ Σ Ξ Γ Δ ρ t A,
@@ -494,7 +498,7 @@ Proof.
 Abort.
 
 Lemma conv_einst Σ Ξ Ξ' Γ u v ξ :
-  inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
+  inst_typing Σ (typing Σ Ξ) Γ ξ Ξ' →
   Σ ;; Ξ' | ∙ ⊢ u ≡ v →
   Σ ;; Ξ | Γ ⊢ einst ξ u ≡ einst ξ v.
 Proof.
@@ -525,12 +529,12 @@ Proof.
   - cbn. eauto.
 Qed.
 
-Axiom inst_typing' : gctx → ectx → (ctx → term → term → Prop) → ctx → eargs → ectx → ctx → Prop.
-
-Axiom inst_typing_var : ∀ Σ Ξ Ξ' Γ Δ ξ x A,
-  inst_typing' Σ Ξ (typing Σ Ξ) Δ ξ Ξ' Γ →
-  nth_error Γ x = Some A →
-  nth_error Δ x = Some (einst (ren_eargs (plus (length Γ - S x)) ξ) A).
+Definition inst_typing_gen Σ Ξ Δ ξ Ξ' Γ :=
+  inst_typing Σ (typing Σ Ξ) Δ ξ Ξ' ∧
+  (∀ x A,
+    nth_error Γ x = Some A →
+    nth_error Δ x = Some (einst (ren_eargs (plus (length Γ - S x)) ξ) A)
+  ).
 
 Axiom ren_eargs_id_ext : ∀ ρ ξ,
   (∀ n, ρ n = n) →
@@ -547,7 +551,7 @@ Tactic Notation "forward" constr(H) := forward_gen H ltac:(idtac).
 Tactic Notation "forward" constr(H) "by" tactic(tac) := forward_gen H tac.
 
 Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
-  inst_typing' Σ Ξ (typing Σ Ξ) Δ ξ Ξ' Γ →
+  inst_typing_gen Σ Ξ Δ ξ Ξ' Γ →
   Σ ;; Ξ' | Γ ⊢ t : A →
   Σ ;; Ξ | Δ ⊢ einst ξ t : einst ξ A.
 Proof.
@@ -555,7 +559,7 @@ Proof.
   induction ht using typing_ind in Ξ, Δ, ξ, hξ |- *.
   all: try solve [ cbn ; econstructor ; eauto ].
   - cbn. eapply meta_conv.
-    + econstructor. eapply inst_typing_var. all: eassumption.
+    + econstructor. apply hξ. eassumption.
     + rewrite ren_inst. f_equal.
       rewrite ren_eargs_comp.
       apply ren_eargs_id_ext.
@@ -572,21 +576,11 @@ Proof.
     + econstructor. 1,3: eassumption.
       admit.
     + admit.
-  - cbn.
-
-    (* Should we define inst_typing Σ Ξ Γ ξ Ξ' as
-
-      ∀ M x E ξ' Ξ'' Δ R,
-        nth_error Ξ' M = Some (E, ξ') →
-        nth_error Σ E = Some (Ext Ξ'' Δ R) →
-        nth_error Δ x = Some A →
-        Σ ;; Ξ | Γ ⊢ eget ξ M x : einst ξ (einst ξ' (delocal M A))
-
-     *)
+  - cbn. eapply hξ. all: eassumption.
 Abort.
 
 Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
-  inst_typing Σ Ξ (typing Σ Ξ) Δ ξ Ξ' →
+  inst_typing Σ (typing Σ Ξ) Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ t : A →
   Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst ξ t : einst ξ A.
 Proof.
@@ -621,6 +615,7 @@ Proof.
     cbn in IHht2.
     specialize IHht2 with (ξ := lift_eargs ξ).
     (* Is ctx_einst wrong then? *)
+    admit.
   - admit.
   - admit.
   - cbn. eapply meta_conv.

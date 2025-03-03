@@ -143,7 +143,14 @@ Section Inst.
       let rhs := (einst ξ (einst ξ' (delocal M rule.(cr_rep)))) <[ ups n σ ] in
       Γ ,,, Θ ⊢ lhs ≡ rhs.
 
-  Inductive inst_typing Γ : eargs → ectx → Prop :=
+  Definition inst_typing (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
+    ∀ M x E ξ' Ξ'' Δ R A,
+      nth_error Ξ' M = Some (E, ξ') →
+      nth_error Σ E = Some (Ext Ξ'' Δ R) →
+      nth_error Δ x = Some A →
+      Γ ⊢ eget ξ M x : einst ξ (einst ξ' (delocal M A)).
+
+  (* Inductive inst_typing Γ : eargs → ectx → Prop :=
   | inst_nil : inst_typing Γ [] []
   | inst_cons σ ξ E ξ' Ξ' Ξ'' Δ R :
       nth_error Σ E = Some (Ext Ξ'' Δ R) →
@@ -151,7 +158,7 @@ Section Inst.
       (* TODO: Do we need to check Ξ' ⊢ ξ' : Ξ''? *)
       styping_ Γ (slist σ) (ctx_einst ξ (ctx_einst ξ' Δ)) →
       inst_equations Γ E (slist σ) R ξ ξ' →
-      inst_typing Γ (σ :: ξ) ((E,ξ') :: Ξ').
+      inst_typing Γ (σ :: ξ) ((E,ξ') :: Ξ'). *)
 
 End Inst.
 
@@ -237,7 +244,7 @@ Inductive ewf (Σ : gctx) : ectx → Prop :=
 | ewf_cons Ξ E ξ' Ξ' Δ R :
     ewf Σ Ξ →
     nth_error Σ E = Some (Ext Ξ' Δ R) →
-    inst_typing Σ Ξ (typing Σ Ξ) ∙ ξ' Ξ' →
+    inst_typing Σ (typing Σ Ξ) ∙ ξ' Ξ' →
     ewf Σ ((E, ξ') :: Ξ).
 
 (** Global environment typing **)
@@ -350,17 +357,13 @@ Proof.
   constructor. all: eauto.
 Qed.
 
-Lemma inst_typing_and Σ Ξ Γ P Q ξ Ξ' :
-  inst_typing Σ Ξ P Γ ξ Ξ' →
-  inst_typing Σ Ξ Q Γ ξ Ξ' →
-  inst_typing Σ Ξ (λ Δ t A, P Δ t A ∧ Q Δ t A) Γ ξ Ξ'.
+Lemma inst_typing_and Σ Γ P Q ξ Ξ' :
+  inst_typing Σ P Γ ξ Ξ' →
+  inst_typing Σ Q Γ ξ Ξ' →
+  inst_typing Σ (λ Δ t A, P Δ t A ∧ Q Δ t A) Γ ξ Ξ'.
 Proof.
   intros h1 h2.
-  induction h1. 1: constructor.
-  inversion h2. subst.
-  econstructor. all: eauto.
-  rewrite H7 in H. inversion H. subst.
-  eapply styping_and. all: eauto.
+  red. eauto.
 Qed.
 
 Lemma styping_impl P Q Γ σ Δ :
@@ -374,13 +377,11 @@ Proof.
   eauto.
 Qed.
 
-Lemma inst_typing_impl Σ Ξ Γ P Q ξ Ξ' :
-  inst_typing Σ Ξ P Γ ξ Ξ' →
+Lemma inst_typing_impl Σ Γ P Q ξ Ξ' :
+  inst_typing Σ P Γ ξ Ξ' →
   (∀ Δ t A, P Δ t A → Q Δ t A) →
-  inst_typing Σ Ξ Q Γ ξ Ξ'.
+  inst_typing Σ Q Γ ξ Ξ'.
 Proof.
   intros h hi.
-  induction h. 1: constructor.
-  econstructor. all: eauto.
-  eapply styping_impl. all: eauto.
+  red. eauto.
 Qed.
