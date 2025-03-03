@@ -536,6 +536,45 @@ Definition inst_typing_gen Σ Ξ Δ ξ Ξ' Γ :=
     nth_error Δ x = Some (einst (ren_eargs (plus (length Γ - S x)) ξ) A)
   ).
 
+Lemma eget_ren ξ M x ρ :
+  eget (ren_eargs ρ ξ) M x = ρ ⋅ (eget ξ M x).
+Proof.
+  unfold eget, ren_eargs.
+  rewrite nth_error_map.
+  destruct (nth_error ξ M). 2: reflexivity.
+  cbn. rewrite nth_error_map.
+  destruct (nth_error _ x). 2: reflexivity.
+  cbn. reflexivity.
+Qed.
+
+Lemma inst_typing_gen_lift Σ Ξ Δ ξ Ξ' Γ A :
+  inst_typing_gen Σ Ξ Δ ξ Ξ' Γ →
+  inst_typing_gen Σ Ξ (Δ ,, einst (ren_eargs (plus (length Γ)) ξ) A) (lift_eargs ξ) Ξ' (Γ ,, A).
+Proof.
+  intros [h1 h2].
+  split.
+  - intros M x E ξ' Ξ'' Θ R B hM hE hx.
+    rewrite eget_ren.
+    eapply meta_conv.
+    + eapply typing_ren. 1: eapply rtyping_S.
+      eauto.
+    + rewrite ren_inst. f_equal.
+      rewrite ren_inst. f_equal.
+      * (* This one should be closed, so it should be ok *)
+        (* We just need to add it to the def *)
+        admit.
+      * unfold delocal. rasimpl.
+        apply ext_term. cbn. auto.
+  - intros x B h.
+    destruct x as [| x].
+    + cbn in *. inversion h. f_equal. f_equal.
+      (* This time something is off, it seems ξ needs to change as well? *)
+      admit.
+    + cbn in *. erewrite h2. 2: eassumption.
+      (* Same problem here! *)
+      admit.
+Abort.
+
 Axiom ren_eargs_id_ext : ∀ ρ ξ,
   (∀ n, ρ n = n) →
   ren_eargs ρ ξ = ξ.
