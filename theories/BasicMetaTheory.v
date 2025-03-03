@@ -525,14 +525,66 @@ Proof.
   - cbn. eauto.
 Qed.
 
-(**
+Axiom inst_typing' : gctx → ectx → (ctx → term → term → Prop) → ctx → eargs → ectx → ctx → Prop.
 
-  So either we bite the bullet and have einst be combined with a weakening
-  or we try and stay abstract / more in line with renaming, and have ξ be typed
-  in Ξ, Δ and going to Ξ', Γ. And then we do the einst locally in Γ or
-  something. Need to think.
+Axiom inst_typing_var : ∀ Σ Ξ Ξ' Γ Δ ξ x A,
+  inst_typing' Σ Ξ (typing Σ Ξ) Δ ξ Ξ' Γ →
+  nth_error Γ x = Some A →
+  nth_error Δ x = Some (einst (ren_eargs (plus (length Γ - S x)) ξ) A).
 
- **)
+Axiom ren_eargs_id_ext : ∀ ρ ξ,
+  (∀ n, ρ n = n) →
+  ren_eargs ρ ξ = ξ.
+
+Ltac forward_gen h tac :=
+  match type of h with
+  | ?P → _ =>
+    let h' := fresh in
+    assert (h' : P) ; [ tac | specialize (h h') ; clear h' ]
+  end.
+
+Tactic Notation "forward" constr(H) := forward_gen H ltac:(idtac).
+Tactic Notation "forward" constr(H) "by" tactic(tac) := forward_gen H tac.
+
+Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
+  inst_typing' Σ Ξ (typing Σ Ξ) Δ ξ Ξ' Γ →
+  Σ ;; Ξ' | Γ ⊢ t : A →
+  Σ ;; Ξ | Δ ⊢ einst ξ t : einst ξ A.
+Proof.
+  intros hξ ht.
+  induction ht using typing_ind in Ξ, Δ, ξ, hξ |- *.
+  all: try solve [ cbn ; econstructor ; eauto ].
+  - cbn. eapply meta_conv.
+    + econstructor. eapply inst_typing_var. all: eassumption.
+    + rewrite ren_inst. f_equal.
+      rewrite ren_eargs_comp.
+      apply ren_eargs_id_ext.
+      intro n. cbn.
+      pose proof (nth_error_Some Γ x) as e%proj1.
+      forward e by congruence.
+      (* The LHS is like plus (length Γ) too! *)
+      admit.
+  - cbn. constructor. 1: eauto.
+    admit.
+  - admit.
+  - admit.
+  - cbn. eapply meta_conv.
+    + econstructor. 1,3: eassumption.
+      admit.
+    + admit.
+  - cbn.
+
+    (* Should we define inst_typing Σ Ξ Γ ξ Ξ' as
+
+      ∀ M x E ξ' Ξ'' Δ R,
+        nth_error Ξ' M = Some (E, ξ') →
+        nth_error Σ E = Some (Ext Ξ'' Δ R) →
+        nth_error Δ x = Some A →
+        Σ ;; Ξ | Γ ⊢ eget ξ M x : einst ξ (einst ξ' (delocal M A))
+
+     *)
+Abort.
+
 Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
   inst_typing Σ Ξ (typing Σ Ξ) Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ t : A →
