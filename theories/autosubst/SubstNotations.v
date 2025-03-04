@@ -15,10 +15,10 @@ From Coq Require Import Setoid Morphisms Relation_Definitions.
 Import ListNotations.
 
 Notation "a ⋅ x" :=
-  (ren1 a x) (at level 20, right associativity) : subst_scope.
+  (ren_term a x) (at level 20, right associativity) : subst_scope.
 
 Notation "t <[ s ]" :=
-  (subst1 s t) (at level 10, right associativity) : subst_scope.
+  (subst_term s t) (at level 10, right associativity) : subst_scope.
 
 Notation "↑" := (shift) : subst_scope.
 
