@@ -682,8 +682,7 @@ Proof.
     + econstructor. 1,3: eassumption.
       intros M x E ξ' Ξ'' Θ R B hM hE hx.
       rewrite <- einst_eget. rewrite <- einst_einst.
-      (* TODO: Maybe a lemma to type those from hξ? *)
-      admit.
+      eauto.
     + rewrite einst_einst. reflexivity.
   - cbn. subst rξ. rewrite eget_ren.
     eapply meta_conv.
