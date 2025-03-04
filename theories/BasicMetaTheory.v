@@ -533,7 +533,7 @@ Definition inst_typing_gen Σ Ξ Δ ξ Ξ' Γ :=
   inst_typing Σ (typing Σ Ξ) Δ ξ Ξ' ∧
   (∀ x A,
     nth_error Γ x = Some A →
-    nth_error Δ x = Some (einst (ren_eargs (plus (length Γ - S x)) ξ) A)
+    nth_error Δ x = Some (einst ξ A)
   ).
 
 Lemma eget_ren ξ M x ρ :
@@ -549,7 +549,7 @@ Qed.
 
 Lemma inst_typing_gen_lift Σ Ξ Δ ξ Ξ' Γ A :
   inst_typing_gen Σ Ξ Δ ξ Ξ' Γ →
-  inst_typing_gen Σ Ξ (Δ ,, einst (ren_eargs (plus (length Γ)) ξ) A) (lift_eargs ξ) Ξ' (Γ ,, A).
+  inst_typing_gen Σ Ξ (Δ ,, einst ξ A) (lift_eargs ξ) Ξ' (Γ ,, A).
 Proof.
   intros [h1 h2].
   split.
@@ -568,7 +568,9 @@ Proof.
   - intros x B h.
     destruct x as [| x].
     + cbn in *. inversion h. f_equal. f_equal.
-      (* This time something is off, it seems ξ needs to change as well? *)
+      (* This time something is off, it seems ξ needs to change as well?
+        Maybe we need some S somewhere?
+      *)
       admit.
     + cbn in *. erewrite h2. 2: eassumption.
       (* Same problem here! *)
@@ -590,14 +592,25 @@ Proof.
   - cbn. eapply meta_conv.
     + econstructor. apply hξ. eassumption.
     + rewrite ren_inst. f_equal.
-      rewrite ren_eargs_comp.
+
+      (* Ok, so we would need to have something other than ξ, rather something
+        that lives in a smaller context, so ξ before it was lifted.
+        Should we indeed use a pair of ξ and some ρ? And then
+        einst ξ ρ (assm M x) is ρ ⋅ eget ξ M x?
+
+        Could also just be a nat.
+      *)
+
+
+      (* rewrite ren_eargs_comp.
       apply ren_eargs_id_ext.
       intro n. cbn.
       pose proof (nth_error_Some Γ x) as e%proj1.
-      forward e by congruence.
-      (* The LHS is like plus (length Γ) too! *)
+      forward e by congruence. *)
       admit.
   - cbn. constructor. 1: eauto.
+    apply IHht2.
+    (* apply inst_typing_gen_lift. *)
     admit.
   - admit.
   - admit.
