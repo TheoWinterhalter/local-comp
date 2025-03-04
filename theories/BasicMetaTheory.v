@@ -234,6 +234,22 @@ Proof.
   rasimpl. reflexivity.
 Qed.
 
+Lemma rtyping_comp Γ Δ Θ ρ ρ' :
+  rtyping Δ ρ Θ →
+  rtyping Γ ρ' Δ →
+  rtyping Γ (ρ >> ρ') Θ.
+Proof.
+  intros hρ hρ'. intros x A e.
+  simpl. rasimpl.
+  eapply hρ in e as [B [e h]].
+  eapply hρ' in e as [C [e h']].
+  exists C. split. 1: assumption.
+  apply (f_equal (λ t, ρ' ⋅ t)) in h. rasimpl in h.
+  rasimpl in h'. rewrite h' in h.
+  etransitivity. 1: exact h.
+  reflexivity.
+Qed.
+
 Lemma ren_eargs_comp :
   ∀ ρ ρ' ξ,
     ren_eargs ρ (ren_eargs ρ' ξ) = ren_eargs (ρ' >> ρ) ξ.
