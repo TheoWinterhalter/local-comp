@@ -611,12 +611,11 @@ Lemma einst_eget ξ ξ' M x :
   einst ξ (eget ξ' M x) = eget (map (map (einst ξ)) ξ') M x.
 Proof.
   unfold eget. rewrite nth_error_map.
-  destruct nth_error. all: cbn. 2: admit.
-  rewrite nth_error_map.
-  destruct nth_error. all: cbn. 2: admit.
+  destruct nth_error. 2: reflexivity.
+  cbn. rewrite nth_error_map.
+  destruct nth_error. 2: reflexivity.
   reflexivity.
-  (* Probably need some more properties about ξ? *)
-Abort.
+Qed.
 
 Lemma einst_einst ξ ξ' t :
   einst ξ (einst ξ' t) = einst (map (map (einst ξ)) ξ') t.
@@ -642,8 +641,8 @@ Proof.
     rewrite !map_map. apply map_ext_All.
     eapply All_impl. 2: eassumption.
     auto.
-  - cbn.
-Abort.
+  - cbn. apply einst_eget.
+Qed.
 
 Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
   inst_typing Σ Ξ Δ ξ Ξ' →

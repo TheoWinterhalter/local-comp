@@ -10,7 +10,7 @@ Set Default Goal Selector "!".
 (** Extension instantiation **)
 
 Definition eget (ξ : eargs) M x :=
-  let default := assm M x in (* Could also be a dummy *)
+  let default := Sort 0 in
   match nth_error ξ M with
   | Some σ =>
     match nth_error σ x with
