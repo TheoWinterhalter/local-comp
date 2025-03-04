@@ -510,6 +510,71 @@ Admitted.
 
 (** Instances preserve conversion and typing **)
 
+Axiom ren_eargs_ext : ∀ ρ ζ ξ,
+  (∀ n, ρ n = ζ n) →
+  ren_eargs ρ ξ = ren_eargs ζ ξ.
+
+Lemma lift_liftn n ξ :
+  lift_eargs (liftn n ξ) = liftn (S n) ξ.
+Proof.
+  rewrite ren_eargs_comp. reflexivity.
+Qed.
+
+Lemma eget_ren ξ M x ρ :
+  eget (ren_eargs ρ ξ) M x = ρ ⋅ (eget ξ M x).
+Proof.
+  unfold eget, ren_eargs.
+  rewrite nth_error_map.
+  destruct (nth_error ξ M). 2: reflexivity.
+  cbn. rewrite nth_error_map.
+  destruct (nth_error _ x). 2: reflexivity.
+  cbn. reflexivity.
+Qed.
+
+Lemma subst_inst σ ξ t n m :
+  einst (liftn n ξ) (t <[ σ ]) =
+  (einst (liftn m ξ) t) <[ σ >> einst (liftn n ξ) ].
+Proof.
+  induction t using term_rect in n, m, σ, ξ |- *.
+  all: try solve [ cbn ; f_equal ; eauto ].
+  - cbn. f_equal. 1: eauto.
+    rewrite lift_liftn. erewrite IHt2.
+    rasimpl. rewrite lift_liftn.
+    apply ext_term.
+    intro. core.unfold_funcomp. cbn.
+    destruct x.
+    + cbn. reflexivity.
+    + cbn. repeat core.unfold_funcomp.
+      rewrite ren_inst.
+      rewrite lift_liftn. reflexivity.
+  - cbn. f_equal. 1: eauto.
+    rewrite lift_liftn. erewrite IHt2.
+    rasimpl. rewrite lift_liftn.
+    apply ext_term.
+    intro. core.unfold_funcomp. cbn.
+    destruct x.
+    + cbn. reflexivity.
+    + cbn. repeat core.unfold_funcomp.
+      rewrite ren_inst.
+      rewrite lift_liftn. reflexivity.
+  - cbn. f_equal.
+    rewrite !map_map. apply map_ext_All.
+    eapply All_impl. 2: eassumption.
+    intros l hl.
+    rewrite !map_map. apply map_ext_All.
+    eapply All_impl. 2: eassumption.
+    auto.
+  - cbn. rewrite !eget_ren. rasimpl.
+    rewrite rinstInst'_term.
+    apply ext_term. intro k.
+    unfold core.funcomp.
+    (* Obviously wrong,
+      the main issue is that n and m are completely unrelated, and unrelated to
+      σ itself.
+      It's quite unclear however how to improve the situation.
+    *)
+Abort.
+
 Definition subst_eargs σ (ξ : eargs) : eargs :=
   map (map (subst_term σ)) ξ.
 
@@ -554,21 +619,6 @@ Proof.
   - reflexivity.
   - cbn. eauto.
 Qed.
-
-Lemma eget_ren ξ M x ρ :
-  eget (ren_eargs ρ ξ) M x = ρ ⋅ (eget ξ M x).
-Proof.
-  unfold eget, ren_eargs.
-  rewrite nth_error_map.
-  destruct (nth_error ξ M). 2: reflexivity.
-  cbn. rewrite nth_error_map.
-  destruct (nth_error _ x). 2: reflexivity.
-  cbn. reflexivity.
-Qed.
-
-Axiom ren_eargs_ext : ∀ ρ ζ ξ,
-  (∀ n, ρ n = ζ n) →
-  ren_eargs ρ ξ = ren_eargs ζ ξ.
 
 Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
   inst_typing Σ Ξ Δ ξ Ξ' →

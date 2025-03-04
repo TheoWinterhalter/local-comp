@@ -25,6 +25,8 @@ Definition ren_eargs ρ (ξ : eargs) : eargs :=
 
 Notation lift_eargs ξ := (ren_eargs S ξ).
 
+Notation liftn n ξ := (ren_eargs (plus n) ξ).
+
 Fixpoint einst (ξ : eargs) (t : term) :=
   match t with
   | var n => var n
