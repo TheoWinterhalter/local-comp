@@ -531,14 +531,17 @@ Proof.
   cbn. reflexivity.
 Qed.
 
-Lemma subst_inst σ ξ t n m :
+Lemma subst_inst σ ξ t n m p :
+  (∀ k, σ (m + k) = var (p + k)) →
   einst (liftn n ξ) (t <[ σ ]) =
   (einst (liftn m ξ) t) <[ σ >> einst (liftn n ξ) ].
 Proof.
-  induction t using term_rect in n, m, σ, ξ |- *.
+  intro hσ.
+  induction t using term_rect in n, m, p, σ, hσ, ξ |- *.
   all: try solve [ cbn ; f_equal ; eauto ].
   - cbn. f_equal. 1: eauto.
-    rewrite lift_liftn. erewrite IHt2.
+    rewrite lift_liftn. rewrite IHt2 with (m := S m) (p := S p).
+    2:{ intro. cbn. core.unfold_funcomp. rewrite hσ. reflexivity. }
     rasimpl. rewrite lift_liftn.
     apply ext_term.
     intro. core.unfold_funcomp. cbn.
@@ -548,7 +551,8 @@ Proof.
       rewrite ren_inst.
       rewrite lift_liftn. reflexivity.
   - cbn. f_equal. 1: eauto.
-    rewrite lift_liftn. erewrite IHt2.
+    rewrite lift_liftn. rewrite IHt2 with (m := S m) (p := S p).
+    2:{ intro. cbn. core.unfold_funcomp. rewrite hσ. reflexivity. }
     rasimpl. rewrite lift_liftn.
     apply ext_term.
     intro. core.unfold_funcomp. cbn.
@@ -563,16 +567,13 @@ Proof.
     intros l hl.
     rewrite !map_map. apply map_ext_All.
     eapply All_impl. 2: eassumption.
-    auto.
+    eauto.
   - cbn. rewrite !eget_ren. rasimpl.
     rewrite rinstInst'_term.
     apply ext_term. intro k.
     unfold core.funcomp.
-    (* Obviously wrong,
-      the main issue is that n and m are completely unrelated, and unrelated to
-      σ itself.
-      It's quite unclear however how to improve the situation.
-    *)
+    rewrite hσ. cbn.
+    (* Ok, now n = p as expected *)
 Abort.
 
 Definition subst_eargs σ (ξ : eargs) : eargs :=
