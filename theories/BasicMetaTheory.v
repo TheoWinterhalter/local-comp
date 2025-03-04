@@ -607,11 +607,49 @@ Proof.
   - cbn. eauto.
 Qed.
 
+Lemma einst_eget ξ ξ' M x :
+  einst ξ (eget ξ' M x) = eget (map (map (einst ξ)) ξ') M x.
+Proof.
+  unfold eget. rewrite nth_error_map.
+  destruct nth_error. all: cbn. 2: admit.
+  rewrite nth_error_map.
+  destruct nth_error. all: cbn. 2: admit.
+  reflexivity.
+  (* Probably need some more properties about ξ? *)
+Abort.
+
+Lemma einst_einst ξ ξ' t :
+  einst ξ (einst ξ' t) = einst (map (map (einst ξ)) ξ') t.
+Proof.
+  induction t using term_rect in ξ, ξ' |- *.
+  all: try solve [ cbn ; f_equal ; eauto ].
+  - cbn. f_equal. 1: eauto.
+    rewrite IHt2. f_equal.
+    unfold ren_eargs.
+    rewrite !map_map. apply map_ext. intro σ.
+    rewrite !map_map. apply map_ext. intro t.
+    symmetry. apply ren_inst.
+  - cbn. f_equal. 1: eauto.
+    rewrite IHt2. f_equal.
+    unfold ren_eargs.
+    rewrite !map_map. apply map_ext. intro σ.
+    rewrite !map_map. apply map_ext. intro t.
+    symmetry. apply ren_inst.
+  - cbn. f_equal.
+    rewrite !map_map. apply map_ext_All.
+    eapply All_impl. 2: eassumption.
+    intros σ hσ.
+    rewrite !map_map. apply map_ext_All.
+    eapply All_impl. 2: eassumption.
+    auto.
+  - cbn.
+Abort.
+
 Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
   inst_typing Σ Ξ Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ t : A →
-  let rξ := ren_eargs (plus (length Γ)) ξ in
-  Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst rξ t : einst rξ A.
+  let rξ := liftn (length Γ) ξ in
+  Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst rξ t : einst rξ A .
 Proof.
   intros hξ ht rξ.
   induction ht using typing_ind in Ξ, Δ, ξ, rξ, hξ |- *.
@@ -643,6 +681,7 @@ Proof.
       apply ext_term. intros []. all: reflexivity.
   - cbn. eapply meta_conv.
     + econstructor. 1,3: eassumption.
+      intros M x E ξ' Ξ'' Θ R B hM hE hx.
       admit.
     + admit.
   - cbn. subst rξ. rewrite eget_ren.
