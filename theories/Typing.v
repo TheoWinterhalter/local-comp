@@ -143,7 +143,7 @@ Section Inst.
       let rhs := (einst ξ (einst ξ' (delocal M rule.(cr_rep)))) <[ ups n σ ] in
       Γ ,,, Θ ⊢ lhs ≡ rhs.
 
-  Definition inst_typing (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
+  Definition inst_typing_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
     ∀ M x E ξ' Ξ'' Δ R A,
       nth_error Ξ' M = Some (E, ξ') →
       nth_error Σ E = Some (Ext Ξ'' Δ R) →
@@ -197,7 +197,7 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
 | type_const :
     ∀ c ξ Ξ' A t,
       nth_error Σ c = Some (Def Ξ' A t) →
-      inst_typing typing Γ ξ Ξ' →
+      inst_typing_ typing Γ ξ Ξ' →
       closed A = true →
       Γ ⊢ const c ξ : einst ξ A
 
@@ -244,7 +244,7 @@ Inductive ewf (Σ : gctx) : ectx → Prop :=
 | ewf_cons Ξ E ξ' Ξ' Δ R :
     ewf Σ Ξ →
     nth_error Σ E = Some (Ext Ξ' Δ R) →
-    inst_typing Σ (typing Σ Ξ) ∙ ξ' Ξ' →
+    inst_typing_ Σ (typing Σ Ξ) ∙ ξ' Ξ' →
     ewf Σ ((E, ξ') :: Ξ).
 
 (** Global environment typing **)
@@ -321,6 +321,7 @@ Proof.
 Qed.
 
 Notation styping Σ Ξ := (styping_ (typing Σ Ξ)).
+Notation inst_typing Σ Ξ := (inst_typing_ Σ (typing Σ Ξ)).
 
 #[export] Instance styping_morphism Σ Ξ :
   Proper (eq ==> pointwise_relation _ eq ==> eq ==> iff) (styping Σ Ξ).
@@ -357,15 +358,6 @@ Proof.
   constructor. all: eauto.
 Qed.
 
-Lemma inst_typing_and Σ Γ P Q ξ Ξ' :
-  inst_typing Σ P Γ ξ Ξ' →
-  inst_typing Σ Q Γ ξ Ξ' →
-  inst_typing Σ (λ Δ t A, P Δ t A ∧ Q Δ t A) Γ ξ Ξ'.
-Proof.
-  intros h1 h2.
-  red. eauto.
-Qed.
-
 Lemma styping_impl P Q Γ σ Δ :
   styping_ P Γ σ Δ →
   (∀ Θ t A, P Θ t A → Q Θ t A) →
@@ -375,13 +367,4 @@ Proof.
   induction h. 1: constructor.
   constructor. 1: assumption.
   eauto.
-Qed.
-
-Lemma inst_typing_impl Σ Γ P Q ξ Ξ' :
-  inst_typing Σ P Γ ξ Ξ' →
-  (∀ Δ t A, P Δ t A → Q Δ t A) →
-  inst_typing Σ Q Γ ξ Ξ'.
-Proof.
-  intros h hi.
-  red. eauto.
 Qed.

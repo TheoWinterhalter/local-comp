@@ -142,8 +142,8 @@ Lemma typing_ind :
     ) →
     (∀ Γ c ξ Ξ' A t,
       nth_error Σ c = Some (Def Ξ' A t) →
-      inst_typing Σ (typing Σ Ξ) Γ ξ Ξ' →
-      inst_typing Σ P Γ ξ Ξ' →
+      inst_typing Σ Ξ Γ ξ Ξ' →
+      inst_typing_ Σ P Γ ξ Ξ' →
       closed A = true →
       P Γ (const c ξ) (einst ξ A)
     ) →
@@ -248,6 +248,16 @@ Proof.
   rasimpl in h'. rewrite h' in h.
   etransitivity. 1: exact h.
   reflexivity.
+Qed.
+
+Lemma rtyping_add Γ Δ :
+  rtyping (Γ ,,, Δ) (plus (length Δ)) Γ.
+Proof.
+  intros x A e.
+  exists A. split.
+  - rewrite nth_error_app2. 2: lia.
+    rewrite <- e. f_equal. lia.
+  - apply extRen_term. intro. core.unfold_funcomp. lia.
 Qed.
 
 Lemma ren_eargs_comp :
@@ -408,7 +418,7 @@ Proof.
     + cbn. rewrite IHσ. reflexivity.
 Qed.
 
-Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
+(* Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →
   inst_typing Σ (typing Σ Ξ) Γ ξ Ξ' →
   inst_typing Σ (λ Γ t A,
@@ -418,7 +428,7 @@ Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
 Proof.
   intros hρ hξ ih.
   intros M x E ξ' Ξ'' Θ R A hM hE hx.
-Abort.
+Abort. *)
 
 (* Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →
@@ -514,7 +524,7 @@ Proof.
 Abort.
 
 Lemma conv_einst Σ Ξ Ξ' Γ u v ξ :
-  inst_typing Σ (typing Σ Ξ) Γ ξ Ξ' →
+  inst_typing Σ Ξ Γ ξ Ξ' →
   Σ ;; Ξ' | ∙ ⊢ u ≡ v →
   Σ ;; Ξ | Γ ⊢ einst ξ u ≡ einst ξ v.
 Proof.
@@ -545,13 +555,6 @@ Proof.
   - cbn. eauto.
 Qed.
 
-Definition inst_typing_gen Σ Ξ Δ ξ Ξ' Γ :=
-  inst_typing Σ (typing Σ Ξ) Δ ξ Ξ' ∧
-  (∀ x A,
-    nth_error Γ x = Some A →
-    nth_error Δ x = Some (einst ξ A)
-  ).
-
 Lemma eget_ren ξ M x ρ :
   eget (ren_eargs ρ ξ) M x = ρ ⋅ (eget ξ M x).
 Proof.
@@ -563,87 +566,18 @@ Proof.
   cbn. reflexivity.
 Qed.
 
-Lemma inst_typing_gen_lift Σ Ξ Δ ξ Ξ' Γ A :
-  inst_typing_gen Σ Ξ Δ ξ Ξ' Γ →
-  inst_typing_gen Σ Ξ (Δ ,, einst ξ A) (lift_eargs ξ) Ξ' (Γ ,, A).
-Proof.
-  intros [h1 h2].
-  split.
-  - intros M x E ξ' Ξ'' Θ R B hM hE hx.
-    rewrite eget_ren.
-    eapply meta_conv.
-    + eapply typing_ren. 1: eapply rtyping_S.
-      eauto.
-    + rewrite ren_inst. f_equal.
-      rewrite ren_inst. f_equal.
-      * (* This one should be closed, so it should be ok *)
-        (* We just need to add it to the def *)
-        admit.
-      * unfold delocal. rasimpl.
-        apply ext_term. cbn. auto.
-  - intros x B h.
-    destruct x as [| x].
-    + cbn in *. inversion h. f_equal. f_equal.
-      (* This time something is off, it seems ξ needs to change as well?
-        Maybe we need some S somewhere?
-      *)
-      admit.
-    + cbn in *. erewrite h2. 2: eassumption.
-      (* Same problem here! *)
-      admit.
-Abort.
-
-Axiom ren_eargs_id_ext : ∀ ρ ξ,
-  (∀ n, ρ n = n) →
-  ren_eargs ρ ξ = ξ.
+Axiom ren_eargs_ext : ∀ ρ ζ ξ,
+  (∀ n, ρ n = ζ n) →
+  ren_eargs ρ ξ = ren_eargs ζ ξ.
 
 Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
-  inst_typing_gen Σ Ξ Δ ξ Ξ' Γ →
+  inst_typing Σ Ξ Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ t : A →
-  Σ ;; Ξ | Δ ⊢ einst ξ t : einst ξ A.
+  let rξ := ren_eargs (plus (length Γ)) ξ in
+  Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst rξ t : einst rξ A.
 Proof.
-  intros hξ ht.
-  induction ht using typing_ind in Ξ, Δ, ξ, hξ |- *.
-  all: try solve [ cbn ; econstructor ; eauto ].
-  - cbn. eapply meta_conv.
-    + econstructor. apply hξ. eassumption.
-    + rewrite ren_inst. f_equal.
-
-      (* Ok, so we would need to have something other than ξ, rather something
-        that lives in a smaller context, so ξ before it was lifted.
-        Should we indeed use a pair of ξ and some ρ? And then
-        einst ξ ρ (assm M x) is ρ ⋅ eget ξ M x?
-
-        Could also just be a nat.
-      *)
-
-
-      (* rewrite ren_eargs_comp.
-      apply ren_eargs_id_ext.
-      intro n. cbn.
-      pose proof (nth_error_Some Γ x) as e%proj1.
-      forward e by congruence. *)
-      admit.
-  - cbn. constructor. 1: eauto.
-    apply IHht2.
-    (* apply inst_typing_gen_lift. *)
-    admit.
-  - admit.
-  - admit.
-  - cbn. eapply meta_conv.
-    + econstructor. 1,3: eassumption.
-      admit.
-    + admit.
-  - cbn. eapply hξ. all: eassumption.
-Abort.
-
-Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
-  inst_typing Σ (typing Σ Ξ) Δ ξ Ξ' →
-  Σ ;; Ξ' | Γ ⊢ t : A →
-  Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst ξ t : einst ξ A.
-Proof.
-  intros hξ ht.
-  induction ht using typing_ind in Ξ, Δ, ξ, hξ |- *.
+  intros hξ ht rξ.
+  induction ht using typing_ind in Ξ, Δ, ξ, rξ, hξ |- *.
   all: try solve [ cbn ; econstructor ; eauto ].
   - cbn. eapply meta_conv.
     + econstructor. rewrite nth_error_app1.
@@ -652,43 +586,32 @@ Proof.
       rewrite H. cbn. reflexivity.
     + rewrite ren_inst. f_equal.
       rewrite ren_eargs_comp.
-      (* The LHS is like plus (length Γ) so it's still not ok.
-
-        I guess we need to also lift everything?
-        Again feels wrong, so it would be nice be able to use renaming in
-        general?
-        Also it is wrong, because lifting makes the variable a wrong reference.
-
-       *)
-    (* Using the same context is also broken because it should actually be
-      instantiated too!
-      The weird thing is that then ξ should be typed in ctx_einst Γ too?
-      This seems very wrong.
-      *)
-      admit.
+      apply ren_eargs_ext.
+      cbn. intro.
+      pose proof (nth_error_Some Γ x) as e%proj1.
+      forward e by congruence.
+      lia.
   - cbn. constructor. 1: eauto.
-    rewrite app_comm_cons.
-    (* change (ctx_einst ?ξ ?Γ ,, einst ?ξ ?A) with (ctx_einst ξ (Γ ,, A)). *)
-    (* eapply IHht2. *)
-    cbn in IHht2.
-    specialize IHht2 with (ξ := lift_eargs ξ).
-    (* Is ctx_einst wrong then? *)
-    admit.
-  - admit.
-  - admit.
+    subst rξ. rewrite ren_eargs_comp. apply IHht2. assumption.
+  - cbn. econstructor. 1: eauto.
+    + subst rξ. rewrite ren_eargs_comp. apply IHht2. assumption.
+    + subst rξ. rewrite ren_eargs_comp. apply IHht3. assumption.
+  - cbn. eapply meta_conv.
+    + cbn in *. econstructor. all: eauto.
+      subst rξ. rewrite ren_eargs_comp. apply IHht4. assumption.
+    + rasimpl. admit.
   - cbn. eapply meta_conv.
     + econstructor. 1,3: eassumption.
       admit.
     + admit.
-  - cbn.
-
-    (* Should we define inst_typing Σ Ξ Γ ξ Ξ' as
-
-      ∀ M x E ξ' Ξ'' Δ R,
-        nth_error Ξ' M = Some (E, ξ') →
-        nth_error Σ E = Some (Ext Ξ'' Δ R) →
-        nth_error Δ x = Some A →
-        Σ ;; Ξ | Γ ⊢ eget ξ M x : einst ξ (einst ξ' (delocal M A))
-
-     *)
-Abort.
+  - cbn. subst rξ. rewrite eget_ren.
+    eapply meta_conv.
+    + eapply typing_ren.
+      1:{ erewrite <- length_ctx_einst. eapply rtyping_add. }
+      eapply hξ. all: eassumption.
+    + rewrite ren_inst. f_equal.
+      rewrite ren_inst. f_equal.
+      * (* ξ0 is closed *) admit.
+      * unfold delocal. rasimpl.
+        apply ext_term. cbn. auto.
+Admitted.
