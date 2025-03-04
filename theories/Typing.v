@@ -28,6 +28,9 @@ Fixpoint scoped n t :=
 
 Notation closed t := (scoped 0 t).
 
+Definition closed_eargs (ξ : eargs) :=
+  forallb (forallb (λ t, closed t)) ξ.
+
 Section Typing.
 
 Reserved Notation "Γ ⊢ t : A"
@@ -206,6 +209,7 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
       nth_error Ξ M = Some (E, ξ) →
       nth_error Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
+      closed_eargs ξ = true →
       Γ ⊢ assm M x : einst ξ (delocal M A)
 
 | type_conv :

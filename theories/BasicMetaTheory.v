@@ -150,7 +150,9 @@ Lemma typing_ind :
     (∀ Γ M x E ξ Ξ' Δ R A,
       nth_error Ξ M = Some (E, ξ) →
       nth_error Σ E = Some (Ext Ξ' Δ R) →
-      nth_error Δ x = Some A → P Γ (assm M x) (einst ξ (delocal M A))
+      nth_error Δ x = Some A →
+      closed_eargs ξ = true →
+      P Γ (assm M x) (einst ξ (delocal M A))
     ) →
     (∀ Γ i A B t,
       Σ ;; Ξ | Γ ⊢ t : A →
@@ -353,6 +355,36 @@ Proof.
   eapply scoped_ren in h. eauto.
 Qed.
 
+Axiom ren_eargs_ext : ∀ ρ ζ ξ,
+  (∀ n, ρ n = ζ n) →
+  ren_eargs ρ ξ = ren_eargs ζ ξ.
+
+Axiom ren_eargs_id : ∀ ξ,
+  ren_eargs id ξ = ξ.
+
+Lemma ren_eargs_id_ext ρ ξ :
+  (∀ n, ρ n = n) →
+  ren_eargs ρ ξ = ξ.
+Proof.
+  intro h.
+  etransitivity. 2: eapply ren_eargs_id.
+  apply ren_eargs_ext. assumption.
+Qed.
+
+Corollary closed_ren_eargs ρ ξ :
+  closed_eargs ξ = true →
+  ren_eargs ρ ξ = ξ.
+Proof.
+  intros h.
+  etransitivity. 2: apply ren_eargs_id.
+  unfold ren_eargs. unfold closed_eargs in h.
+  apply map_ext_All. eapply All_impl.
+  2:{ apply forallb_All. eassumption. }
+  cbn. intros σ hσ%forallb_All.
+  apply map_ext_All. eapply All_impl. 2: eassumption.
+  cbn. rasimpl. apply closed_ren.
+Qed.
+
 Lemma conv_ren :
   ∀ Σ Ξ Γ Δ ρ u v,
     rtyping Γ ρ Δ →
@@ -509,10 +541,6 @@ Proof.
 Admitted.
 
 (** Instances preserve conversion and typing **)
-
-Axiom ren_eargs_ext : ∀ ρ ζ ξ,
-  (∀ n, ρ n = ζ n) →
-  ren_eargs ρ ξ = ren_eargs ζ ξ.
 
 Lemma lift_liftn n ξ :
   lift_eargs (liftn n ξ) = liftn (S n) ξ.
@@ -691,7 +719,8 @@ Proof.
       eapply hξ. all: eassumption.
     + rewrite ren_inst. f_equal.
       rewrite ren_inst. f_equal.
-      * (* ξ0 is closed *) admit.
+      * apply closed_ren_eargs. assumption.
       * unfold delocal. rasimpl.
         apply ext_term. cbn. auto.
+  - admit.
 Admitted.
