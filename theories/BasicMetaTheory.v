@@ -531,16 +531,16 @@ Proof.
   cbn. reflexivity.
 Qed.
 
-Lemma subst_inst σ ξ t n m p :
-  (∀ k, σ (m + k) = var (p + k)) →
+Lemma subst_inst σ ξ t n m :
+  (∀ k, σ (m + k) = var (n + k)) →
   einst (liftn n ξ) (t <[ σ ]) =
   (einst (liftn m ξ) t) <[ σ >> einst (liftn n ξ) ].
 Proof.
   intro hσ.
-  induction t using term_rect in n, m, p, σ, hσ, ξ |- *.
+  induction t using term_rect in n, m, σ, hσ, ξ |- *.
   all: try solve [ cbn ; f_equal ; eauto ].
   - cbn. f_equal. 1: eauto.
-    rewrite lift_liftn. rewrite IHt2 with (m := S m) (p := S p).
+    rewrite lift_liftn. rewrite IHt2 with (m := S m).
     2:{ intro. cbn. core.unfold_funcomp. rewrite hσ. reflexivity. }
     rasimpl. rewrite lift_liftn.
     apply ext_term.
@@ -551,7 +551,7 @@ Proof.
       rewrite ren_inst.
       rewrite lift_liftn. reflexivity.
   - cbn. f_equal. 1: eauto.
-    rewrite lift_liftn. rewrite IHt2 with (m := S m) (p := S p).
+    rewrite lift_liftn. rewrite IHt2 with (m := S m).
     2:{ intro. cbn. core.unfold_funcomp. rewrite hσ. reflexivity. }
     rasimpl. rewrite lift_liftn.
     apply ext_term.
@@ -572,22 +572,8 @@ Proof.
     rewrite rinstInst'_term.
     apply ext_term. intro k.
     unfold core.funcomp.
-    rewrite hσ. cbn.
-    (* Ok, now n = p as expected *)
-Abort.
-
-Definition subst_eargs σ (ξ : eargs) : eargs :=
-  map (map (subst_term σ)) ξ.
-
-Lemma subst_inst σ ξ t :
-  (einst ξ t) <[ σ ] = einst (subst_eargs σ ξ) (t <[ σ ]).
-Proof.
-  induction t using term_rect in σ, ξ |- *.
-  all: try solve [ cbn ; rewrite ?lift_ren_eargs ; f_equal ; eauto ].
-  - cbn. (* Unclear what it should be, maybe it would be good to have
-    a simpler way to represent instances.
-   *)
-Abort.
+    rewrite hσ. cbn. reflexivity.
+Qed.
 
 Lemma conv_einst Σ Ξ Ξ' Γ u v ξ :
   inst_typing Σ Ξ Γ ξ Ξ' →
