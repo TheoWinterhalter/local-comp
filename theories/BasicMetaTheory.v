@@ -636,7 +636,11 @@ Proof.
   - cbn. eapply meta_conv.
     + cbn in *. econstructor. all: eauto.
       subst rξ. rewrite ren_eargs_comp. apply IHht4. assumption.
-    + rasimpl. admit.
+    + rasimpl.
+      subst rξ. erewrite subst_inst with (m := S (length Γ)).
+      2:{ cbn. auto. }
+      rewrite lift_liftn.
+      apply ext_term. intros []. all: reflexivity.
   - cbn. eapply meta_conv.
     + econstructor. 1,3: eassumption.
       admit.
