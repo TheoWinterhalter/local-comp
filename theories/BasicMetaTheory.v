@@ -661,7 +661,7 @@ Proof.
 Qed.
 
 Lemma conv_einst Σ Ξ Ξ' Γ Δ u v ξ :
-  inst_typing Σ Ξ Δ ξ Ξ' →
+  inst_equations Σ Ξ Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ u ≡ v →
   let rξ := liftn (length Γ) ξ in
   Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst rξ u ≡ einst rξ v.
@@ -674,12 +674,22 @@ Proof.
     cbn. rewrite lift_liftn. apply ext_term. intros []. all: reflexivity.
   - cbn. eapply meta_conv_trans_r. 1:{ eapply conv_unfold. all: eassumption. }
     rewrite einst_einst. reflexivity.
-  - (* Maybe this should be part of inst_typing directly? *)
-    (* At least this is inst_equations that should be included
-      maybe instead of inst_typing for this lemma!
-    *)
-    erewrite subst_inst. 2: admit. (* Will need add some assumption about σ *)
-    erewrite subst_inst. 2: admit.
+  - red in hξ.
+    (* Here we need the constraint that says we can do this! *)
+    admit.
+  - cbn. constructor. 1: eauto.
+    rewrite lift_liftn.
+    apply IHh2. assumption.
+  - cbn. constructor. 1: eauto.
+    rewrite lift_liftn.
+    apply IHh2. assumption.
+  - cbn. constructor.
+    apply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    intros l l' h.
+    apply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    cbn. auto.
 Admitted.
 
 Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
