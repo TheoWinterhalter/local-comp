@@ -603,18 +603,6 @@ Proof.
     rewrite hσ. cbn. reflexivity.
 Qed.
 
-Lemma conv_einst Σ Ξ Ξ' Γ u v ξ :
-  inst_typing Σ Ξ Γ ξ Ξ' →
-  Σ ;; Ξ' | ∙ ⊢ u ≡ v →
-  Σ ;; Ξ | Γ ⊢ einst ξ u ≡ einst ξ v.
-Proof.
-  intros hξ h.
-  induction h using conversion_ind in Γ, Ξ, ξ, hξ |- *.
-  all: try solve [ cbn ; econstructor ; eauto ].
-  - cbn. admit.
-  - cbn. admit.
-Admitted.
-
 Lemma nth_error_ctx_einst ξ Γ x :
   nth_error (ctx_einst ξ Γ) x =
   option_map (einst (ren_eargs (plus (length Γ - S x)) ξ)) (nth_error Γ x).
@@ -672,11 +660,33 @@ Proof.
   - cbn. apply einst_eget.
 Qed.
 
+Lemma conv_einst Σ Ξ Ξ' Γ Δ u v ξ :
+  inst_typing Σ Ξ Δ ξ Ξ' →
+  Σ ;; Ξ' | Γ ⊢ u ≡ v →
+  let rξ := liftn (length Γ) ξ in
+  Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst rξ u ≡ einst rξ v.
+Proof.
+  intros hξ h. cbn.
+  induction h using conversion_ind in Ξ, Δ, ξ, hξ |- *.
+  all: try solve [ cbn ; econstructor ; eauto ].
+  - cbn. rewrite subst_inst with (m := S (length Γ)). 2: auto.
+    eapply meta_conv_trans_r. 1: constructor.
+    cbn. rewrite lift_liftn. apply ext_term. intros []. all: reflexivity.
+  - cbn. eapply meta_conv_trans_r. 1:{ eapply conv_unfold. all: eassumption. }
+    rewrite einst_einst. reflexivity.
+  - (* Maybe this should be part of inst_typing directly? *)
+    (* At least this is inst_equations that should be included
+      maybe instead of inst_typing for this lemma!
+    *)
+    erewrite subst_inst. 2: admit. (* Will need add some assumption about σ *)
+    erewrite subst_inst. 2: admit.
+Admitted.
+
 Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
   inst_typing Σ Ξ Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ t : A →
   let rξ := liftn (length Γ) ξ in
-  Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst rξ t : einst rξ A .
+  Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst rξ t : einst rξ A.
 Proof.
   intros hξ ht rξ.
   induction ht using typing_ind in Ξ, Δ, ξ, rξ, hξ |- *.
@@ -722,5 +732,6 @@ Proof.
       * apply closed_ren_eargs. assumption.
       * unfold delocal. rasimpl.
         apply ext_term. cbn. auto.
-  - admit.
+  - econstructor. 1,3: eauto.
+
 Admitted.
