@@ -129,14 +129,6 @@ Section Inst.
 
   Notation "Γ ⊢ u : A" := (typing Γ u A).
 
-  (** Substitution typing **)
-  Inductive styping_ (Γ : ctx) (σ : nat → term) : ctx → Prop :=
-  | type_nil : styping_ Γ σ ∙
-  | type_cons Δ A :
-      styping_ Γ (S >> σ) Δ →
-      Γ ⊢ σ 0 : A <[ S >> σ ] →
-      styping_ Γ σ (Δ ,, A).
-
   Definition inst_equations (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
     ∀ E Ξ'' Δ R M ξ' σ n rule,
       nth_error Σ E = Some (Ext Ξ'' Δ R) →
@@ -322,52 +314,5 @@ Proof.
   intros Σ Ξ Γ u ? <-. ttconv.
 Qed.
 
-Notation styping Σ Ξ := (styping_ (typing Σ Ξ)).
 Notation inst_eget Σ Ξ := (inst_eget_ Σ Ξ (typing Σ Ξ)).
 Notation inst_typing Σ Ξ := (inst_typing_ Σ Ξ (typing Σ Ξ)).
-
-#[export] Instance styping_morphism Σ Ξ :
-  Proper (eq ==> pointwise_relation _ eq ==> eq ==> iff) (styping Σ Ξ).
-Proof.
-  intros Γ ? <- σ σ' e Δ ? <-.
-  revert σ σ' e. wlog_iff. intros σ σ' e h.
-  induction h as [| ? ? ? ? ih ? ] in σ', e |- *.
-  - constructor.
-  - constructor.
-    + apply ih. intros n. apply e.
-    + rewrite <- e. assumption.
-Qed.
-
-Lemma autosubst_simpl_styping :
-  ∀ Σ Ξ Γ Δ r s,
-    SubstSimplification r s →
-    styping Σ Ξ Γ r Δ ↔ styping Σ Ξ Γ s Δ.
-Proof.
-  intros Σ Ξ Γ Δ r s H.
-  apply styping_morphism. 1,3: reflexivity.
-  apply H.
-Qed.
-
-#[export] Hint Rewrite -> autosubst_simpl_styping : rasimpl_outermost.
-
-Lemma styping_and P Q Γ σ Δ :
-  styping_ P Γ σ Δ →
-  styping_ Q Γ σ Δ →
-  styping_ (λ Θ t A, P Θ t A ∧ Q Θ t A) Γ σ Δ.
-Proof.
-  intros h1 h2.
-  induction h1. 1: constructor.
-  inversion h2. subst.
-  constructor. all: eauto.
-Qed.
-
-Lemma styping_impl P Q Γ σ Δ :
-  styping_ P Γ σ Δ →
-  (∀ Θ t A, P Θ t A → Q Θ t A) →
-  styping_ Q Γ σ Δ.
-Proof.
-  intros h hi.
-  induction h. 1: constructor.
-  constructor. 1: assumption.
-  eauto.
-Qed.

@@ -427,20 +427,6 @@ Proof.
   - cbn. rewrite app_comm_cons. cbn. eapply rtyping_up. assumption.
 Qed.
 
-Lemma styping_comp_ren_ Σ Ξ Γ Δ Θ σ ρ :
-  styping_ (λ Δ t A, ∀ Θ ρ, rtyping Θ ρ Δ → Σ ;; Ξ | Θ ⊢ ρ ⋅ t : ρ ⋅ A) Δ σ Θ →
-  rtyping Γ ρ Δ →
-  styping Σ Ξ Γ (σ >> ren_term ρ) Θ.
-Proof.
-  intros hσ hρ.
-  induction hσ as [| σ Θ A hσ ih h ] in ρ, hρ |- *. 1: constructor.
-  constructor. 1: eauto.
-  core.unfold_funcomp.
-  eapply meta_conv.
-  - eapply h. assumption.
-  - asimpl. reflexivity.
-Qed.
-
 Lemma slist_ren σ ρ :
   pointwise_relation _ eq (slist (map (ren_term ρ) σ)) (slist σ >> ren_term ρ).
 Proof.
@@ -517,12 +503,98 @@ Proof.
     eapply conv_ren. all: eassumption.
 Qed.
 
-Lemma styping_comp_ren Σ Ξ Γ Δ Θ σ ρ :
-  styping Σ Ξ Δ σ Θ →
-  rtyping Γ ρ Δ →
-  styping Σ Ξ Γ (σ >> ren_term ρ) Θ.
+(** Substitution preserves typing **)
+
+Inductive styping Σ Ξ (Γ : ctx) (σ : nat → term) : ctx → Prop :=
+| type_nil : styping Σ Ξ Γ σ ∙
+| type_cons Δ A :
+    styping Σ Ξ Γ (S >> σ) Δ →
+    Σ ;; Ξ | Γ ⊢ σ 0 : A <[ S >> σ ] →
+    styping Σ Ξ Γ σ (Δ ,, A).
+
+#[export] Instance styping_morphism Σ Ξ :
+  Proper (eq ==> pointwise_relation _ eq ==> eq ==> iff) (styping Σ Ξ).
 Proof.
-  intros hσ hρ.
+  intros Γ ? <- σ σ' e Δ ? <-.
+  revert σ σ' e. wlog_iff. intros σ σ' e h.
+  induction h as [| ? ? ? ? ih ? ] in σ', e |- *.
+  - constructor.
+  - constructor.
+    + apply ih. intros n. apply e.
+    + rewrite <- e. eapply meta_conv. 1: eassumption.
+      apply ext_term. intro. apply e.
+Qed.
+
+Lemma autosubst_simpl_styping :
+  ∀ Σ Ξ Γ Δ r s,
+    SubstSimplification r s →
+    styping Σ Ξ Γ r Δ ↔ styping Σ Ξ Γ s Δ.
+Proof.
+  intros Σ Ξ Γ Δ r s H.
+  apply styping_morphism. 1,3: reflexivity.
+  apply H.
+Qed.
+
+#[export] Hint Rewrite -> autosubst_simpl_styping : rasimpl_outermost.
+
+Lemma styping_weak Σ Ξ Γ Δ σ A :
+  styping Σ Ξ Γ σ Δ →
+  styping Σ Ξ (Γ,, A) (σ >> ren_term S) Δ.
+Proof.
+  intros h.
+  induction h.
+  - constructor.
+  - constructor.
+    + assumption.
+    + eapply meta_conv.
+      * eapply typing_ren. 2: eassumption.
+        apply rtyping_S.
+      * rasimpl. reflexivity.
+Qed.
+
+Lemma styping_up Σ Ξ Γ Δ A σ :
+  styping Σ Ξ Γ σ Δ →
+  styping Σ Ξ (Γ ,, A <[ σ ]) (up_term σ) (Δ,, A).
+Proof.
+  intros h.
+  constructor.
+  - rasimpl. apply styping_weak. assumption.
+  - rasimpl. eapply meta_conv.
+    + econstructor. cbn. reflexivity.
+    + rasimpl. reflexivity.
+Qed.
+
+Lemma conv_subst Σ Ξ Γ Δ σ u v :
+  Σ ;; Ξ | Δ ⊢ u ≡ v →
+  Σ ;; Ξ | Γ ⊢ u <[ σ ] ≡ v <[ σ ].
+Proof.
+Admitted.
+
+Lemma typing_subst Σ Ξ Γ Δ σ t A :
+  styping Σ Ξ Δ σ Γ →
+  Σ ;; Ξ | Γ ⊢ t : A →
+  Σ ;; Ξ | Δ ⊢ t <[ σ ] : A <[ σ ].
+Proof.
+  intros hσ ht.
+  induction ht using typing_ind in Δ, σ, hσ |- *.
+  all: try solve [ rasimpl ; econstructor ; eauto using styping_up ].
+  - rasimpl.
+    induction hσ in x, H |- *. 1: destruct x ; discriminate.
+    destruct x.
+    + cbn in H. inversion H. subst. assumption.
+    + apply IHhσ. assumption.
+  - rasimpl. eapply meta_conv.
+    + cbn in *. econstructor ; eauto using styping_up.
+    + rasimpl. reflexivity.
+  - cbn. eapply meta_conv.
+    + econstructor. 1,3: eassumption.
+      admit.
+    + admit.
+  - cbn. eapply meta_conv.
+    + econstructor. all: eassumption.
+    + admit.
+  - econstructor. 1,3: eauto.
+    eapply conv_subst. eassumption.
 Admitted.
 
 (** Instances preserve conversion and typing **)
