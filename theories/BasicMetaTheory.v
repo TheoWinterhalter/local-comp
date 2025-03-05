@@ -564,56 +564,6 @@ Proof.
     + rasimpl. reflexivity.
 Qed.
 
-Lemma conv_subst Σ Ξ Γ Δ σ u v :
-  Σ ;; Ξ | Δ ⊢ u ≡ v →
-  Σ ;; Ξ | Γ ⊢ u <[ σ ] ≡ v <[ σ ].
-Proof.
-  intros h.
-  induction h using conversion_ind in Γ, σ |- *.
-  all: try solve [ rasimpl ; econstructor ; eauto ].
-  - rasimpl. eapply meta_conv_trans_r. 1: econstructor.
-    rasimpl. reflexivity.
-  - cbn. eapply meta_conv_trans_r.
-    1:{ econstructor. all: eassumption. }
-    admit.
-  - cbn. constructor.
-    apply Forall2_map_l, Forall2_map_r.
-    eapply Forall2_impl. 2: eassumption.
-    intros l l' h.
-    apply Forall2_map_l, Forall2_map_r.
-    eapply Forall2_impl. 2: eassumption.
-    cbn. auto.
-Admitted.
-
-Lemma typing_subst Σ Ξ Γ Δ σ t A :
-  styping Σ Ξ Δ σ Γ →
-  Σ ;; Ξ | Γ ⊢ t : A →
-  Σ ;; Ξ | Δ ⊢ t <[ σ ] : A <[ σ ].
-Proof.
-  intros hσ ht.
-  induction ht using typing_ind in Δ, σ, hσ |- *.
-  all: try solve [ rasimpl ; econstructor ; eauto using styping_up ].
-  - rasimpl.
-    induction hσ in x, H |- *. 1: destruct x ; discriminate.
-    destruct x.
-    + cbn in H. inversion H. subst. assumption.
-    + apply IHhσ. assumption.
-  - rasimpl. eapply meta_conv.
-    + cbn in *. econstructor ; eauto using styping_up.
-    + rasimpl. reflexivity.
-  - cbn. eapply meta_conv.
-    + econstructor. 1,3: eassumption.
-      admit.
-    + admit.
-  - cbn. eapply meta_conv.
-    + econstructor. all: eassumption.
-    + admit.
-  - econstructor. 1,3: eauto.
-    eapply conv_subst. eassumption.
-Admitted.
-
-(** Instances preserve conversion and typing **)
-
 Lemma lift_liftn n ξ :
   lift_eargs (liftn n ξ) = liftn (S n) ξ.
 Proof.
@@ -663,6 +613,69 @@ Proof.
     unfold core.funcomp.
     rewrite hσ. cbn. reflexivity.
 Qed.
+
+Notation subst_eargs σ ξ :=
+  (map (map (subst_term σ)) ξ).
+
+Lemma subst_inst_alt σ ξ t :
+  (einst ξ t) <[ σ ] = einst (subst_eargs σ ξ) (t <[ σ ]).
+Proof.
+  induction t using term_rect in σ, ξ |- *.
+  all: try solve [ cbn ; f_equal ; eauto ].
+  - cbn. (* If the term is closed it works, but maybe there is something that
+    generalises both lemmas? We can anyway not go with closed because of
+    lam. *)
+Abort.
+
+Lemma conv_subst Σ Ξ Γ Δ σ u v :
+  Σ ;; Ξ | Δ ⊢ u ≡ v →
+  Σ ;; Ξ | Γ ⊢ u <[ σ ] ≡ v <[ σ ].
+Proof.
+  intros h.
+  induction h using conversion_ind in Γ, σ |- *.
+  all: try solve [ rasimpl ; econstructor ; eauto ].
+  - rasimpl. eapply meta_conv_trans_r. 1: econstructor.
+    rasimpl. reflexivity.
+  - cbn. eapply meta_conv_trans_r.
+    1:{ econstructor. all: eassumption. }
+    admit.
+  - cbn. constructor.
+    apply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    intros l l' h.
+    apply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    cbn. auto.
+Admitted.
+
+Lemma typing_subst Σ Ξ Γ Δ σ t A :
+  styping Σ Ξ Δ σ Γ →
+  Σ ;; Ξ | Γ ⊢ t : A →
+  Σ ;; Ξ | Δ ⊢ t <[ σ ] : A <[ σ ].
+Proof.
+  intros hσ ht.
+  induction ht using typing_ind in Δ, σ, hσ |- *.
+  all: try solve [ rasimpl ; econstructor ; eauto using styping_up ].
+  - rasimpl.
+    induction hσ in x, H |- *. 1: destruct x ; discriminate.
+    destruct x.
+    + cbn in H. inversion H. subst. assumption.
+    + apply IHhσ. assumption.
+  - rasimpl. eapply meta_conv.
+    + cbn in *. econstructor ; eauto using styping_up.
+    + rasimpl. reflexivity.
+  - cbn. eapply meta_conv.
+    + econstructor. 1,3: eassumption.
+      admit.
+    + admit.
+  - cbn. eapply meta_conv.
+    + econstructor. all: eassumption.
+    + admit.
+  - econstructor. 1,3: eauto.
+    eapply conv_subst. eassumption.
+Admitted.
+
+(** Instances preserve conversion and typing **)
 
 Lemma nth_error_ctx_einst ξ Γ x :
   nth_error (ctx_einst ξ Γ) x =
