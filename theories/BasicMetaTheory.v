@@ -269,7 +269,7 @@ Lemma ren_eargs_comp :
     ren_eargs ρ (ren_eargs ρ' ξ) = ren_eargs (ρ' >> ρ) ξ.
 Proof.
   intros ρ ρ' ξ.
-  unfold ren_eargs. rewrite map_map.
+  rewrite map_map.
   apply map_ext. intro σ.
   rewrite map_map.
   apply map_ext. intro t.
@@ -298,7 +298,7 @@ Proof.
     rewrite !map_map. apply map_ext_All.
     eapply All_impl. 2: eassumption.
     cbn. intros t ht. auto.
-  - cbn. unfold eget. unfold ren_eargs.
+  - cbn. unfold eget.
     rewrite nth_error_map.
     destruct (nth_error ξ _) as [σ |]. 2: reflexivity.
     cbn. rewrite nth_error_map.
@@ -379,7 +379,7 @@ Corollary closed_ren_eargs ρ ξ :
 Proof.
   intros h.
   etransitivity. 2: apply ren_eargs_id.
-  unfold ren_eargs. unfold closed_eargs in h.
+  unfold closed_eargs in h.
   apply map_ext_All. eapply All_impl.
   2:{ apply forallb_All. eassumption. }
   cbn. intros σ hσ%forallb_All.
@@ -441,7 +441,7 @@ Qed.
 Lemma eget_ren ξ M x ρ :
   eget (ren_eargs ρ ξ) M x = ρ ⋅ (eget ξ M x).
 Proof.
-  unfold eget, ren_eargs.
+  unfold eget.
   rewrite nth_error_map.
   destruct (nth_error ξ M). 2: reflexivity.
   cbn. rewrite nth_error_map.
@@ -714,13 +714,11 @@ Proof.
   all: try solve [ cbn ; f_equal ; eauto ].
   - cbn. f_equal. 1: eauto.
     rewrite IHt2. f_equal.
-    unfold ren_eargs.
     rewrite !map_map. apply map_ext. intro σ.
     rewrite !map_map. apply map_ext. intro t.
     symmetry. apply ren_inst.
   - cbn. f_equal. 1: eauto.
     rewrite IHt2. f_equal.
-    unfold ren_eargs.
     rewrite !map_map. apply map_ext. intro σ.
     rewrite !map_map. apply map_ext. intro t.
     symmetry. apply ren_inst.

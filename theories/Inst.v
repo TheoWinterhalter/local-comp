@@ -20,8 +20,8 @@ Definition eget (ξ : eargs) M x :=
   | None => default
   end.
 
-Definition ren_eargs ρ (ξ : eargs) : eargs :=
-  map (map (ren_term ρ)) ξ.
+Notation ren_eargs ρ ξ :=
+  (map (map (ren_term ρ)) ξ).
 
 Notation lift_eargs ξ := (ren_eargs S ξ).
 
