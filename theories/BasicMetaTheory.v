@@ -452,56 +452,36 @@ Proof.
     + cbn. rewrite IHσ. reflexivity.
 Qed.
 
-(* Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
+Lemma eget_ren ξ M x ρ :
+  eget (ren_eargs ρ ξ) M x = ρ ⋅ (eget ξ M x).
+Proof.
+  unfold eget, ren_eargs.
+  rewrite nth_error_map.
+  destruct (nth_error ξ M). 2: reflexivity.
+  cbn. rewrite nth_error_map.
+  destruct (nth_error _ x). 2: reflexivity.
+  cbn. reflexivity.
+Qed.
+
+Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →
-  inst_typing Σ (typing Σ Ξ) Γ ξ Ξ' →
-  inst_typing Σ (λ Γ t A,
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  inst_typing_ Σ Ξ (λ Γ t A,
     ∀ Δ ρ, rtyping Δ ρ Γ → Σ ;; Ξ | Δ ⊢ ρ ⋅ t : ρ ⋅ A
   ) Γ ξ Ξ' →
-  inst_typing Σ (typing Σ Ξ) Δ (map (map (ren_term ρ)) ξ) Ξ'.
+  inst_typing Σ Ξ Δ (ren_eargs ρ ξ) Ξ'.
 Proof.
-  intros hρ hξ ih.
-  intros M x E ξ' Ξ'' Θ R A hM hE hx.
-Abort. *)
-
-(* Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
-  rtyping Δ ρ Γ →
-  inst_typing Σ Ξ (typing Σ Ξ) Γ ξ Ξ' →
-  inst_typing Σ Ξ (λ Γ t A,
-    ∀ Δ ρ, rtyping Δ ρ Γ → Σ ;; Ξ | Δ ⊢ ρ ⋅ t : ρ ⋅ A
-  ) Γ ξ Ξ' →
-  inst_typing Σ Ξ (typing Σ Ξ) Δ (map (map (ren_term ρ)) ξ) Ξ'.
-Proof.
-  intros hρ hξ ih.
-  eapply inst_typing_and in ih. 2: eapply hξ. clear hξ.
-  induction ih as [| σ ξ E ξ' Ξ' Ξ'' Θ R hE h1 h2 h3 h4 ]. 1: constructor.
-  cbn. econstructor. all: eauto.
-  - (* setoid_rewrite slist_ren. eapply styping_comp_ren_. 2: eassumption. *)
-    (* Now we can prove some styping_map but on the end context, the one that gets destructed *)
-    (* It's not actually a map that's happening, rather a renaming inside the map *)
-    eapply styping_impl in h3.
-    2:{ intros ??? [_ h]. exact h. }
-    eapply styping_comp_ren_ in h3. 2: eassumption.
-
-    setoid_rewrite slist_ren.
-
-    (* Now why would these two be the same?
-      Must ξ be closed? It's not…
-    *)
-
-
-    (* I guess we need first something to say ρ does nothing on Θ?
-      But this isn't really what's happening right?
-      It seems it's not closed, only closed under Δ, hence ρ is actually
-      acting on it!
-
-      TODO: Prove that einst works as expected first maybe?
-     *)
-    admit.
-  - intros n rule hr. cbn. (* m Θ' lhs rhs. *)
-    specialize (h4 n rule hr). cbn in h4.
-    eapply conv_ren in h4.
-Abort. *)
+  intros hρ [h1 h2] [ih1 ih2].
+  split.
+  - admit.
+  - intros M x E ξ' Ξ'' Θ R A hM hE hx.
+    rewrite eget_ren. eapply meta_conv.
+    + eauto.
+    + rewrite !ren_inst. f_equal. f_equal.
+      * apply closed_ren_eargs. admit. (* Missing assumption *)
+      * unfold delocal. rasimpl.
+        apply ext_term. cbn. auto.
+Admitted.
 
 Lemma typing_ren :
   ∀ Σ Ξ Γ Δ ρ t A,
@@ -548,17 +528,6 @@ Lemma lift_liftn n ξ :
   lift_eargs (liftn n ξ) = liftn (S n) ξ.
 Proof.
   rewrite ren_eargs_comp. reflexivity.
-Qed.
-
-Lemma eget_ren ξ M x ρ :
-  eget (ren_eargs ρ ξ) M x = ρ ⋅ (eget ξ M x).
-Proof.
-  unfold eget, ren_eargs.
-  rewrite nth_error_map.
-  destruct (nth_error ξ M). 2: reflexivity.
-  cbn. rewrite nth_error_map.
-  destruct (nth_error _ x). 2: reflexivity.
-  cbn. reflexivity.
 Qed.
 
 Lemma subst_inst σ ξ t n m :
