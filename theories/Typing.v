@@ -150,22 +150,15 @@ Section Inst.
       let rhs := (einst ξ (einst ξ' (delocal M rule.(cr_rep)))) <[ θ ] in
       Γ ,,, Θ ⊢ lhs ≡ rhs.
 
-  Definition inst_typing_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
+  Definition inst_eget_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
     ∀ M x E ξ' Ξ'' Δ R A,
       nth_error Ξ' M = Some (E, ξ') →
       nth_error Σ E = Some (Ext Ξ'' Δ R) →
       nth_error Δ x = Some A →
       Γ ⊢ eget ξ M x : einst ξ (einst ξ' (delocal M A)).
 
-  (* Inductive inst_typing Γ : eargs → ectx → Prop :=
-  | inst_nil : inst_typing Γ [] []
-  | inst_cons σ ξ E ξ' Ξ' Ξ'' Δ R :
-      nth_error Σ E = Some (Ext Ξ'' Δ R) →
-      inst_typing Γ ξ Ξ' →
-      (* TODO: Do we need to check Ξ' ⊢ ξ' : Ξ''? *)
-      styping_ Γ (slist σ) (ctx_einst ξ (ctx_einst ξ' Δ)) →
-      inst_equations Γ E (slist σ) R ξ ξ' →
-      inst_typing Γ (σ :: ξ) ((E,ξ') :: Ξ'). *)
+  Definition inst_typing_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
+    inst_equations Γ ξ Ξ' ∧ inst_eget_ Γ ξ Ξ'.
 
 End Inst.
 
@@ -252,7 +245,7 @@ Inductive ewf (Σ : gctx) : ectx → Prop :=
 | ewf_cons Ξ E ξ' Ξ' Δ R :
     ewf Σ Ξ →
     nth_error Σ E = Some (Ext Ξ' Δ R) →
-    inst_typing_ Σ (typing Σ Ξ) ∙ ξ' Ξ' →
+    inst_typing_ Σ Ξ (typing Σ Ξ) ∙ ξ' Ξ' →
     ewf Σ ((E, ξ') :: Ξ).
 
 (** Global environment typing **)
@@ -329,7 +322,8 @@ Proof.
 Qed.
 
 Notation styping Σ Ξ := (styping_ (typing Σ Ξ)).
-Notation inst_typing Σ Ξ := (inst_typing_ Σ (typing Σ Ξ)).
+Notation inst_eget Σ Ξ := (inst_eget_ Σ Ξ (typing Σ Ξ)).
+Notation inst_typing Σ Ξ := (inst_typing_ Σ Ξ (typing Σ Ξ)).
 
 #[export] Instance styping_morphism Σ Ξ :
   Proper (eq ==> pointwise_relation _ eq ==> eq ==> iff) (styping Σ Ξ).

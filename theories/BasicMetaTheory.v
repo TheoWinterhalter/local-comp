@@ -143,7 +143,7 @@ Lemma typing_ind :
     (∀ Γ c ξ Ξ' A t,
       nth_error Σ c = Some (Def Ξ' A t) →
       inst_typing Σ Ξ Γ ξ Ξ' →
-      inst_typing_ Σ P Γ ξ Ξ' →
+      inst_typing_ Σ Ξ P Γ ξ Ξ' →
       closed A = true →
       P Γ (const c ξ) (einst ξ A)
     ) →
@@ -169,6 +169,8 @@ Proof.
   intros Γ t A h. destruct h.
   6:{
     eapply hconst. 1,2,4: eassumption.
+    destruct H0.
+    split. 1: assumption.
     red. eauto.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
@@ -728,9 +730,14 @@ Proof.
       apply ext_term. intros []. all: reflexivity.
   - cbn. eapply meta_conv.
     + econstructor. 1,3: eassumption.
-      intros M x E ξ' Ξ'' Θ R B hM hE hx.
-      rewrite <- einst_eget. rewrite <- einst_einst.
-      eauto.
+      destruct H1.
+      split.
+      * intros E Ξ'' Θ R M ξ' σ n rule hE hM hξM hn. cbn.
+        rewrite <- einst_einst.
+        admit.
+      * intros M x E ξ' Ξ'' Θ R B hM hE hx.
+        rewrite <- einst_eget. rewrite <- einst_einst.
+        eauto.
     + rewrite einst_einst. reflexivity.
   - cbn. subst rξ. rewrite eget_ren.
     eapply meta_conv.
@@ -743,5 +750,6 @@ Proof.
       * unfold delocal. rasimpl.
         apply ext_term. cbn. auto.
   - econstructor. 1,3: eauto.
-
+    eapply conv_einst. 2: eassumption.
+    apply hξ.
 Admitted.
