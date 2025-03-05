@@ -568,6 +568,21 @@ Lemma conv_subst Σ Ξ Γ Δ σ u v :
   Σ ;; Ξ | Δ ⊢ u ≡ v →
   Σ ;; Ξ | Γ ⊢ u <[ σ ] ≡ v <[ σ ].
 Proof.
+  intros h.
+  induction h using conversion_ind in Γ, σ |- *.
+  all: try solve [ rasimpl ; econstructor ; eauto ].
+  - rasimpl. eapply meta_conv_trans_r. 1: econstructor.
+    rasimpl. reflexivity.
+  - cbn. eapply meta_conv_trans_r.
+    1:{ econstructor. all: eassumption. }
+    admit.
+  - cbn. constructor.
+    apply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    intros l l' h.
+    apply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    cbn. auto.
 Admitted.
 
 Lemma typing_subst Σ Ξ Γ Δ σ t A :
