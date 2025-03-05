@@ -501,18 +501,21 @@ Proof.
     rasimpl. reflexivity.
   - rasimpl. eapply meta_conv. 1: econstructor.
     + eassumption.
-    + admit.
+    + eapply inst_typing_ren. all: eassumption.
     + assumption.
     + rewrite ren_inst. f_equal.
       symmetry. apply closed_ren. assumption.
   - rasimpl. eapply meta_conv.
     1:{ econstructor. all: eassumption. }
     rewrite ren_inst.
-    admit.
+    f_equal.
+    + symmetry. apply closed_ren_eargs. assumption.
+    + unfold delocal. rasimpl.
+      apply ext_term. cbn. auto.
   - rasimpl. rasimpl in IHht2.
     econstructor. all: eauto.
     eapply conv_ren. all: eassumption.
-Admitted.
+Qed.
 
 Lemma styping_comp_ren Σ Ξ Γ Δ Θ σ ρ :
   styping Σ Ξ Δ σ Θ →
