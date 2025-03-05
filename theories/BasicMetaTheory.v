@@ -617,14 +617,53 @@ Qed.
 Notation subst_eargs σ ξ :=
   (map (map (subst_term σ)) ξ).
 
-Lemma subst_inst_alt σ ξ t :
-  (einst ξ t) <[ σ ] = einst (subst_eargs σ ξ) (t <[ σ ]).
+Lemma subst_inst_scoped σ ξ t k :
+  scoped k t = true →
+  (∀ n, n < k → σ n = var n) →
+  (einst ξ t) <[ σ ] = einst (subst_eargs σ ξ) t.
 Proof.
-  induction t using term_rect in σ, ξ |- *.
+  intros h hσ.
+  induction t using term_rect in k, h, σ, hσ, ξ |- *.
   all: try solve [ cbn ; f_equal ; eauto ].
-  - cbn. (* If the term is closed it works, but maybe there is something that
-    generalises both lemmas? We can anyway not go with closed because of
-    lam. *)
+  - cbn - ["<?"] in *. apply Nat.ltb_lt in h. auto.
+  - cbn in *. apply andb_prop in h as [].
+    f_equal. 1: eauto.
+    erewrite IHt2. 2: eassumption.
+    2:{
+      intros [] h. 1: reflexivity.
+      rasimpl. cbn. core.unfold_funcomp. rewrite hσ. 2: lia.
+      reflexivity.
+    }
+    f_equal.
+    rewrite !map_map. apply map_ext. intro l.
+    rewrite !map_map. apply map_ext. intro t.
+    rasimpl. reflexivity.
+  - cbn in *. apply andb_prop in h as [].
+    f_equal. 1: eauto.
+    erewrite IHt2. 2: eassumption.
+    2:{
+      intros [] h. 1: reflexivity.
+      rasimpl. cbn. core.unfold_funcomp. rewrite hσ. 2: lia.
+      reflexivity.
+    }
+    f_equal.
+    rewrite !map_map. apply map_ext. intro l.
+    rewrite !map_map. apply map_ext. intro t.
+    rasimpl. reflexivity.
+  - cbn in *. apply andb_prop in h as [].
+    f_equal. all: eauto.
+  - cbn in *. f_equal.
+    rewrite map_map. apply map_ext_All.
+    apply forallb_All in h. move h at top.
+    eapply All_prod in h. 2: eassumption.
+    eapply All_impl. 2: eassumption. clear - hσ.
+    cbn. intros l [h1 h2].
+    rewrite map_map. apply map_ext_All.
+    apply forallb_All in h2.
+    eapply All_prod in h1. 2: eassumption.
+    eapply All_impl. 2: eassumption. clear - hσ.
+    cbn. intros t [h1 h2]. eauto.
+  - cbn. admit.
 Abort.
 
 Lemma conv_subst Σ Ξ Γ Δ σ u v :
@@ -666,6 +705,7 @@ Proof.
     + rasimpl. reflexivity.
   - cbn. eapply meta_conv.
     + econstructor. 1,3: eassumption.
+    (* TODO Try and see whether it informs the subst lemma above *)
       admit.
     + admit.
   - cbn. eapply meta_conv.
