@@ -137,13 +137,17 @@ Section Inst.
       Γ ⊢ σ 0 : A <[ S >> σ ] →
       styping_ Γ σ (Δ ,, A).
 
-  Definition inst_equations Γ M σ R ξ ξ' :=
-    ∀ n rule,
+  Definition inst_equations (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
+    ∀ E Ξ'' Δ R M ξ' σ n rule,
+      nth_error Σ E = Some (Ext Ξ'' Δ R) →
+      nth_error Ξ' M = Some (E, ξ') →
+      nth_error ξ M = Some σ →
       nth_error R n = Some rule →
-      let n := length rule.(cr_env) in
+      let m := length rule.(cr_env) in
+      let θ := ups m (slist σ) in
       let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
-      let lhs := (einst ξ (einst ξ' (plinst M rule.(cr_pat)))) <[ ups n σ ] in
-      let rhs := (einst ξ (einst ξ' (delocal M rule.(cr_rep)))) <[ ups n σ ] in
+      let lhs := (einst ξ (einst ξ' (plinst M rule.(cr_pat)))) <[ θ ] in
+      let rhs := (einst ξ (einst ξ' (delocal M rule.(cr_rep)))) <[ θ ] in
       Γ ,,, Θ ⊢ lhs ≡ rhs.
 
   Definition inst_typing_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
