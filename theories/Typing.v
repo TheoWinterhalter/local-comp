@@ -155,6 +155,7 @@ Section Inst.
       nth_error Ξ' M = Some (E, ξ') →
       nth_error Σ E = Some (Ext Ξ'' Δ R) →
       nth_error Δ x = Some A →
+      closed_eargs ξ' = true →
       Γ ⊢ eget ξ M x : einst ξ (einst ξ' (delocal M A)).
 
   Definition inst_typing_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=

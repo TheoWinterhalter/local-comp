@@ -474,11 +474,11 @@ Proof.
   intros hρ [h1 h2] [ih1 ih2].
   split.
   - admit.
-  - intros M x E ξ' Ξ'' Θ R A hM hE hx.
+  - intros M x E ξ' Ξ'' Θ R A hM hE hx hξ'.
     rewrite eget_ren. eapply meta_conv.
     + eauto.
     + rewrite !ren_inst. f_equal. f_equal.
-      * apply closed_ren_eargs. admit. (* Missing assumption *)
+      * apply closed_ren_eargs. assumption.
       * unfold delocal. rasimpl.
         apply ext_term. cbn. auto.
 Admitted.
