@@ -1088,3 +1088,60 @@ Proof.
     eapply conv_einst. 2: eassumption.
     apply hξ.
 Admitted.
+
+(** Validity (or presupposition) **)
+
+Lemma styping_ids Σ Ξ Γ :
+  styping Σ Ξ Γ ids Γ.
+Proof.
+  induction Γ as [| A Γ ih].
+  - constructor.
+  - constructor.
+    + eapply styping_weak with (A := A) in ih.
+      assumption.
+    + eapply meta_conv.
+      * econstructor. cbn. reflexivity.
+      * rasimpl. substify. reflexivity.
+Qed.
+
+Lemma styping_one Σ Ξ Γ A u :
+    Σ ;; Ξ | Γ ⊢ u : A →
+    styping Σ Ξ Γ u.. (Γ ,, A).
+Proof.
+  intros h.
+  constructor. all: rasimpl. 2: auto.
+  erewrite autosubst_simpl_styping. 2: exact _. (* Somehow rasimpl doesn't work *)
+  apply styping_ids.
+Qed.
+
+Lemma validity Σ Ξ Γ t A :
+  gwf Σ →
+  ewf Σ Ξ →
+  wf Σ Ξ Γ →
+  Σ ;; Ξ | Γ ⊢ t : A →
+  ∃ i, Σ ;; Ξ | Γ ⊢ A : Sort i.
+Proof.
+  intros hΣ hΞ hΓ h.
+  induction h using typing_ind in hΓ |- *.
+  all: try solve [ eexists ; econstructor ; eauto ].
+  - induction hΓ as [| Γ j B hΓ ih hB] in x, H |- *.
+    1: destruct x ; discriminate.
+    destruct x.
+    + cbn in *. inversion H. subst.
+      exists j. rasimpl.
+      eapply meta_conv.
+      * eapply typing_ren. 1: eapply rtyping_S.
+        eassumption.
+      * reflexivity.
+    + cbn in H. eapply ih in H as [i h]. exists i.
+      eapply typing_ren in h. 2: eapply rtyping_S.
+      rasimpl in h. eassumption.
+  - eexists. eapply meta_conv.
+    + eapply typing_subst.
+      * eapply styping_one. eassumption.
+      * eassumption.
+    + reflexivity.
+  - admit.
+  - admit.
+  - eexists. eassumption.
+Admitted.
