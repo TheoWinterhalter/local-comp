@@ -617,6 +617,15 @@ Qed.
 Notation subst_eargs σ ξ :=
   (map (map (subst_term σ)) ξ).
 
+Lemma eget_subst σ ξ M x :
+  eget (subst_eargs σ ξ) M x = (eget ξ M x) <[ σ ].
+Proof.
+  unfold eget.
+  rewrite nth_error_map. destruct nth_error. 2: reflexivity.
+  cbn. rewrite nth_error_map. destruct nth_error. 2: reflexivity.
+  cbn. reflexivity.
+Qed.
+
 Lemma subst_inst_scoped σ ξ t k :
   scoped k t = true →
   (∀ n, n < k → σ n = var n) →
@@ -663,8 +672,18 @@ Proof.
     eapply All_prod in h1. 2: eassumption.
     eapply All_impl. 2: eassumption. clear - hσ.
     cbn. intros t [h1 h2]. eauto.
-  - cbn. admit.
-Abort.
+  - cbn. symmetry. apply eget_subst.
+Qed.
+
+Corollary subst_inst_closed σ ξ t :
+  closed t = true →
+  (einst ξ t) <[ σ ] = einst (subst_eargs σ ξ) t.
+Proof.
+  intro h.
+  eapply subst_inst_scoped.
+  - eassumption.
+  - lia.
+Qed.
 
 Lemma conv_subst Σ Ξ Γ Δ σ u v :
   Σ ;; Ξ | Δ ⊢ u ≡ v →
