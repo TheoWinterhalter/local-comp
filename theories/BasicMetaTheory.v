@@ -1103,9 +1103,9 @@ Qed.
 
 (** Global environment weakening **)
 
-Lemma conv_gweak Σ Σ' Ξ Γ u v :
+Lemma conv_gweak Σ d Ξ Γ u v :
   Σ ;; Ξ | Γ ⊢ u ≡ v →
-  Σ' ++ Σ ;; Ξ | Γ ⊢ u ≡ v.
+  d :: Σ ;; Ξ | Γ ⊢ u ≡ v.
 Proof.
   intro h. induction h using conversion_ind.
   all: try solve [ econstructor ; eauto ].
@@ -1119,9 +1119,9 @@ Proof.
     admit.
 Admitted.
 
-Lemma typing_gweak Σ Σ' Ξ Γ t A :
+Lemma typing_gweak Σ d Ξ Γ t A :
   Σ ;; Ξ | Γ ⊢ t : A →
-  Σ' ++ Σ ;; Ξ | Γ ⊢ t : A.
+  d :: Σ ;; Ξ | Γ ⊢ t : A.
 Proof.
   intro h. induction h using typing_ind.
   all: try solve [ econstructor ; eauto ].
