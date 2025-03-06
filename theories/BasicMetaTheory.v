@@ -357,12 +357,23 @@ Proof.
   eapply scoped_ren in h. eauto.
 Qed.
 
-Axiom ren_eargs_ext : ∀ ρ ζ ξ,
+Lemma ren_eargs_ext ρ ζ ξ :
   (∀ n, ρ n = ζ n) →
   ren_eargs ρ ξ = ren_eargs ζ ξ.
+Proof.
+  intros h.
+  apply map_ext. intro.
+  apply map_ext. intro.
+  apply extRen_term. assumption.
+Qed.
 
-Axiom ren_eargs_id : ∀ ξ,
-  ren_eargs id ξ = ξ.
+Lemma ren_eargs_id ξ :
+  ren_eargs id ξ = ξ .
+Proof.
+  rewrite <- map_id. apply map_ext. intro.
+  rewrite <- map_id. apply map_ext. intro.
+  rasimpl. reflexivity.
+Qed.
 
 Lemma ren_eargs_id_ext ρ ξ :
   (∀ n, ρ n = n) →
@@ -788,8 +799,13 @@ Proof.
   eapply scoped_subst in h. eauto.
 Qed.
 
-Axiom subst_eargs_id : ∀ ξ,
+Lemma subst_eargs_id ξ :
   subst_eargs ids ξ = ξ.
+Proof.
+  rewrite <- map_id. apply map_ext. intro.
+  rewrite <- map_id. apply map_ext. intro.
+  rasimpl. reflexivity.
+Qed.
 
 Lemma closed_subst_eargs σ ξ :
   closed_eargs ξ = true →
