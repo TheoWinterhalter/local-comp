@@ -91,6 +91,15 @@ Proof.
   constructor. all: auto.
 Qed.
 
+Lemma All_forallb A (p : A → bool) l :
+  All (λ x, p x = true) l →
+  forallb p l = true.
+Proof.
+  intro h. induction h.
+  - reflexivity.
+  - cbn. eauto using andb_true_intro.
+Qed.
+
 Lemma All_prod :
   ∀ A P Q l,
     All (A := A) P l →
@@ -101,6 +110,15 @@ Proof.
   induction hP. 1: constructor.
   inversion hQ. subst.
   constructor. all: eauto.
+Qed.
+
+Lemma All_map A B (f : A → B) P l :
+  All (λ x, P (f x)) l →
+  All P (map f l).
+Proof.
+  intro h. induction h.
+  - constructor.
+  - cbn. constructor. all: auto.
 Qed.
 
 Lemma Forall2_map_l :
