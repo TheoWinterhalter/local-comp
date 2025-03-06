@@ -821,6 +821,96 @@ Proof.
   cbn. rasimpl. apply closed_subst.
 Qed.
 
+Lemma closed_lift_eargs ξ :
+  closed_eargs ξ = true →
+  closed_eargs (lift_eargs ξ) = true.
+Proof.
+  intro h.
+  rewrite closed_ren_eargs. all: assumption.
+Qed.
+
+Lemma scoped_upwards k l t :
+  scoped k t = true →
+  k ≤ l →
+  scoped l t = true.
+Proof.
+  intros ht hkl.
+  induction t using term_rect in k, l, ht, hkl |- *.
+  all: try solve [ cbn ; eauto ].
+  all: try solve [
+    cbn in * ; rewrite Bool.andb_true_iff in * ;
+    intuition eauto with arith
+  ].
+  - cbn - ["<?"] in *. rewrite Nat.ltb_lt in *. lia.
+  - cbn in *. apply All_forallb. apply forallb_All in ht.
+    move ht at top. eapply All_prod in ht. 2: eassumption.
+    eapply All_impl. 2: eassumption.
+    cbn. intros ? [h1 h2]. apply All_forallb. apply forallb_All in h2.
+    eapply All_prod in h1. 2: eassumption.
+    eapply All_impl. 2: eassumption.
+    cbn. intros ? []. eauto.
+Qed.
+
+Lemma scoped_einst k ξ t :
+  closed_eargs ξ = true →
+  scoped k t = true →
+  scoped k (einst ξ t) = true.
+Proof.
+  intros hξ ht.
+  induction t using term_rect in k, ξ, ht, hξ |- *.
+  all: try solve [ cbn ; eauto ].
+  all: try solve [
+    cbn in * ; apply andb_prop in ht as [] ;
+    apply andb_true_intro ; eauto using closed_lift_eargs
+  ].
+  - cbn in *. apply forallb_All in ht. move ht at top.
+    eapply All_prod in ht. 2: eassumption.
+    apply All_forallb. apply All_map. eapply All_impl. 2: eassumption.
+    clear - hξ.
+    cbn. intros σ [h1 h2].
+    apply All_forallb. apply All_map.
+    apply forallb_All in h2.
+    eapply All_prod in h1. 2: eassumption.
+    eapply All_impl. 2: eassumption. clear - hξ.
+    cbn. intros t [h1 h2]. eauto.
+  - cbn. unfold closed_eargs in hξ. unfold eget.
+    destruct nth_error as [l |] eqn: eM. 2: reflexivity.
+    destruct (nth_error l _) eqn: ex. 2: reflexivity.
+    apply nth_error_In in eM, ex.
+    rewrite forallb_forall in hξ. specialize hξ with (1 := eM).
+    rewrite forallb_forall in hξ. specialize hξ with (1 := ex).
+    eapply scoped_upwards. 1: eassumption.
+    lia.
+Qed.
+
+Corollary closed_einst ξ t :
+  closed_eargs ξ = true →
+  closed t = true →
+  closed (einst ξ t) = true.
+Proof.
+  intros hξ ht.
+  apply scoped_einst. all: assumption.
+Qed.
+
+Lemma inst_typing_subst Σ Ξ Δ Γ σ ξ Ξ' :
+  styping Σ Ξ Δ σ Γ →
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  inst_typing_ Σ Ξ (λ Γ t A,
+    ∀ Δ σ, styping Σ Ξ Δ σ Γ → Σ ;; Ξ | Δ ⊢ t <[ σ ] : A <[ σ ]
+  ) Γ ξ Ξ' →
+  inst_typing Σ Ξ Δ (subst_eargs σ ξ) Ξ'.
+Proof.
+  intros hσ [h1 h2] [ih1 ih2].
+  split.
+  - admit.
+  - intros M x E ξ' Ξ'' Θ R A hM hE hx hξ'.
+    rewrite eget_subst. eapply meta_conv.
+    + eauto.
+    + apply subst_inst_closed. apply closed_einst.
+      * assumption.
+      * apply closed_delocal.
+Admitted.
+
 Lemma typing_subst Σ Ξ Γ Δ σ t A :
   styping Σ Ξ Δ σ Γ →
   Σ ;; Ξ | Γ ⊢ t : A →
@@ -839,7 +929,7 @@ Proof.
     + rasimpl. reflexivity.
   - cbn. eapply meta_conv.
     + econstructor. 1,3: eassumption.
-      admit.
+      eapply inst_typing_subst. all: eassumption.
     + symmetry. apply subst_inst_closed. assumption.
   - cbn. eapply meta_conv.
     + econstructor. all: eassumption.
@@ -848,7 +938,7 @@ Proof.
       reflexivity.
   - econstructor. 1,3: eauto.
     eapply conv_subst. eassumption.
-Admitted.
+Qed.
 
 (** Instances preserve conversion and typing **)
 
