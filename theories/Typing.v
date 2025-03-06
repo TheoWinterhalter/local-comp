@@ -253,9 +253,10 @@ Inductive gwf : gctx → Prop :=
     (* TODO Something about R that ensures all typed instances factor through *)
     gwf (Ext Ξ Δ R :: Σ)
 
-| gwf_def Σ Ξ A t :
+| gwf_def Σ Ξ A t i :
     gwf Σ →
     ewf Σ Ξ →
+    Σ ;; Ξ | ∙ ⊢ A : Sort i → (* Redundant, makes proofs easier *)
     Σ ;; Ξ | ∙ ⊢ t : A →
     gwf (Def Ξ A t :: Σ).
 

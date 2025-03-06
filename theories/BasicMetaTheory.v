@@ -1089,6 +1089,18 @@ Proof.
     apply hξ.
 Admitted.
 
+Corollary typing_einst_closed Σ Ξ Ξ' Γ t A ξ :
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  Σ ;; Ξ' | ∙ ⊢ t : A →
+  Σ ;; Ξ | Γ ⊢ einst ξ t : einst ξ A.
+Proof.
+  intros hξ h.
+  eapply typing_einst in h. 2: eassumption.
+  cbn in h.
+  rewrite ren_eargs_id_ext in h. 2: auto.
+  assumption.
+Qed.
+
 (** Validity (or presupposition) **)
 
 Lemma styping_ids Σ Ξ Γ :
@@ -1114,6 +1126,47 @@ Proof.
   apply styping_ids.
 Qed.
 
+Lemma valid_wf Σ Ξ Γ x A :
+  wf Σ Ξ Γ →
+  nth_error Γ x = Some A →
+  ∃ i, Σ ;; Ξ | Γ ⊢ (plus (S x)) ⋅ A : Sort i.
+Proof.
+  intros hΓ h.
+  induction hΓ as [| Γ i B hΓ ih hB] in x, h |- *.
+  1: destruct x ; discriminate.
+  destruct x.
+  + cbn in *. inversion h. subst.
+    exists i. rasimpl.
+    eapply meta_conv.
+    * eapply typing_ren. 1: eapply rtyping_S.
+      eassumption.
+    * reflexivity.
+  + cbn in h. eapply ih in h as [j h]. exists j.
+    eapply typing_ren in h. 2: eapply rtyping_S.
+    rasimpl in h. eassumption.
+Qed.
+
+Lemma valid_def Σ c Ξ A t :
+  gwf Σ →
+  nth_error Σ c = Some (Def Ξ A t) →
+  ewf Σ Ξ ∧
+  (∃ i, Σ ;; Ξ | ∙ ⊢ A : Sort i) ∧
+  Σ ;; Ξ | ∙ ⊢ t : A.
+Proof.
+  intros hΣ hc.
+  induction hΣ as [ | Σ ? ? ? ? ih | Σ ????? ih ] in c, Ξ, A, t, hc |- *.
+  - destruct c. all: discriminate.
+  - destruct c. 1: inversion hc.
+    cbn in hc. specialize ih with (1 := hc) as [? [[i ?] ?]].
+    (* NEED: Σ weakening *)
+    admit.
+  - destruct c.
+    + cbn in hc. inversion hc. subst.
+      admit. (* same *)
+    + cbn in hc. specialize ih with (1 := hc) as [? [[j ?] ?]].
+      admit. (* same *)
+Admitted.
+
 Lemma validity Σ Ξ Γ t A :
   gwf Σ →
   ewf Σ Ξ →
@@ -1124,24 +1177,17 @@ Proof.
   intros hΣ hΞ hΓ h.
   induction h using typing_ind in hΓ |- *.
   all: try solve [ eexists ; econstructor ; eauto ].
-  - induction hΓ as [| Γ j B hΓ ih hB] in x, H |- *.
-    1: destruct x ; discriminate.
-    destruct x.
-    + cbn in *. inversion H. subst.
-      exists j. rasimpl.
-      eapply meta_conv.
-      * eapply typing_ren. 1: eapply rtyping_S.
-        eassumption.
-      * reflexivity.
-    + cbn in H. eapply ih in H as [i h]. exists i.
-      eapply typing_ren in h. 2: eapply rtyping_S.
-      rasimpl in h. eassumption.
+  - apply valid_wf. all: assumption.
   - eexists. eapply meta_conv.
     + eapply typing_subst.
       * eapply styping_one. eassumption.
       * eassumption.
     + reflexivity.
-  - admit.
+  - eapply valid_def in hΣ as h. 2: eassumption.
+    destruct h as [? [[i ?]]].
+    exists i. eapply meta_conv.
+    + eapply typing_einst_closed. all: eassumption.
+    + reflexivity.
   - admit.
   - eexists. eassumption.
 Admitted.
