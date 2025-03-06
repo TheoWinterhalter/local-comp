@@ -750,6 +750,61 @@ Proof.
   apply scoped_delocal with (k := 0).
 Qed.
 
+Lemma scoped_subst σ k t :
+  scoped k t = true →
+  t <[ ups k σ ] = t.
+Proof.
+  intros h.
+  induction t using term_rect in k, σ, h |- *.
+  all: try solve [ cbn ; eauto ].
+  all: try solve [
+    cbn ;
+    apply andb_prop in h as [] ;
+    change (up_term_term (ups ?k ?σ)) with (ups (S k) σ) ;
+    f_equal ;
+    eauto
+  ].
+  - cbn - ["<?"] in *.
+    apply ups_below.
+    apply Nat.ltb_lt. assumption.
+  - cbn in *. f_equal.
+    rewrite <- map_id. apply map_ext_All.
+    apply forallb_All in h. move h at top.
+    eapply All_prod in h. 2: eassumption.
+    eapply All_impl. 2: eassumption. clear.
+    cbn. intros ? [h1 h2].
+    rewrite <- map_id. apply map_ext_All.
+    apply forallb_All in h2.
+    eapply All_prod in h1. 2: eassumption.
+    eapply All_impl. 2: eassumption. clear.
+    cbn. intros t [h1 h2]. eauto.
+Qed.
+
+Corollary closed_subst σ t :
+  closed t = true →
+  t <[ σ ] = t.
+Proof.
+  intros h.
+  eapply scoped_subst in h. eauto.
+Qed.
+
+Axiom subst_eargs_id : ∀ ξ,
+  subst_eargs ids ξ = ξ.
+
+Lemma closed_subst_eargs σ ξ :
+  closed_eargs ξ = true →
+  subst_eargs σ ξ = ξ.
+Proof.
+  intros h.
+  etransitivity. 2: apply subst_eargs_id.
+  unfold closed_eargs in h.
+  apply map_ext_All. eapply All_impl.
+  2:{ apply forallb_All. eassumption. }
+  cbn. intros ? hσ%forallb_All.
+  apply map_ext_All. eapply All_impl. 2: eassumption.
+  cbn. rasimpl. apply closed_subst.
+Qed.
+
 Lemma typing_subst Σ Ξ Γ Δ σ t A :
   styping Σ Ξ Δ σ Γ →
   Σ ;; Ξ | Γ ⊢ t : A →
@@ -773,7 +828,8 @@ Proof.
   - cbn. eapply meta_conv.
     + econstructor. all: eassumption.
     + rewrite subst_inst_closed. 2: apply closed_delocal.
-      admit.
+      rewrite closed_subst_eargs. 2: assumption.
+      reflexivity.
   - econstructor. 1,3: eauto.
     eapply conv_subst. eassumption.
 Admitted.
