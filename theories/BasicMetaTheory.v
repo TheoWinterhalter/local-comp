@@ -1101,6 +1101,42 @@ Proof.
   assumption.
 Qed.
 
+(** Global environment weakening **)
+
+Lemma conv_gweak Σ Σ' Ξ Γ u v :
+  Σ ;; Ξ | Γ ⊢ u ≡ v →
+  Σ' ++ Σ ;; Ξ | Γ ⊢ u ≡ v.
+Proof.
+  intro h. induction h using conversion_ind.
+  all: try solve [ econstructor ; eauto ].
+  - econstructor. 2: eassumption.
+    (* Uh oh. For this to hold, we need a different way to use names.
+      We could use de Bruijn levels maybe.
+    *)
+    admit.
+  - econstructor. all: eauto.
+    (* Same *)
+    admit.
+Admitted.
+
+Lemma typing_gweak Σ Σ' Ξ Γ t A :
+  Σ ;; Ξ | Γ ⊢ t : A →
+  Σ' ++ Σ ;; Ξ | Γ ⊢ t : A.
+Proof.
+  intro h. induction h using typing_ind.
+  all: try solve [ econstructor ; eauto ].
+  - econstructor. 1,3: admit.
+    split.
+    + (* intros E Ξ'' Δ R M ξ' σ n rule hE hM heM hn. cbn. *)
+      (* destruct H0, H1. *)
+      admit.
+    + admit.
+  - econstructor. all: eauto.
+    admit.
+  - econstructor. 1,3: eassumption.
+    apply conv_gweak. assumption.
+Admitted.
+
 (** Validity (or presupposition) **)
 
 Lemma styping_ids Σ Ξ Γ :
