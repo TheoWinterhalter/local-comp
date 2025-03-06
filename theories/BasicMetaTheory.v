@@ -696,7 +696,7 @@ Proof.
     rasimpl. reflexivity.
   - cbn. eapply meta_conv_trans_r.
     1:{ econstructor. all: eassumption. }
-    admit.
+    symmetry. apply subst_inst_closed. assumption.
   - cbn. constructor.
     apply Forall2_map_l, Forall2_map_r.
     eapply Forall2_impl. 2: eassumption.
@@ -704,7 +704,71 @@ Proof.
     apply Forall2_map_l, Forall2_map_r.
     eapply Forall2_impl. 2: eassumption.
     cbn. auto.
-Admitted.
+Qed.
+
+Lemma ups_below k σ n :
+  n < k →
+  ups k σ n = var n.
+Proof.
+  intro h.
+  induction k as [| k ih] in n, σ, h |- *. 1: lia.
+  cbn. destruct n as [| ].
+  - reflexivity.
+  - cbn. core.unfold_funcomp. rewrite ih. 2: lia.
+    reflexivity.
+Qed.
+
+Lemma ups_above k σ n :
+  ups k σ (k + n) = (plus k) ⋅ σ n.
+Proof.
+  induction k as [| k ih] in n |- *.
+  - cbn. rasimpl. reflexivity.
+  - cbn. core.unfold_funcomp. rewrite ih.
+    rasimpl. reflexivity.
+Qed.
+
+(* TODO MOVE *)
+Lemma All_forallb A (p : A → bool) l :
+  All (λ x, p x = true) l →
+  forallb p l = true.
+Proof.
+  intro h. induction h.
+  - reflexivity.
+  - cbn. eauto using andb_true_intro.
+Qed.
+
+(* TODO MOVE *)
+Lemma All_map A B (f : A → B) P l :
+  All (λ x, P (f x)) l →
+  All P (map f l).
+Proof.
+  intro h. induction h.
+  - constructor.
+  - cbn. constructor. all: auto.
+Qed.
+
+Lemma scoped_delocal M t k :
+  scoped k (t <[ ups k (λ x, assm M x) ]) = true.
+Proof.
+  induction t using term_rect in k |- *.
+  all: try solve [ cbn ; eauto using andb_true_intro ].
+  - cbn. destruct (lt_dec n k).
+    + rewrite ups_below. 2: assumption.
+      cbn - ["<?"]. apply Nat.ltb_lt. assumption.
+    + pose (m := n - k). replace n with (k + m) by lia.
+      rewrite ups_above. reflexivity.
+  - cbn. apply All_forallb. apply All_map.
+    eapply All_impl. 2: eassumption.
+    intros. apply All_forallb. apply All_map.
+    eapply All_impl. 2: eassumption.
+    auto.
+Qed.
+
+Lemma closed_delocal M t :
+  closed (delocal M t) = true.
+Proof.
+  apply scoped_delocal with (k := 0).
+Qed.
 
 Lemma typing_subst Σ Ξ Γ Δ σ t A :
   styping Σ Ξ Δ σ Γ →
@@ -724,12 +788,12 @@ Proof.
     + rasimpl. reflexivity.
   - cbn. eapply meta_conv.
     + econstructor. 1,3: eassumption.
-    (* TODO Try and see whether it informs the subst lemma above *)
       admit.
-    + admit.
+    + symmetry. apply subst_inst_closed. assumption.
   - cbn. eapply meta_conv.
     + econstructor. all: eassumption.
-    + admit.
+    + rewrite subst_inst_closed. 2: apply closed_delocal.
+      admit.
   - econstructor. 1,3: eauto.
     eapply conv_subst. eassumption.
 Admitted.
