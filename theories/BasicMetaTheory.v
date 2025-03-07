@@ -1289,6 +1289,18 @@ Proof.
     intuition eauto using wf_gweak, ewf_gweak, typing_gweak, extends_gcons.
 Qed.
 
+Lemma type_delocal Σ Ξ Γ M A i :
+  Σ ;; Ξ | Γ ⊢ A : Sort i →
+  Σ ;; Ξ | ∙ ⊢ delocal M A : Sort i.
+Proof.
+  intros h.
+  eapply meta_conv.
+  - unfold delocal. eapply typing_subst. 2: eassumption.
+    (* When is it correct? *)
+    admit.
+  - reflexivity.
+Admitted.
+
 Lemma validity Σ Ξ Γ t A :
   gwf Σ →
   ewf Σ Ξ →
@@ -1310,6 +1322,16 @@ Proof.
     exists i. eapply meta_conv.
     + eapply typing_einst_closed. all: eassumption.
     + reflexivity.
-  - admit.
+  - eapply valid_ext in hΣ as h. 2: eassumption.
+    destruct h as [hΞ' hΔ].
+    eapply valid_wf in hΔ as hA. 2: eassumption.
+    destruct hA as [i hA].
+    exists i. eapply meta_conv.
+    + eapply typing_einst_closed.
+      * admit. (* See how to get it *)
+      * eapply type_delocal.
+        (* Unclear, is there an issue with the def? *)
+        admit.
+    + reflexivity.
   - eexists. eassumption.
 Admitted.
