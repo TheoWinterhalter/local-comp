@@ -1181,6 +1181,18 @@ Proof.
     eapply inst_typing_gweak. all: eauto.
 Qed.
 
+Lemma wf_gweak Σ Σ' Ξ Γ :
+  wf Σ Ξ Γ →
+  Σ ⊑ Σ' →
+  wf Σ' Ξ Γ.
+Proof.
+  intros h hle. induction h.
+  - constructor.
+  - econstructor.
+    + assumption.
+    + eapply typing_gweak. all: eassumption.
+Qed.
+
 (** Validity (or presupposition) **)
 
 Lemma styping_ids Σ Ξ Γ :
@@ -1257,6 +1269,24 @@ Proof.
       intuition eauto using ewf_gweak, typing_gweak, extends_gcons.
     + specialize ih with (1 := hc) as [? [[j ?] ?]].
       intuition eauto using ewf_gweak, typing_gweak, extends_gcons.
+Qed.
+
+Lemma valid_ext Σ c Ξ Δ R :
+  gwf Σ →
+  Σ c = Some (Ext Ξ Δ R) →
+  ewf Σ Ξ ∧ wf Σ Ξ Δ.
+Proof.
+  intros hΣ hc.
+  induction hΣ as [ | c' ?????? ih | c' ??????? ih ] in c, Ξ, Δ, R, hc |- *.
+  - discriminate.
+  - unfold gcons in hc. destruct (c =? c')%string.
+    + inversion hc. subst.
+      intuition eauto using wf_gweak, ewf_gweak, typing_gweak, extends_gcons.
+    + specialize ih with (1 := hc) as [? ?].
+      intuition eauto using wf_gweak, ewf_gweak, typing_gweak, extends_gcons.
+  - unfold gcons in hc. destruct (c =? c')%string. 1: discriminate.
+    specialize ih with (1 := hc) as [? ?].
+    intuition eauto using wf_gweak, ewf_gweak, typing_gweak, extends_gcons.
 Qed.
 
 Lemma validity Σ Ξ Γ t A :
