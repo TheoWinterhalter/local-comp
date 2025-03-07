@@ -1289,6 +1289,18 @@ Proof.
     intuition eauto using wf_gweak, ewf_gweak, typing_gweak, extends_gcons.
 Qed.
 
+Lemma styping_delocal Σ Ξ M Γ :
+  styping Σ Ξ ∙ (assm M) Γ.
+Proof.
+  induction Γ.
+  - constructor.
+  - constructor.
+    + admit.
+    + eapply meta_conv.
+      * econstructor. all: admit.
+      *
+Abort.
+
 Lemma type_delocal Σ Ξ Γ M A i :
   Σ ;; Ξ | Γ ⊢ A : Sort i →
   Σ ;; Ξ | ∙ ⊢ delocal M A : Sort i.
