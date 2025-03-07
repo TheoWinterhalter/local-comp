@@ -317,5 +317,5 @@ Proof.
   intros Σ Ξ Γ u ? <-. ttconv.
 Qed.
 
-Notation inst_eget Σ Ξ := (inst_eget_ Σ Ξ (typing Σ Ξ)).
+Notation inst_eget Σ Ξ := (inst_eget_ Σ (typing Σ Ξ)).
 Notation inst_typing Σ Ξ := (inst_typing_ Σ Ξ (typing Σ Ξ)).

@@ -1112,6 +1112,38 @@ Proof.
   all: solve [ econstructor ; eauto ].
 Qed.
 
+Lemma inst_equations_gweak Σ Σ' Ξ Γ ξ Ξ' :
+  inst_equations Σ Ξ Γ ξ Ξ' →
+  Σ ⊑ Σ' →
+  inst_equations Σ' Ξ Γ ξ Ξ'.
+Proof.
+Admitted.
+
+Lemma inst_eget_gweak Σ Σ' Ξ Γ ξ Ξ' :
+  inst_eget Σ Ξ Γ ξ Ξ' →
+  inst_eget_ Σ (λ Γ t A, Σ' ;; Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
+  Σ ⊑ Σ' →
+  inst_eget Σ' Ξ Γ ξ Ξ'.
+Proof.
+  intros h ih hle.
+  intros M x E ξ' Ξ'' Δ R A hM hE hx hc.
+  eapply ih. all: eauto.
+  (* I guess we need some guarantee that M and Ξ' weren't pointing into the
+    future *)
+Admitted.
+
+Lemma inst_typing_gweak Σ Σ' Ξ Γ ξ Ξ' :
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  inst_typing_ Σ Ξ (λ Γ t A, Σ' ;; Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
+  Σ ⊑ Σ' →
+  inst_typing Σ' Ξ Γ ξ Ξ'.
+Proof.
+  intros [h1 h2] [ih1 ih2] hle.
+  split.
+  - eapply inst_equations_gweak. all: eassumption.
+  - eapply inst_eget_gweak. all: eassumption.
+Qed.
+
 Lemma typing_gweak Σ Σ' Ξ Γ t A :
   Σ ;; Ξ | Γ ⊢ t : A →
   Σ ⊑ Σ' →
@@ -1120,14 +1152,10 @@ Proof.
   intros h hle. induction h using typing_ind.
   all: try solve [ econstructor ; eauto ].
   - econstructor. 1,3: eauto.
-    split.
-    + (* intros E Ξ'' Δ R M ξ' σ n rule hE hM heM hn. cbn. *)
-      (* destruct H0, H1. *)
-      admit.
-    + admit.
+    eapply inst_typing_gweak. all: eassumption.
   - econstructor. 1,3: eassumption.
     eapply conv_gweak. all: eauto.
-Admitted.
+Qed.
 
 (** Validity (or presupposition) **)
 
