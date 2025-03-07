@@ -1226,6 +1226,16 @@ Proof.
     rasimpl in h. eassumption.
 Qed.
 
+Lemma extends_gcons Σ c d :
+  Σ c = None →
+  Σ ⊑ gcons c d Σ.
+Proof.
+  intros h. intros c' d' e.
+  unfold gcons. destruct (_ =? _)%string eqn:ec.
+  - apply eqb_eq in ec. subst. congruence.
+  - assumption.
+Qed.
+
 Lemma valid_def Σ c Ξ A t :
   gwf Σ →
   Σ c = Some (Def Ξ A t) →
@@ -1238,14 +1248,16 @@ Proof.
   - discriminate.
   - unfold gcons in hc. destruct (c =? c')%string. 1: discriminate.
     specialize ih with (1 := hc) as [? [[i ?] ?]].
-    (* NEED: Σ weakening *)
-    admit.
+    split. 2: split.
+    + eapply ewf_gweak. all: eauto using extends_gcons.
+    + eexists. eapply typing_gweak. all: eauto using extends_gcons.
+    + eapply typing_gweak. all: eauto using extends_gcons.
   - unfold gcons in hc. destruct (c =? c')%string.
     + inversion hc. subst.
-      admit. (* same *)
+      intuition eauto using ewf_gweak, typing_gweak, extends_gcons.
     + specialize ih with (1 := hc) as [? [[j ?] ?]].
-      admit. (* same *)
-Admitted.
+      intuition eauto using ewf_gweak, typing_gweak, extends_gcons.
+Qed.
 
 Lemma validity Σ Ξ Γ t A :
   gwf Σ →
