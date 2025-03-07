@@ -1132,7 +1132,7 @@ Proof.
     future *)
 Admitted.
 
-Lemma inst_typing_gweak Σ Σ' Ξ Γ ξ Ξ' :
+Lemma inst_typing_gweak_ Σ Σ' Ξ Γ ξ Ξ' :
   inst_typing Σ Ξ Γ ξ Ξ' →
   inst_typing_ Σ Ξ (λ Γ t A, Σ' ;; Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
   Σ ⊑ Σ' →
@@ -1152,9 +1152,33 @@ Proof.
   intros h hle. induction h using typing_ind.
   all: try solve [ econstructor ; eauto ].
   - econstructor. 1,3: eauto.
-    eapply inst_typing_gweak. all: eassumption.
+    eapply inst_typing_gweak_. all: eassumption.
   - econstructor. 1,3: eassumption.
     eapply conv_gweak. all: eauto.
+Qed.
+
+Lemma inst_typing_gweak Σ Σ' Ξ Γ ξ Ξ' :
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  Σ ⊑ Σ' →
+  inst_typing Σ' Ξ Γ ξ Ξ'.
+Proof.
+  intros h hle.
+  eapply inst_typing_gweak_. 1,3: eassumption.
+  destruct h as [h1 h2]. split.
+  - assumption.
+  - intros M x E ξ' Ξ'' Δ R A hM hE hx hc.
+    eapply typing_gweak. all: eauto.
+Qed.
+
+Lemma ewf_gweak Σ Σ' Ξ :
+  ewf Σ Ξ →
+  Σ ⊑ Σ' →
+  ewf Σ' Ξ.
+Proof.
+  intros h hle. induction h.
+  - constructor.
+  - econstructor. 1,2: eauto.
+    eapply inst_typing_gweak. all: eauto.
 Qed.
 
 (** Validity (or presupposition) **)
