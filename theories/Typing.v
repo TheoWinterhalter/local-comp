@@ -51,13 +51,13 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
 
 | conv_unfold :
     ∀ c ξ Ξ' A t,
-      nth_error Σ c = Some (Def Ξ' A t) →
+      Σ c = Some (Def Ξ' A t) →
       closed t = true →
       Γ ⊢ const c ξ ≡ einst ξ t
 
 | conv_red :
     ∀ E Ξ' Δ R M ξ' n rule σ,
-      nth_error Σ E = Some (Ext Ξ' Δ R) →
+      Σ E = Some (Ext Ξ' Δ R) →
       nth_error Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
       Γ ⊢ (plinst M rule.(cr_pat)) <[ σ ] ≡ (delocal M rule.(cr_rep)) <[ σ ]
@@ -131,7 +131,7 @@ Section Inst.
 
   Definition inst_equations (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
     ∀ E Ξ'' Δ R M ξ' σ n rule,
-      nth_error Σ E = Some (Ext Ξ'' Δ R) →
+      Σ E = Some (Ext Ξ'' Δ R) →
       nth_error Ξ' M = Some (E, ξ') →
       nth_error ξ M = Some σ →
       nth_error R n = Some rule →
@@ -145,7 +145,7 @@ Section Inst.
   Definition inst_eget_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
     ∀ M x E ξ' Ξ'' Δ R A,
       nth_error Ξ' M = Some (E, ξ') →
-      nth_error Σ E = Some (Ext Ξ'' Δ R) →
+      Σ E = Some (Ext Ξ'' Δ R) →
       nth_error Δ x = Some A →
       closed_eargs ξ' = true →
       Γ ⊢ eget ξ M x : einst ξ (einst ξ' (delocal M A)).
@@ -189,7 +189,7 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
 
 | type_const :
     ∀ c ξ Ξ' A t,
-      nth_error Σ c = Some (Def Ξ' A t) →
+      Σ c = Some (Def Ξ' A t) →
       inst_typing_ typing Γ ξ Ξ' →
       closed A = true →
       Γ ⊢ const c ξ : einst ξ A
@@ -197,7 +197,7 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
 | type_assm :
     ∀ M x E ξ Ξ' Δ R A,
       nth_error Ξ M = Some (E, ξ) →
-      nth_error Σ E = Some (Ext Ξ' Δ R) →
+      Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
       closed_eargs ξ = true →
       Γ ⊢ assm M x : einst ξ (delocal M A)
@@ -237,28 +237,30 @@ Inductive ewf (Σ : gctx) : ectx → Prop :=
 | ewf_nil : ewf Σ []
 | ewf_cons Ξ E ξ' Ξ' Δ R :
     ewf Σ Ξ →
-    nth_error Σ E = Some (Ext Ξ' Δ R) →
+    Σ E = Some (Ext Ξ' Δ R) →
     inst_typing_ Σ Ξ (typing Σ Ξ) ∙ ξ' Ξ' →
     ewf Σ ((E, ξ') :: Ξ).
 
 (** Global environment typing **)
 
 Inductive gwf : gctx → Prop :=
-| gwf_nil : gwf []
+| gwf_nil : gwf gnil
 
-| gwf_ext Σ Ξ Δ R :
+| gwf_ext c Σ Ξ Δ R :
+    Σ c = None → (* freshness *)
     gwf Σ →
     ewf Σ Ξ →
     wf Σ Ξ Δ →
     (* TODO Something about R that ensures all typed instances factor through *)
-    gwf (Ext Ξ Δ R :: Σ)
+    gwf (gcons c (Ext Ξ Δ R) Σ)
 
-| gwf_def Σ Ξ A t i :
+| gwf_def c Σ Ξ A t i :
+    Σ c = None → (* freshness *)
     gwf Σ →
     ewf Σ Ξ →
     Σ ;; Ξ | ∙ ⊢ A : Sort i → (* Redundant, makes proofs easier *)
     Σ ;; Ξ | ∙ ⊢ t : A →
-    gwf (Def Ξ A t :: Σ).
+    gwf (gcons c (Def Ξ A t) Σ).
 
 (** Automation **)
 

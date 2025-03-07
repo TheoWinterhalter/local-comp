@@ -1,9 +1,9 @@
-From Coq Require Import Utf8.
+From Coq Require Import Utf8 String.
 
 Set Primitive Projections.
 
 (** Reference in the global environment **)
-Definition gref := nat.
+Definition gref := string.
 
 (** Reference in the extension environment **)
 Definition eref := nat.

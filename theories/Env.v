@@ -7,7 +7,7 @@
 
 **)
 
-From Coq Require Import Utf8 List.
+From Coq Require Import Utf8 String List.
 From LocalComp.autosubst Require Import AST.
 From LocalComp Require Import BasicAST.
 
@@ -52,7 +52,20 @@ Inductive gdecl :=
 | Ext (Ξ : ectx) (Δ : ctx) (R : list crule)
 | Def (Ξ : ectx) (A : term) (t : term).
 
-Definition gctx : Type := list gdecl.
+Definition gctx : Type := gref → option gdecl.
+
+Definition gnil : gctx :=
+  λ _, None.
+
+Definition gcons (k : gref) (d : gdecl) (Σ : gctx) : gctx :=
+  λ r, if (r =? k)%string then Some d else Σ r.
+
+Definition extends (Σ Σ' : gctx) :=
+  ∀ r d,
+    Σ r = Some d →
+    Σ' r = Some d.
+
+Notation "a ⊑ b" := (extends a b) (at level 70, b at next level).
 
 (** Notations **)
 

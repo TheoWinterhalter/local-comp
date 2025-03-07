@@ -1,6 +1,6 @@
 (** Basic meta-theory **)
 
-From Coq Require Import Utf8 List Arith Lia.
+From Coq Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst Typing.
@@ -46,12 +46,12 @@ Lemma conversion_ind :
   ∀ Σ Ξ (P : ctx → term → term → Prop),
     (∀ Γ A t u, P Γ (app (lam A t) u) (t <[ u.. ])) →
     (∀ Γ c ξ Ξ' A t,
-      nth_error Σ c = Some (Def Ξ' A t) →
+      Σ c = Some (Def Ξ' A t) →
       closed t = true →
       P Γ (const c ξ) (einst ξ t)
     ) →
     (∀ Γ E Ξ' Δ R M ξ' n rule σ,
-      nth_error Σ E = Some (Ext Ξ' Δ R) →
+      Σ E = Some (Ext Ξ' Δ R) →
       nth_error Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
       P Γ ((plinst M (cr_pat rule)) <[ σ]) ((delocal M (cr_rep rule)) <[ σ])
@@ -141,7 +141,7 @@ Lemma typing_ind :
       P Γ (app t u) (B <[ u..])
     ) →
     (∀ Γ c ξ Ξ' A t,
-      nth_error Σ c = Some (Def Ξ' A t) →
+      Σ c = Some (Def Ξ' A t) →
       inst_typing Σ Ξ Γ ξ Ξ' →
       inst_typing_ Σ Ξ P Γ ξ Ξ' →
       closed A = true →
@@ -149,7 +149,7 @@ Lemma typing_ind :
     ) →
     (∀ Γ M x E ξ Ξ' Δ R A,
       nth_error Ξ M = Some (E, ξ) →
-      nth_error Σ E = Some (Ext Ξ' Δ R) →
+      Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
       closed_eargs ξ = true →
       P Γ (assm M x) (einst ξ (delocal M A))
@@ -1103,38 +1103,30 @@ Qed.
 
 (** Global environment weakening **)
 
-Lemma conv_gweak Σ d Ξ Γ u v :
+Lemma conv_gweak Σ Σ' Ξ Γ u v :
   Σ ;; Ξ | Γ ⊢ u ≡ v →
-  d :: Σ ;; Ξ | Γ ⊢ u ≡ v.
+  Σ ⊑ Σ' →
+  Σ' ;; Ξ | Γ ⊢ u ≡ v.
 Proof.
-  intro h. induction h using conversion_ind.
-  all: try solve [ econstructor ; eauto ].
-  - econstructor. 2: eassumption.
-    (* Uh oh. For this to hold, we need a different way to use names.
-      We could use de Bruijn levels maybe.
-    *)
-    admit.
-  - econstructor. all: eauto.
-    (* Same *)
-    admit.
-Admitted.
+  intros h hle. induction h using conversion_ind.
+  all: solve [ econstructor ; eauto ].
+Qed.
 
-Lemma typing_gweak Σ d Ξ Γ t A :
+Lemma typing_gweak Σ Σ' Ξ Γ t A :
   Σ ;; Ξ | Γ ⊢ t : A →
-  d :: Σ ;; Ξ | Γ ⊢ t : A.
+  Σ ⊑ Σ' →
+  Σ' ;; Ξ | Γ ⊢ t : A.
 Proof.
-  intro h. induction h using typing_ind.
+  intros h hle. induction h using typing_ind.
   all: try solve [ econstructor ; eauto ].
-  - econstructor. 1,3: admit.
+  - econstructor. 1,3: eauto.
     split.
     + (* intros E Ξ'' Δ R M ξ' σ n rule hE hM heM hn. cbn. *)
       (* destruct H0, H1. *)
       admit.
     + admit.
-  - econstructor. all: eauto.
-    admit.
   - econstructor. 1,3: eassumption.
-    apply conv_gweak. assumption.
+    eapply conv_gweak. all: eauto.
 Admitted.
 
 (** Validity (or presupposition) **)
@@ -1184,22 +1176,22 @@ Qed.
 
 Lemma valid_def Σ c Ξ A t :
   gwf Σ →
-  nth_error Σ c = Some (Def Ξ A t) →
+  Σ c = Some (Def Ξ A t) →
   ewf Σ Ξ ∧
   (∃ i, Σ ;; Ξ | ∙ ⊢ A : Sort i) ∧
   Σ ;; Ξ | ∙ ⊢ t : A.
 Proof.
   intros hΣ hc.
-  induction hΣ as [ | Σ ? ? ? ? ih | Σ ????? ih ] in c, Ξ, A, t, hc |- *.
-  - destruct c. all: discriminate.
-  - destruct c. 1: inversion hc.
-    cbn in hc. specialize ih with (1 := hc) as [? [[i ?] ?]].
+  induction hΣ as [ | c' ?????? ih | c' ??????? ih ] in c, Ξ, A, t, hc |- *.
+  - discriminate.
+  - unfold gcons in hc. destruct (c =? c')%string. 1: discriminate.
+    specialize ih with (1 := hc) as [? [[i ?] ?]].
     (* NEED: Σ weakening *)
     admit.
-  - destruct c.
-    + cbn in hc. inversion hc. subst.
+  - unfold gcons in hc. destruct (c =? c')%string.
+    + inversion hc. subst.
       admit. (* same *)
-    + cbn in hc. specialize ih with (1 := hc) as [? [[j ?] ?]].
+    + specialize ih with (1 := hc) as [? [[j ?] ?]].
       admit. (* same *)
 Admitted.
 
