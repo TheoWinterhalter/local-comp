@@ -1289,16 +1289,26 @@ Proof.
     intuition eauto using wf_gweak, ewf_gweak, typing_gweak, extends_gcons.
 Qed.
 
-Lemma styping_delocal Σ Ξ M Γ :
-  styping Σ Ξ ∙ (assm M) Γ.
+Lemma styping_delocal Σ Ξ M Γ x E ξ Ξ' Δ R A :
+  nth_error Ξ M = Some (E, ξ) →
+  Σ E = Some (Ext Ξ' Δ R) →
+  nth_error Δ x = Some A →
+  closed_eargs ξ = true →
+  styping Σ Ξ ∙ (λ n, assm M (x + n)) Γ.
 Proof.
-  induction Γ.
+  intros hM hE hx hξ.
+  induction Γ as [| B Γ ih] in x, hx |- *.
   - constructor.
   - constructor.
-    + admit.
+    + specialize (ih (S x)).
+      eapply styping_morphism. 1,3: eauto.
+      2:{ eapply ih. admit. }
+      intros n. unfold core.funcomp. f_equal. lia.
     + eapply meta_conv.
-      * econstructor. all: admit.
-      *
+      * econstructor. 1,2,4: eauto.
+        replace (x + 0) with x by lia.
+        eassumption.
+      * unfold delocal. admit.
 Abort.
 
 Lemma type_delocal Σ Ξ Γ M A i :
