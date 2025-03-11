@@ -1317,34 +1317,30 @@ Proof.
       assumption.
 Qed.
 
-Lemma styping_delocal Σ Ξ M Γ x E ξ Ξ' R :
+Lemma styping_delocal Σ Ξ M Γ E ξ Ξ' R :
   nth_error Ξ M = Some (E, ξ) →
   Σ E = Some (Ext Ξ' Γ R) →
-  (* nth_error Γ x = Some A → *)
   closed_eargs ξ = true →
-  styping Σ Ξ ∙ (λ n, assm M (x + n)) Γ.
+  styping Σ Ξ' ∙ (λ n, assm M n) Γ.
 Proof.
-  intros hM hE (* hx *) hξ.
-  induction Γ as [| A Γ ih] in x, hE |- *.
-  - constructor.
-  - constructor.
-    + specialize (ih (S x)).
-      eapply styping_morphism. 1,3: eauto.
-      (* intros n. unfold core.funcomp. f_equal. lia. *)
-      all: admit.
-    + eapply meta_conv.
-      * econstructor. 1,2,4: eauto.
-        replace (x + 0) with x by lia.
-        (* eassumption. *)
-        (* * unfold delocal. admit. *)
-        admit.
+  intros hM hE hξ.
+  rewrite styping_alt_equiv. intros x A e.
+  rasimpl. eapply meta_conv.
+  - econstructor. all: eauto.
+    (* Not good *)
+    admit.
+  - (* Something's off here too! So I must have messed something up in the
+    typing rules. *)
 Abort.
 
-Lemma type_delocal Σ Ξ Γ M A i :
-  Σ ;; Ξ | Γ ⊢ A : Sort i →
-  Σ ;; Ξ | ∙ ⊢ delocal M A : Sort i.
+Lemma type_delocal Σ Ξ Γ M A i E ξ Ξ' R :
+  nth_error Ξ M = Some (E, ξ) →
+  Σ E = Some (Ext Ξ' Γ R) →
+  closed_eargs ξ = true →
+  Σ ;; Ξ' | Γ ⊢ A : Sort i →
+  Σ ;; Ξ' | ∙ ⊢ delocal M A : Sort i.
 Proof.
-  intros h.
+  intros hM hE hξ h.
   eapply meta_conv.
   - unfold delocal. eapply typing_subst. 2: eassumption.
     (* When is it correct? *)
@@ -1380,7 +1376,7 @@ Proof.
     exists i. eapply meta_conv.
     + eapply typing_einst_closed.
       * admit. (* See how to get it *)
-      * eapply type_delocal.
+      * eapply type_delocal. all: eauto.
         (* Unclear, is there an issue with the def? *)
         admit.
     + reflexivity.
