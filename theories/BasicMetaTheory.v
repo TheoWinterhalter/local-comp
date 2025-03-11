@@ -1289,26 +1289,55 @@ Proof.
     intuition eauto using wf_gweak, ewf_gweak, typing_gweak, extends_gcons.
 Qed.
 
-Lemma styping_delocal Σ Ξ M Γ x E ξ Ξ' Δ R A :
+Definition styping_alt Σ Ξ (Γ : ctx) (σ : nat → term) (Δ : ctx) :=
+  ∀ x A,
+    nth_error Δ x = Some A →
+    Σ ;; Ξ | Γ ⊢ σ x : ((plus (S x)) ⋅ A) <[ σ ].
+
+Lemma styping_alt_equiv Σ Ξ Γ σ Δ :
+  styping Σ Ξ Γ σ Δ ↔ styping_alt Σ Ξ Γ σ Δ.
+Proof.
+  split.
+  - intro h. induction h as [| ???? ih].
+    + intros x A e. destruct x. all: discriminate.
+    + intros [] B e.
+      * rasimpl. cbn in e. inversion e. subst.
+        assumption.
+      * cbn in e. rasimpl. eapply ih in e. rasimpl in e.
+        exact e.
+  - intro h. induction Δ as [| A Δ ih] in σ, h |- *.
+    1: constructor.
+    econstructor.
+    + eapply ih.
+      intros x B e. rasimpl.
+      core.unfold_funcomp.
+      specialize (h (S x) _ e). rasimpl in h.
+      assumption.
+    + specialize (h 0 _ eq_refl). rasimpl in h.
+      assumption.
+Qed.
+
+Lemma styping_delocal Σ Ξ M Γ x E ξ Ξ' R :
   nth_error Ξ M = Some (E, ξ) →
-  Σ E = Some (Ext Ξ' Δ R) →
-  nth_error Δ x = Some A →
+  Σ E = Some (Ext Ξ' Γ R) →
+  (* nth_error Γ x = Some A → *)
   closed_eargs ξ = true →
   styping Σ Ξ ∙ (λ n, assm M (x + n)) Γ.
 Proof.
-  intros hM hE hx hξ.
-  induction Γ as [| B Γ ih] in x, hx |- *.
+  intros hM hE (* hx *) hξ.
+  induction Γ as [| A Γ ih] in x, hE |- *.
   - constructor.
   - constructor.
     + specialize (ih (S x)).
       eapply styping_morphism. 1,3: eauto.
-      2:{ eapply ih. admit. }
-      intros n. unfold core.funcomp. f_equal. lia.
+      (* intros n. unfold core.funcomp. f_equal. lia. *)
+      all: admit.
     + eapply meta_conv.
       * econstructor. 1,2,4: eauto.
         replace (x + 0) with x by lia.
-        eassumption.
-      * unfold delocal. admit.
+        (* eassumption. *)
+        (* * unfold delocal. admit. *)
+        admit.
 Abort.
 
 Lemma type_delocal Σ Ξ Γ M A i :
