@@ -1102,6 +1102,20 @@ Proof.
   assumption.
 Qed.
 
+(** Extension environement weakening **)
+
+Lemma conv_eweak Σ Ξ d Γ u v :
+  Σ ;; Ξ | Γ ⊢ u ≡ v →
+  Σ ;; d :: Ξ | Γ ⊢ u ≡ v.
+Proof.
+  intros h. induction h using conversion_ind.
+  all: try solve [ econstructor ; eauto ].
+  (* M here needs to be shifted.
+    TODO: Find an abstraction to have weakenings from Ξ to Ξ'.
+  *)
+  econstructor.
+Abort.
+
 (** Global environment weakening **)
 
 Lemma conv_gweak Σ Σ' Ξ Γ u v :
