@@ -200,7 +200,7 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
       Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
       closed_eargs ξ = true →
-      Γ ⊢ assm M x : einst ξ (delocal M A)
+      Γ ⊢ assm M x : einst ξ (delocal M ((plus (S x)) ⋅ A))
 
 | type_conv :
     ∀ i A B t,

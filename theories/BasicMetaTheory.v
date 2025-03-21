@@ -152,7 +152,7 @@ Lemma typing_ind :
       Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
       closed_eargs ξ = true →
-      P Γ (assm M x) (einst ξ (delocal M A))
+      P Γ (assm M x) (einst ξ (delocal M ((plus (S x)) ⋅ A)))
     ) →
     (∀ Γ i A B t,
       Σ ;; Ξ | Γ ⊢ t : A →
@@ -1083,7 +1083,8 @@ Proof.
       rewrite ren_inst. f_equal.
       * apply closed_ren_eargs. assumption.
       * unfold delocal. rasimpl.
-        apply ext_term. cbn. auto.
+        apply ext_term. cbn. unfold core.funcomp.
+        admit.
   - econstructor. 1,3: eauto.
     eapply conv_einst. 2: eassumption.
     apply hξ.
@@ -1377,8 +1378,6 @@ Proof.
     + eapply typing_einst_closed.
       * admit. (* See how to get it *)
       * eapply type_delocal. all: eauto.
-        (* Unclear, is there an issue with the def? *)
-        admit.
     + reflexivity.
   - eexists. eassumption.
 Admitted.
