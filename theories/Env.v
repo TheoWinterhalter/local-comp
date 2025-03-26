@@ -7,7 +7,7 @@
 
 **)
 
-From Coq Require Import Utf8 String List.
+From Stdlib Require Import Utf8 String List.
 From LocalComp.autosubst Require Import AST.
 From LocalComp Require Import BasicAST.
 

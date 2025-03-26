@@ -4,9 +4,9 @@
 
 **)
 
-From Coq Require Import Utf8 List.
+From Stdlib Require Import Utf8 List.
 From LocalComp.autosubst Require Import core unscoped RAsimpl AST.
-From Coq Require Import Setoid Morphisms Relation_Definitions.
+From Stdlib Require Import Setoid Morphisms Relation_Definitions.
 
 #[global] Disable Notation "[ sigma_term ]" : fscope.
 #[global] Disable Notation "s [ sigma_term ]" : subst_scope.

@@ -1,6 +1,6 @@
 (** Extension and pattern instantiation **)
 
-From Coq Require Import Utf8 List.
+From Stdlib Require Import Utf8 List.
 From LocalComp.autosubst Require Import AST SubstNotations RAsimpl AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env.
 Import ListNotations.

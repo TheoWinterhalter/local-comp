@@ -8,9 +8,9 @@
 
 **)
 
-From Coq Require Import Utf8 List.
+From Stdlib Require Import Utf8 List.
 From LocalComp.autosubst Require Import core unscoped.
-From Coq Require Import Setoid Morphisms Relation_Definitions.
+From Stdlib Require Import Setoid Morphisms Relation_Definitions.
 Import ListNotations.
 
 Inductive quoted_nat :=

@@ -1,10 +1,10 @@
 (** Basic meta-theory **)
 
-From Coq Require Import Utf8 String List Arith Lia.
+From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst Typing.
-From Coq Require Import Setoid Morphisms Relation_Definitions.
+From Stdlib Require Import Setoid Morphisms Relation_Definitions.
 
 Import ListNotations.
 Import CombineNotations.

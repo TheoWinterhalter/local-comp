@@ -1,10 +1,10 @@
 (** Typing **)
 
-From Coq Require Import Utf8 List Arith Bool.
+From Stdlib Require Import Utf8 List Arith Bool.
 From LocalComp.autosubst
 Require Import core unscoped AST SubstNotations RAsimpl AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst.
-From Coq Require Import Setoid Morphisms Relation_Definitions.
+From Stdlib Require Import Setoid Morphisms Relation_Definitions.
 
 Import ListNotations.
 Import CombineNotations.
