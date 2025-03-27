@@ -7,7 +7,7 @@
 
 **)
 
-From Stdlib Require Import Utf8 String List.
+From Stdlib Require Import Utf8 String List Arith.
 From LocalComp.autosubst Require Import AST.
 From LocalComp Require Import BasicAST.
 
@@ -31,12 +31,14 @@ Definition ectx := list idecl.
 (** Access in an extension environment
 
   This is special because we use de Bruijn levels so we need to perform some
-  simple arithmetic.
+  simple arithmetic. We also avoid returning [Some] for de Bruijn levels that go
+  too far.
 
 **)
 
 Definition ectx_get (Ξ : ectx) (M : eref) :=
-  nth_error Ξ (length Ξ - (S M)).
+  if length Ξ <=? M then None
+  else nth_error Ξ (length Ξ - (S M)).
 
 (** Patterns and pattern arguments **)
 Inductive parg :=

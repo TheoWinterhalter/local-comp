@@ -1108,13 +1108,14 @@ Lemma ectx_get_weak d Ξ M i :
   ectx_get Ξ M = Some i →
   ectx_get (d :: Ξ) M = Some i.
 Proof.
-  unfold ectx_get. cbn.
+  unfold ectx_get. cbn - ["<=?"].
+  destruct (_ <=? _) eqn: e. 1: congruence.
+  rewrite Nat.leb_gt in e.
   intro h.
-  epose proof (nth_error_Some Ξ _) as [e _]. rewrite h in e.
-  forward e by congruence.
-  (* replace (length Ξ - M) with (S (length Ξ - M - 1)). by lia. *)
-  (* Currently this is wrong because M could overflow and this isn't caught. *)
-Abort.
+  destruct (_ <=? _) eqn: e'. 1:{ rewrite Nat.leb_le in e'. lia. }
+  replace (length Ξ - M) with (S (length Ξ - (S M))) by lia.
+  cbn. assumption.
+Qed.
 
 Lemma conv_eweak Σ Ξ d Γ u v :
   Σ ;; Ξ | Γ ⊢ u ≡ v →
@@ -1123,7 +1124,8 @@ Proof.
   intros h. induction h using conversion_ind.
   all: try solve [ econstructor ; eauto ].
   econstructor. 1,3: eauto.
-Abort.
+  apply ectx_get_weak. eassumption.
+Qed.
 
 (** Global environment weakening **)
 
