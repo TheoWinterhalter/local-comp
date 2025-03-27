@@ -1157,6 +1157,18 @@ Proof.
     eapply conv_eweak. all: eauto.
 Qed.
 
+Lemma inst_typing_eweak Σ Ξ d Γ ξ Ξ' :
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  inst_typing Σ (d :: Ξ) Γ ξ Ξ'.
+Proof.
+  intros h.
+  eapply inst_typing_eweak_. 1: eassumption.
+  destruct h as [h1 h2]. split.
+  - assumption.
+  - intros M x E ξ' Ξ'' Δ R A hM hE hx hc.
+    eapply typing_eweak. eauto.
+Qed.
+
 (** Global environment weakening **)
 
 Lemma conv_gweak Σ Σ' Ξ Γ u v :
@@ -1294,6 +1306,57 @@ Proof.
     rasimpl in h. eassumption.
 Qed.
 
+Lemma ectx_get_case d Ξ M i :
+  ectx_get (d :: Ξ) M = Some i →
+  (M = length Ξ ∧ d = i) ∨ (ectx_get Ξ M = Some i).
+Proof.
+  intro h.
+  unfold ectx_get in h.
+  destruct (_ <=? _) eqn: e. 1: discriminate.
+  rewrite Nat.leb_gt in e. cbn in e.
+  cbn in h.
+  destruct (length Ξ - M) eqn: e'.
+  - left. cbn in h. inversion h.
+    intuition lia.
+  - right. cbn in h.
+    unfold ectx_get.
+    destruct (_ <=? _) eqn: e2.
+    1:{ rewrite Nat.leb_le in e2. lia. }
+    rewrite <- h. f_equal. lia.
+Qed.
+
+Lemma valid_ewf Σ Ξ M E ξ :
+  ewf Σ Ξ →
+  ectx_get Ξ M = Some (E, ξ) →
+  ∃ Ξ' Δ R,
+    Σ E = Some (Ext Ξ' Δ R) ∧
+    inst_typing Σ Ξ ∙ ξ Ξ'.
+Proof.
+  intros hΞ e.
+  induction hΞ as [ | Ξ E' ξ' Ξ' Δ R h ih he hξ ].
+  1:{ destruct M. all: discriminate. }
+  eapply ectx_get_case in e as eh. destruct eh as [[-> eh] | eh].
+  - inversion eh. subst.
+    eexists _,_,_. split. 1: eassumption.
+    eapply inst_typing_eweak. assumption.
+  - specialize (ih eh) as [? [? [? []]]].
+    eexists _,_,_. split. 1: eassumption.
+    eapply inst_typing_eweak. assumption.
+Qed.
+
+Corollary valid_ewf_alt Σ Ξ M E ξ Ξ' Δ R :
+  ewf Σ Ξ →
+  ectx_get Ξ M = Some (E, ξ) →
+  Σ E = Some (Ext Ξ' Δ R) →
+  inst_typing Σ Ξ ∙ ξ Ξ'.
+Proof.
+  intros hΞ hM hE.
+  eapply valid_ewf in hM. 2: eassumption.
+  destruct hM as [? [? [? [e ?]]]].
+  rewrite e in hE. inversion hE. subst.
+  assumption.
+Qed.
+
 Lemma extends_gcons Σ c d :
   Σ c = None →
   Σ ⊑ gcons c d Σ.
@@ -1404,6 +1467,19 @@ Proof.
   - reflexivity.
 Admitted.
 
+Lemma typing_lift_closed Σ Ξ Γ t A :
+Σ ;; Ξ | ∙ ⊢ t : A →
+  closed t = true →
+  closed A = true →
+  Σ ;; Ξ | Γ ⊢ t : A.
+Proof.
+  intros h ht hA.
+  eapply typing_ren in h. 2: eapply rtyping_add.
+  rewrite !closed_ren in h. 2,3: assumption.
+  rewrite app_nil_r in h.
+  eassumption.
+Qed.
+
 Lemma validity Σ Ξ Γ t A :
   gwf Σ →
   ewf Σ Ξ →
@@ -1425,15 +1501,19 @@ Proof.
     exists i. eapply meta_conv.
     + eapply typing_einst_closed. all: eassumption.
     + reflexivity.
-  - (* eapply valid_ext in hΣ as h. 2: eassumption.
+  - eapply valid_ext in hΣ as h. 2: eassumption.
     destruct h as [hΞ' hΔ].
     eapply valid_wf in hΔ as hA. 2: eassumption.
     destruct hA as [i hA].
-    exists i. eapply meta_conv.
-    + eapply typing_einst_closed.
-      * admit. (* See how to get it *)
-      * eapply type_delocal. all: eauto.
-    + reflexivity. *)
+    exists i. eapply typing_lift_closed.
+    2: apply closed_delocal.
+    2: reflexivity.
+
+    eapply valid_ewf_alt in hΞ as hξ. 2,3: eassumption.
+    eapply typing_einst in hA. 2: eassumption.
+    cbn in hA. rewrite app_nil_r in hA.
+    rewrite closed_ren_eargs in hA. 2: assumption.
+
     admit.
   - eexists. eassumption.
 Admitted.
