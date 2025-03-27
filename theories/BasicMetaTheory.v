@@ -1436,37 +1436,6 @@ Proof.
       assumption.
 Qed.
 
-Lemma styping_delocal Σ Ξ M Γ E ξ Ξ' R :
-  ectx_get Ξ M = Some (E, ξ) →
-  Σ E = Some (Ext Ξ' Γ R) →
-  closed_eargs ξ = true →
-  styping Σ Ξ' ∙ (λ n, assm M n) Γ.
-Proof.
-  intros hM hE hξ.
-  rewrite styping_alt_equiv. intros x A e.
-  rasimpl. eapply meta_conv.
-  - econstructor. all: eauto.
-    (* Not good *)
-    admit.
-  - (* Something's off here too! So I must have messed something up in the
-    typing rules. *)
-Abort.
-
-Lemma type_delocal Σ Ξ Γ M A i E ξ Ξ' R :
-  ectx_get Ξ M = Some (E, ξ) →
-  Σ E = Some (Ext Ξ' Γ R) →
-  closed_eargs ξ = true →
-  Σ ;; Ξ' | Γ ⊢ A : Sort i →
-  Σ ;; Ξ' | ∙ ⊢ delocal M A : Sort i.
-Proof.
-  intros hM hE hξ h.
-  eapply meta_conv.
-  - unfold delocal. eapply typing_subst. 2: eassumption.
-    (* When is it correct? *)
-    admit.
-  - reflexivity.
-Admitted.
-
 Lemma typing_lift_closed Σ Ξ Γ t A :
 Σ ;; Ξ | ∙ ⊢ t : A →
   closed t = true →
@@ -1508,12 +1477,22 @@ Proof.
     exists i. eapply typing_lift_closed.
     2: apply closed_delocal.
     2: reflexivity.
-
     eapply valid_ewf_alt in hΞ as hξ. 2,3: eassumption.
     eapply typing_einst in hA. 2: eassumption.
     cbn in hA. rewrite app_nil_r in hA.
     rewrite closed_ren_eargs in hA. 2: assumption.
-
-    admit.
+    unfold delocal. eapply meta_conv.
+    + eapply typing_subst. 2: eassumption.
+      rewrite styping_alt_equiv. intros y B e.
+      rewrite nth_error_ctx_einst in e.
+      destruct (nth_error Δ y) eqn:e2. 2: discriminate.
+      cbn in e. inversion e. subst. clear e.
+      eapply meta_conv.
+      * econstructor. all: eassumption.
+      * rewrite closed_ren_eargs. 2: assumption.
+        rewrite ren_inst.
+        rewrite closed_ren_eargs. 2: assumption.
+        reflexivity.
+    + reflexivity.
   - eexists. eassumption.
-Admitted.
+Qed.
