@@ -28,6 +28,16 @@ Definition idecl : Type := gref * eargs.
 (** Extension environment **)
 Definition ectx := list idecl.
 
+(** Access in an extension environment
+
+  This is special because we use de Bruijn levels so we need to perform some
+  simple arithmetic.
+
+**)
+
+Definition ectx_get (Ξ : ectx) (M : eref) :=
+  nth_error Ξ (length Ξ - (S M)).
+
 (** Patterns and pattern arguments **)
 Inductive parg :=
 | pvar

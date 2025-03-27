@@ -58,7 +58,7 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
 | conv_red :
     ∀ E Ξ' Δ R M ξ' n rule σ,
       Σ E = Some (Ext Ξ' Δ R) →
-      nth_error Ξ M = Some (E, ξ') →
+      ectx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
       Γ ⊢ (plinst M rule.(cr_pat)) <[ σ ] ≡ (delocal M rule.(cr_rep)) <[ σ ]
 
@@ -132,7 +132,7 @@ Section Inst.
   Definition inst_equations (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
     ∀ E Ξ'' Δ R M ξ' σ n rule,
       Σ E = Some (Ext Ξ'' Δ R) →
-      nth_error Ξ' M = Some (E, ξ') →
+      ectx_get Ξ' M = Some (E, ξ') →
       nth_error ξ M = Some σ →
       nth_error R n = Some rule →
       let m := length rule.(cr_env) in
@@ -144,7 +144,7 @@ Section Inst.
 
   Definition inst_eget_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
     ∀ M x E ξ' Ξ'' Δ R A,
-      nth_error Ξ' M = Some (E, ξ') →
+      ectx_get Ξ' M = Some (E, ξ') →
       Σ E = Some (Ext Ξ'' Δ R) →
       nth_error Δ x = Some A →
       closed_eargs ξ' = true →
@@ -196,7 +196,7 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
 
 | type_assm :
     ∀ M x E ξ Ξ' Δ R A,
-      nth_error Ξ M = Some (E, ξ) →
+      ectx_get Ξ M = Some (E, ξ) →
       Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
       closed_eargs ξ = true →

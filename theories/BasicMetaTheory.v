@@ -52,7 +52,7 @@ Lemma conversion_ind :
     ) →
     (∀ Γ E Ξ' Δ R M ξ' n rule σ,
       Σ E = Some (Ext Ξ' Δ R) →
-      nth_error Ξ M = Some (E, ξ') →
+      ectx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
       P Γ ((plinst M (cr_pat rule)) <[ σ]) ((delocal M (cr_rep rule)) <[ σ])
     ) →
@@ -148,7 +148,7 @@ Lemma typing_ind :
       P Γ (const c ξ) (einst ξ A)
     ) →
     (∀ Γ M x E ξ Ξ' Δ R A,
-      nth_error Ξ M = Some (E, ξ) →
+      ectx_get Ξ M = Some (E, ξ) →
       Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
       closed_eargs ξ = true →
@@ -1333,7 +1333,7 @@ Proof.
 Qed.
 
 Lemma styping_delocal Σ Ξ M Γ E ξ Ξ' R :
-  nth_error Ξ M = Some (E, ξ) →
+  ectx_get Ξ M = Some (E, ξ) →
   Σ E = Some (Ext Ξ' Γ R) →
   closed_eargs ξ = true →
   styping Σ Ξ' ∙ (λ n, assm M n) Γ.
@@ -1349,7 +1349,7 @@ Proof.
 Abort.
 
 Lemma type_delocal Σ Ξ Γ M A i E ξ Ξ' R :
-  nth_error Ξ M = Some (E, ξ) →
+  ectx_get Ξ M = Some (E, ξ) →
   Σ E = Some (Ext Ξ' Γ R) →
   closed_eargs ξ = true →
   Σ ;; Ξ' | Γ ⊢ A : Sort i →
