@@ -152,7 +152,7 @@ Lemma typing_ind :
       Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
       closed_eargs ξ = true →
-      P Γ (assm M x) (einst ξ (delocal M ((plus (S x)) ⋅ A)))
+      P Γ (assm M x) (delocal M (einst ξ ((plus (S x)) ⋅ A)))
     ) →
     (∀ Γ i A B t,
       Σ ;; Ξ | Γ ⊢ t : A →
@@ -480,6 +480,50 @@ Proof.
         apply ext_term. cbn. auto.
 Admitted.
 
+Lemma ups_below k σ n :
+  n < k →
+  ups k σ n = var n.
+Proof.
+  intro h.
+  induction k as [| k ih] in n, σ, h |- *. 1: lia.
+  cbn. destruct n as [| ].
+  - reflexivity.
+  - cbn. core.unfold_funcomp. rewrite ih. 2: lia.
+    reflexivity.
+Qed.
+
+Lemma ups_above k σ n :
+  ups k σ (k + n) = (plus k) ⋅ σ n.
+Proof.
+  induction k as [| k ih] in n |- *.
+  - cbn. rasimpl. reflexivity.
+  - cbn. core.unfold_funcomp. rewrite ih.
+    rasimpl. reflexivity.
+Qed.
+
+Lemma scoped_delocal M t k :
+  scoped k (t <[ ups k (λ x, assm M x) ]) = true.
+Proof.
+  induction t using term_rect in k |- *.
+  all: try solve [ cbn ; eauto using andb_true_intro ].
+  - cbn. destruct (lt_dec n k).
+    + rewrite ups_below. 2: assumption.
+      cbn - ["<?"]. apply Nat.ltb_lt. assumption.
+    + pose (m := n - k). replace n with (k + m) by lia.
+      rewrite ups_above. reflexivity.
+  - cbn. apply All_forallb. apply All_map.
+    eapply All_impl. 2: eassumption.
+    intros. apply All_forallb. apply All_map.
+    eapply All_impl. 2: eassumption.
+    auto.
+Qed.
+
+Lemma closed_delocal M t :
+  closed (delocal M t) = true.
+Proof.
+  apply scoped_delocal with (k := 0).
+Qed.
+
 Lemma typing_ren :
   ∀ Σ Ξ Γ Δ ρ t A,
     rtyping Δ ρ Γ →
@@ -502,13 +546,8 @@ Proof.
     + assumption.
     + rewrite ren_inst. f_equal.
       symmetry. apply closed_ren. assumption.
-  - rasimpl. eapply meta_conv.
-    1:{ econstructor. all: eassumption. }
-    rewrite ren_inst.
-    f_equal.
-    + symmetry. apply closed_ren_eargs. assumption.
-    + unfold delocal. rasimpl.
-      apply ext_term. cbn. auto.
+  - rasimpl. rewrite closed_ren. 2: eapply closed_delocal.
+    econstructor. all: eassumption.
   - rasimpl. rasimpl in IHht2.
     econstructor. all: eauto.
     eapply conv_ren. all: eassumption.
@@ -717,50 +756,6 @@ Proof.
     cbn. auto.
 Qed.
 
-Lemma ups_below k σ n :
-  n < k →
-  ups k σ n = var n.
-Proof.
-  intro h.
-  induction k as [| k ih] in n, σ, h |- *. 1: lia.
-  cbn. destruct n as [| ].
-  - reflexivity.
-  - cbn. core.unfold_funcomp. rewrite ih. 2: lia.
-    reflexivity.
-Qed.
-
-Lemma ups_above k σ n :
-  ups k σ (k + n) = (plus k) ⋅ σ n.
-Proof.
-  induction k as [| k ih] in n |- *.
-  - cbn. rasimpl. reflexivity.
-  - cbn. core.unfold_funcomp. rewrite ih.
-    rasimpl. reflexivity.
-Qed.
-
-Lemma scoped_delocal M t k :
-  scoped k (t <[ ups k (λ x, assm M x) ]) = true.
-Proof.
-  induction t using term_rect in k |- *.
-  all: try solve [ cbn ; eauto using andb_true_intro ].
-  - cbn. destruct (lt_dec n k).
-    + rewrite ups_below. 2: assumption.
-      cbn - ["<?"]. apply Nat.ltb_lt. assumption.
-    + pose (m := n - k). replace n with (k + m) by lia.
-      rewrite ups_above. reflexivity.
-  - cbn. apply All_forallb. apply All_map.
-    eapply All_impl. 2: eassumption.
-    intros. apply All_forallb. apply All_map.
-    eapply All_impl. 2: eassumption.
-    auto.
-Qed.
-
-Lemma closed_delocal M t :
-  closed (delocal M t) = true.
-Proof.
-  apply scoped_delocal with (k := 0).
-Qed.
-
 Lemma scoped_subst σ k t :
   scoped k t = true →
   t <[ ups k σ ] = t.
@@ -931,11 +926,8 @@ Proof.
     + econstructor. 1,3: eassumption.
       eapply inst_typing_subst. all: eassumption.
     + symmetry. apply subst_inst_closed. assumption.
-  - cbn. eapply meta_conv.
-    + econstructor. all: eassumption.
-    + rewrite subst_inst_closed. 2: apply closed_delocal.
-      rewrite closed_subst_eargs. 2: assumption.
-      reflexivity.
+  - cbn. rewrite closed_subst. 2: eapply closed_delocal.
+    econstructor. all: eassumption.
   - econstructor. 1,3: eauto.
     eapply conv_subst. eassumption.
 Qed.
@@ -1079,11 +1071,12 @@ Proof.
     + eapply typing_ren.
       1:{ erewrite <- length_ctx_einst. eapply rtyping_add. }
       eapply hξ. all: eassumption.
-    + rewrite ren_inst. f_equal.
+    + (* Need to update inst_eget! *)
+      (* rewrite ren_inst. f_equal.
       rewrite ren_inst. f_equal.
       * apply closed_ren_eargs. assumption.
       * unfold delocal. rasimpl.
-        apply ext_term. cbn. unfold core.funcomp.
+        apply ext_term. cbn. unfold core.funcomp. *)
         admit.
   - econstructor. 1,3: eauto.
     eapply conv_einst. 2: eassumption.
@@ -1436,7 +1429,7 @@ Proof.
     exists i. eapply meta_conv.
     + eapply typing_einst_closed. all: eassumption.
     + reflexivity.
-  - eapply valid_ext in hΣ as h. 2: eassumption.
+  - (* eapply valid_ext in hΣ as h. 2: eassumption.
     destruct h as [hΞ' hΔ].
     eapply valid_wf in hΔ as hA. 2: eassumption.
     destruct hA as [i hA].
@@ -1444,6 +1437,7 @@ Proof.
     + eapply typing_einst_closed.
       * admit. (* See how to get it *)
       * eapply type_delocal. all: eauto.
-    + reflexivity.
+    + reflexivity. *)
+    admit.
   - eexists. eassumption.
 Admitted.
