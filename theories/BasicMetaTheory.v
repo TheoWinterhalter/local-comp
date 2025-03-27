@@ -166,12 +166,14 @@ Lemma typing_ind :
 Proof.
   intros Σ Ξ P hvar hsort hpi hlam happ hconst hassm hconv.
   fix aux 4. move aux at top.
-  intros Γ t A h. destruct h.
+  intros Γ t A h. destruct h as [| | | | | ????? hc h hA | |].
   6:{
     eapply hconst. 1,2,4: eassumption.
-    destruct H0.
+    destruct h as [h1 h2].
     split. 1: assumption.
-    red. eauto.
+    intros M E ξ' hM. specialize (h2 _ _ _ hM).
+    destruct h2 as [? [? [? [? h2]]]]. split. 1: assumption.
+    eexists _,_,_. intuition eauto.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
@@ -515,7 +517,10 @@ Proof.
   intros hρ [h1 h2] [ih1 ih2].
   split.
   - admit.
-  - intros M x E ξ' Ξ'' Θ R A hM hE hx hξ'.
+  - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].
+    split. 1: assumption.
+    eexists _,_,_. split. 1: eassumption.
+    intros ?? h.
     rewrite eget_ren. eapply meta_conv.
     + eauto.
     + rewrite !ren_inst. f_equal.
@@ -896,7 +901,10 @@ Proof.
   intros hσ [h1 h2] [ih1 ih2].
   split.
   - admit.
-  - intros M x E ξ' Ξ'' Θ R A hM hE hx hξ'.
+  - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].
+    split. 1: assumption.
+    eexists _,_,_. split. 1: eassumption.
+    intros ?? h.
     rewrite eget_subst. eapply meta_conv.
     + eauto.
     + apply subst_inst_closed. apply closed_delocal.
@@ -1017,6 +1025,19 @@ Proof.
     cbn. auto.
 Admitted.
 
+Lemma type_eget Σ Ξ Ξ' Γ ξ M x E ξ' Ξ'' Δ R A :
+  inst_eget Σ Ξ Γ ξ Ξ' →
+  ectx_get Ξ' M = Some (E, ξ') →
+  Σ E = Some (Ext Ξ'' Δ R) →
+  nth_error Δ x = Some A →
+  Σ ;; Ξ | Γ ⊢ eget ξ M x : einst ξ (delocal M (einst ξ' (plus (S x) ⋅ A))).
+Proof.
+  intros hξ hM hE hx.
+  specialize (hξ _ _ _ hM) as [? [? [? [? [e hξ]]]]].
+  rewrite e in hE. inversion hE. subst.
+  intuition eauto.
+Qed.
+
 Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
   inst_typing Σ Ξ Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ t : A →
@@ -1058,7 +1079,11 @@ Proof.
       * intros E Ξ'' Θ R M ξ' σ n rule hE hM hξM hn. cbn.
         rewrite <- einst_einst.
         admit.
-      * intros M x E ξ' Ξ'' Θ R B hM hE hx.
+      * rename H3 into ih2.
+        intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].
+        split. 1: assumption.
+        eexists _,_,_. split. 1: eassumption.
+        intros ?? h.
         rewrite <- einst_eget. rewrite <- einst_einst.
         eauto.
     + rewrite einst_einst. reflexivity.
@@ -1066,7 +1091,8 @@ Proof.
     eapply meta_conv.
     + eapply typing_ren.
       1:{ erewrite <- length_ctx_einst. eapply rtyping_add. }
-      eapply hξ. all: eassumption.
+      eapply type_eget. 2-4: eassumption.
+      apply hξ.
     + rewrite ren_inst. f_equal.
       apply closed_ren. apply closed_delocal.
   - econstructor. 1,3: eauto.
@@ -1123,8 +1149,10 @@ Lemma inst_eget_eweak Σ Ξ d Γ ξ Ξ' :
   inst_eget Σ (d :: Ξ) Γ ξ Ξ'.
 Proof.
   intros h ih.
-  intros M x E ξ' Ξ'' Δ R A hM hE hx hc.
-  eapply ih. all: eauto.
+  intros M E ξ' e. specialize (ih _ _ _ e) as [? [? [? [? [? ih]]]]].
+  split. 1: assumption.
+  eexists _,_,_. split. 1: eassumption.
+  eauto.
 Qed.
 
 Lemma inst_typing_eweak_ Σ Ξ d Γ ξ Ξ' :
@@ -1160,8 +1188,10 @@ Proof.
   eapply inst_typing_eweak_. 1: eassumption.
   destruct h as [h1 h2]. split.
   - assumption.
-  - intros M x E ξ' Ξ'' Δ R A hM hE hx hc.
-    eapply typing_eweak. eauto.
+  - intros M E ξ' e. specialize (h2 _ _ _ e) as [? [? [? [? [? ih]]]]].
+    split. 1: assumption.
+    eexists _,_,_. split. 1: eassumption.
+    eauto using typing_eweak.
 Qed.
 
 (** Global environment weakening **)
@@ -1189,11 +1219,12 @@ Lemma inst_eget_gweak Σ Σ' Ξ Γ ξ Ξ' :
   inst_eget Σ' Ξ Γ ξ Ξ'.
 Proof.
   intros h ih hle.
-  intros M x E ξ' Ξ'' Δ R A hM hE hx hc.
-  eapply ih. all: eauto.
-  (* I guess we need some guarantee that M and Ξ' weren't pointing into the
-    future *)
-Admitted.
+  intros M E ξ' e. specialize (ih _ _ _ e) as [? [? [? [? [? ih]]]]].
+  split. 1: assumption.
+  eexists _,_,_. split.
+  - eapply hle. eassumption.
+  - eapply ih.
+Qed.
 
 Lemma inst_typing_gweak_ Σ Σ' Ξ Γ ξ Ξ' :
   inst_typing Σ Ξ Γ ξ Ξ' →
@@ -1229,8 +1260,10 @@ Proof.
   eapply inst_typing_gweak_. 1,3: eassumption.
   destruct h as [h1 h2]. split.
   - assumption.
-  - intros M x E ξ' Ξ'' Δ R A hM hE hx hc.
-    eapply typing_gweak. all: eauto.
+  - intros M E ξ' e. specialize (h2 _ _ _ e) as [? [? [? [? [? h2]]]]].
+    split. 1: assumption.
+    eexists _,_,_. split. 1: eassumption.
+    eauto using typing_gweak.
 Qed.
 
 Lemma ewf_gweak Σ Σ' Ξ :

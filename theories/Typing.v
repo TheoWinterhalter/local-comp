@@ -143,12 +143,14 @@ Section Inst.
       Γ ,,, Θ ⊢ lhs ≡ rhs.
 
   Definition inst_eget_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
-    ∀ M x E ξ' Ξ'' Δ R A,
+    ∀ M E ξ',
       ectx_get Ξ' M = Some (E, ξ') →
-      Σ E = Some (Ext Ξ'' Δ R) →
-      nth_error Δ x = Some A →
-      closed_eargs ξ' = true →
-      Γ ⊢ eget ξ M x : einst ξ (delocal M (einst ξ' (plus (S x) ⋅ A))).
+      closed_eargs ξ' = true ∧
+      ∃ Ξ'' Δ R,
+        Σ E = Some (Ext Ξ'' Δ R) ∧
+        ∀ x A,
+          nth_error Δ x = Some A →
+          Γ ⊢ eget ξ M x : einst ξ (delocal M (einst ξ' (plus (S x) ⋅ A))).
 
   Definition inst_typing_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
     inst_equations Γ ξ Ξ' ∧ inst_eget_ Γ ξ Ξ'.
