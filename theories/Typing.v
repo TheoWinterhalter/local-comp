@@ -148,7 +148,7 @@ Section Inst.
       Σ E = Some (Ext Ξ'' Δ R) →
       nth_error Δ x = Some A →
       closed_eargs ξ' = true →
-      Γ ⊢ eget ξ M x : einst ξ (einst ξ' (delocal M A)).
+      Γ ⊢ eget ξ M x : einst ξ (delocal M (einst ξ' (plus (S x) ⋅ A))).
 
   Definition inst_typing_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
     inst_equations Γ ξ Ξ' ∧ inst_eget_ Γ ξ Ξ'.

@@ -460,26 +460,6 @@ Proof.
   cbn. reflexivity.
 Qed.
 
-Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
-  rtyping Δ ρ Γ →
-  inst_typing Σ Ξ Γ ξ Ξ' →
-  inst_typing_ Σ Ξ (λ Γ t A,
-    ∀ Δ ρ, rtyping Δ ρ Γ → Σ ;; Ξ | Δ ⊢ ρ ⋅ t : ρ ⋅ A
-  ) Γ ξ Ξ' →
-  inst_typing Σ Ξ Δ (ren_eargs ρ ξ) Ξ'.
-Proof.
-  intros hρ [h1 h2] [ih1 ih2].
-  split.
-  - admit.
-  - intros M x E ξ' Ξ'' Θ R A hM hE hx hξ'.
-    rewrite eget_ren. eapply meta_conv.
-    + eauto.
-    + rewrite !ren_inst. f_equal. f_equal.
-      * apply closed_ren_eargs. assumption.
-      * unfold delocal. rasimpl.
-        apply ext_term. cbn. auto.
-Admitted.
-
 Lemma ups_below k σ n :
   n < k →
   ups k σ n = var n.
@@ -523,6 +503,24 @@ Lemma closed_delocal M t :
 Proof.
   apply scoped_delocal with (k := 0).
 Qed.
+
+Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
+  rtyping Δ ρ Γ →
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  inst_typing_ Σ Ξ (λ Γ t A,
+    ∀ Δ ρ, rtyping Δ ρ Γ → Σ ;; Ξ | Δ ⊢ ρ ⋅ t : ρ ⋅ A
+  ) Γ ξ Ξ' →
+  inst_typing Σ Ξ Δ (ren_eargs ρ ξ) Ξ'.
+Proof.
+  intros hρ [h1 h2] [ih1 ih2].
+  split.
+  - admit.
+  - intros M x E ξ' Ξ'' Θ R A hM hE hx hξ'.
+    rewrite eget_ren. eapply meta_conv.
+    + eauto.
+    + rewrite !ren_inst. f_equal.
+      apply closed_ren. apply closed_delocal.
+Admitted.
 
 Lemma typing_ren :
   ∀ Σ Ξ Γ Δ ρ t A,
@@ -901,9 +899,7 @@ Proof.
   - intros M x E ξ' Ξ'' Θ R A hM hE hx hξ'.
     rewrite eget_subst. eapply meta_conv.
     + eauto.
-    + apply subst_inst_closed. apply closed_einst.
-      * assumption.
-      * apply closed_delocal.
+    + apply subst_inst_closed. apply closed_delocal.
 Admitted.
 
 Lemma typing_subst Σ Ξ Γ Δ σ t A :
