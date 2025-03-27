@@ -1067,13 +1067,8 @@ Proof.
     + eapply typing_ren.
       1:{ erewrite <- length_ctx_einst. eapply rtyping_add. }
       eapply hξ. all: eassumption.
-    + (* Need to update inst_eget! *)
-      (* rewrite ren_inst. f_equal.
-      rewrite ren_inst. f_equal.
-      * apply closed_ren_eargs. assumption.
-      * unfold delocal. rasimpl.
-        apply ext_term. cbn. unfold core.funcomp. *)
-        admit.
+    + rewrite ren_inst. f_equal.
+      apply closed_ren. apply closed_delocal.
   - econstructor. 1,3: eauto.
     eapply conv_einst. 2: eassumption.
     apply hξ.
