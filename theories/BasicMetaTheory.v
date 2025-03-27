@@ -1127,6 +1127,47 @@ Proof.
   apply ectx_get_weak. eassumption.
 Qed.
 
+Lemma inst_equations_eweak Σ Ξ d Γ ξ Ξ' :
+  inst_equations Σ Ξ Γ ξ Ξ' →
+  inst_equations Σ (d :: Ξ) Γ ξ Ξ'.
+Proof.
+Admitted.
+
+Lemma inst_eget_eweak Σ Ξ d Γ ξ Ξ' :
+  inst_eget Σ Ξ Γ ξ Ξ' →
+  inst_eget_ Σ (λ Γ t A, Σ ;; d :: Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
+  inst_eget Σ (d :: Ξ) Γ ξ Ξ'.
+Proof.
+  intros h ih.
+  intros M x E ξ' Ξ'' Δ R A hM hE hx hc.
+  eapply ih. all: eauto.
+Qed.
+
+Lemma inst_typing_eweak_ Σ Ξ d Γ ξ Ξ' :
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  inst_typing_ Σ Ξ (λ Γ t A, Σ ;; d :: Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
+  inst_typing Σ (d :: Ξ) Γ ξ Ξ'.
+Proof.
+  intros [h1 h2] [ih1 ih2].
+  split.
+  - eapply inst_equations_eweak. all: eassumption.
+  - eapply inst_eget_eweak. all: eassumption.
+Qed.
+
+Lemma typing_eweak Σ Ξ d Γ t A :
+  Σ ;; Ξ | Γ ⊢ t : A →
+  Σ ;; d :: Ξ | Γ ⊢ t : A.
+Proof.
+  intros h. induction h using typing_ind.
+  all: try solve [ econstructor ; eauto ].
+  - econstructor. 1,3: eauto.
+    eapply inst_typing_eweak_. all: eassumption.
+  - econstructor. 2-4: eauto.
+    eapply ectx_get_weak. assumption.
+  - econstructor. 1,3: eassumption.
+    eapply conv_eweak. all: eauto.
+Qed.
+
 (** Global environment weakening **)
 
 Lemma conv_gweak Σ Σ' Ξ Γ u v :
