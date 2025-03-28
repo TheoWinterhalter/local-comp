@@ -7,6 +7,8 @@ Import ListNotations.
 
 Set Default Goal Selector "!".
 
+Open Scope subst_scope.
+
 (** Extension instantiation **)
 
 Definition eget (ξ : eargs) M x :=
@@ -54,14 +56,26 @@ Fixpoint apps (u : term) (l : list term) :=
   | v :: l => apps (app u v) l
   end.
 
+(** Substitution lifting **)
+
+Fixpoint ups n σ :=
+  match n with
+  | 0 => σ
+  | S n => up_term (ups n σ)
+  end.
+
 (** Delocalising a term
 
   That is replacing all local variables x by M.x.
+  In some cases, we want to do it only for certain variables, so we use [ups].
 
 **)
 
 Definition delocal M t :=
-  subst_term (λ x, assm M x) t.
+  t <[ assm M ].
+
+Definition delocal_lift M k t :=
+  t <[ ups k (assm M) ].
 
 (** Pattern linear instantiation **)
 

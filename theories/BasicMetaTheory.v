@@ -54,7 +54,9 @@ Lemma conversion_ind :
       Σ E = Some (Ext Ξ' Δ R) →
       ectx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
-      P Γ ((plinst M (cr_pat rule)) <[ σ]) ((delocal M (cr_rep rule)) <[ σ])
+      P Γ
+        ((plinst M (cr_pat rule)) <[ σ])
+        ((delocal_lift M (length rule.(cr_env)) rule.(cr_rep)) <[ σ ])
     ) →
     (∀ Γ A A' B B',
       Σ ;; Ξ | Γ ⊢ A ≡ A' →
@@ -1007,8 +1009,8 @@ Proof.
     cbn. rewrite lift_liftn. apply ext_term. intros []. all: reflexivity.
   - cbn. eapply meta_conv_trans_r. 1:{ eapply conv_unfold. all: eassumption. }
     rewrite einst_einst. reflexivity.
-  - red in hξ.
-    (* Here we need the constraint that says we can do this! *)
+  - (* erewrite subst_inst. *)
+    (* red in hξ. *)
     admit.
   - cbn. constructor. 1: eauto.
     rewrite lift_liftn.

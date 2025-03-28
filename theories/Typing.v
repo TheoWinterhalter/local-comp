@@ -60,7 +60,9 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
       Σ E = Some (Ext Ξ' Δ R) →
       ectx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
-      Γ ⊢ (plinst M rule.(cr_pat)) <[ σ ] ≡ (delocal M rule.(cr_rep)) <[ σ ]
+      Γ ⊢
+      (plinst M rule.(cr_pat)) <[ σ ] ≡
+      (delocal_lift M (length rule.(cr_env)) rule.(cr_rep)) <[ σ ]
 
 (** Congruence rules **)
 
@@ -114,12 +116,6 @@ Fixpoint slist (l : list term) :=
   match l with
   | [] => λ _, dummy
   | u :: l => u .: slist l
-  end.
-
-Fixpoint ups n σ :=
-  match n with
-  | 0 => σ
-  | S n => up_term (ups n σ)
   end.
 
 (** Instance typing (relative to typing for now) **)
