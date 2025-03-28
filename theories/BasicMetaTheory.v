@@ -1010,6 +1010,16 @@ Proof.
   - cbn. eapply meta_conv_trans_r. 1:{ eapply conv_unfold. all: eassumption. }
     rewrite einst_einst. reflexivity.
   - (* erewrite subst_inst. *)
+    (* Maybe the unrestricted σ is a bit problematic?
+
+      It has to be unrestricted to be able to prove conv_subst.
+      But, maybe we can use eta laws to show that each unrestricted substitution
+      acts the same as a restricted one, given the scope of a term.
+      Like ∃ θ, t <[ σ ] = t <[ θ ] and θ restricted.
+
+      First test, whether it would work.
+
+    *)
     (* red in hξ. *)
     admit.
   - cbn. constructor. 1: eauto.
