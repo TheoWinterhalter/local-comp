@@ -237,6 +237,12 @@ Inductive ewf (Σ : gctx) : ectx → Prop :=
     inst_typing_ Σ Ξ (typing Σ Ξ) ∙ ξ' Ξ' →
     ewf Σ ((E, ξ') :: Ξ).
 
+(** Computation rule typing **)
+
+Definition rule_typing Σ Ξ Δ M rule :=
+  Σ ;; Ξ | Δ ,,, rule.(cr_env) ⊢ rule_lhs M rule : rule.(cr_typ) ∧
+  Σ ;; Ξ | Δ ,,, rule.(cr_env) ⊢ rule_rhs M rule : rule.(cr_typ).
+
 (** Global environment typing **)
 
 Inductive gwf : gctx → Prop :=
@@ -248,6 +254,7 @@ Inductive gwf : gctx → Prop :=
     ewf Σ Ξ →
     wf Σ Ξ Δ →
     (* TODO Something about R that ensures all typed instances factor through *)
+    (* Forall (rule_typing Σ Ξ Δ M) R → *)
     gwf (gcons c (Ext Ξ Δ R) Σ)
 
 | gwf_def c Σ Ξ A t i :
