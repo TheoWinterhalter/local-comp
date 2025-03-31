@@ -1009,7 +1009,7 @@ Proof.
     cbn. rewrite lift_liftn. apply ext_term. intros []. all: reflexivity.
   - cbn. eapply meta_conv_trans_r. 1:{ eapply conv_unfold. all: eassumption. }
     rewrite einst_einst. reflexivity.
-  - (* erewrite subst_inst. *)
+  - erewrite subst_inst. 2: admit.
     (* Maybe the unrestricted σ is a bit problematic?
 
       It has to be unrestricted to be able to prove conv_subst.
@@ -1018,6 +1018,9 @@ Proof.
       Like ∃ θ, t <[ σ ] = t <[ θ ] and θ restricted.
 
       First test, whether it would work.
+
+      If it works, we can probably show all terms have a scope, and so the
+      condition is not necessary/relaxed?
 
     *)
     (* red in hξ. *)
