@@ -101,9 +101,12 @@ Definition plinst k (p : pat) : term :=
   let '(l,_) := plinst_args plinst_arg p.(pat_args) k in
   apps (var p.(pat_head)) (rev l).
 
-Definition rule_lhs M rule :=
-  let k := length rule.(cr_env) in
-  delocal_lift M k (plinst k rule.(cr_pat)).
+Definition rule_tm M ξ δ k t :=
+  delocal_lift M k (einst (liftn (δ + k) ξ) t).
 
-Definition rule_rhs M rule :=
-  delocal_lift M (length rule.(cr_env)) rule.(cr_rep).
+Definition rule_lhs M ξ δ rule :=
+  let k := length rule.(cr_env) in
+  rule_tm M ξ δ k (plinst k rule.(cr_pat)).
+
+Definition rule_rhs M ξ δ rule :=
+  rule_tm M ξ δ (length rule.(cr_env)) rule.(cr_rep).

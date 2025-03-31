@@ -54,7 +54,8 @@ Lemma conversion_ind :
       Σ E = Some (Ext Ξ' Δ R) →
       ectx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
-      P Γ ((rule_lhs M rule) <[ σ ]) ((rule_rhs M rule) <[ σ ])
+      let δ := length Δ in
+      P Γ ((rule_lhs M ξ' δ rule) <[ σ ]) ((rule_rhs M ξ' δ rule) <[ σ ])
     ) →
     (∀ Γ A A' B B',
       Σ ;; Ξ | Γ ⊢ A ≡ A' →
@@ -1094,7 +1095,7 @@ Proof.
       destruct H1.
       split.
       * intros E Ξ'' Θ R M ξ' σ n rule hE hM hξM hn. cbn.
-        rewrite <- einst_einst.
+        (* rewrite <- einst_einst. *)
         admit.
       * rename H3 into ih2.
         intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].

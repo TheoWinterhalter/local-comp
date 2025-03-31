@@ -60,7 +60,8 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
       Σ E = Some (Ext Ξ' Δ R) →
       ectx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
-      Γ ⊢ (rule_lhs M rule) <[ σ ] ≡ (rule_rhs M rule) <[ σ ]
+      let δ := length Δ in
+      Γ ⊢ (rule_lhs M ξ' δ rule) <[ σ ] ≡ (rule_rhs M ξ' δ rule) <[ σ ]
 
 (** Congruence rules **)
 
@@ -124,16 +125,15 @@ Section Inst.
   Notation "Γ ⊢ u : A" := (typing Γ u A).
 
   Definition inst_equations (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
-    ∀ E Ξ'' Δ R M ξ' σ n rule,
+    ∀ E Ξ'' Δ R M ξ' n rule,
       Σ E = Some (Ext Ξ'' Δ R) →
       ectx_get Ξ' M = Some (E, ξ') →
-      nth_error ξ M = Some σ →
       nth_error R n = Some rule →
       let m := length rule.(cr_env) in
-      let θ := ups m (slist σ) in
+      let δ := length Δ in
       let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
-      let lhs := (einst ξ (einst ξ' (plinst M rule.(cr_pat)))) <[ θ ] in
-      let rhs := (einst ξ (einst ξ' (delocal M rule.(cr_rep)))) <[ θ ] in
+      let lhs := einst (liftn 0 ξ) (rule_lhs M ξ' δ rule) in
+      let rhs := einst (liftn 0 ξ) (rule_rhs M ξ' δ rule) in
       Γ ,,, Θ ⊢ lhs ≡ rhs.
 
   Definition inst_eget_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
