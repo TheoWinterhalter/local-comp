@@ -60,9 +60,7 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
       Σ E = Some (Ext Ξ' Δ R) →
       ectx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
-      Γ ⊢
-      (plinst M rule.(cr_pat)) <[ σ ] ≡
-      (delocal_lift M (length rule.(cr_env)) rule.(cr_rep)) <[ σ ]
+      Γ ⊢ (rule_lhs M rule) <[ σ ] ≡ (rule_rhs M rule) <[ σ ]
 
 (** Congruence rules **)
 

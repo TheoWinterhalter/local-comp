@@ -54,9 +54,7 @@ Lemma conversion_ind :
       Σ E = Some (Ext Ξ' Δ R) →
       ectx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
-      P Γ
-        ((plinst M (cr_pat rule)) <[ σ])
-        ((delocal_lift M (length rule.(cr_env)) rule.(cr_rep)) <[ σ ])
+      P Γ ((rule_lhs M rule) <[ σ ]) ((rule_rhs M rule) <[ σ ])
     ) →
     (∀ Γ A A' B B',
       Σ ;; Ξ | Γ ⊢ A ≡ A' →

@@ -96,3 +96,9 @@ Fixpoint plinst_arg M (p : parg) n : term * nat :=
 Definition plinst M (p : pat) : term :=
   let '(l,_) := plinst_args (plinst_arg M) p.(pat_args) 0 in
   apps (assm M p.(pat_head)) (rev l).
+
+Definition rule_lhs M rule :=
+  plinst M rule.(cr_pat).
+
+Definition rule_rhs M rule :=
+  delocal_lift M (length rule.(cr_env)) rule.(cr_rep).
