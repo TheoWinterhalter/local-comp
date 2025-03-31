@@ -1009,7 +1009,11 @@ Proof.
     cbn. rewrite lift_liftn. apply ext_term. intros []. all: reflexivity.
   - cbn. eapply meta_conv_trans_r. 1:{ eapply conv_unfold. all: eassumption. }
     rewrite einst_einst. reflexivity.
-  - erewrite subst_inst. 2: admit.
+  - erewrite 2!subst_inst. 2,3: admit.
+    eapply conv_subst.
+    (* Ok, now we must align with hξ *)
+
+
     (* Maybe the unrestricted σ is a bit problematic?
 
       It has to be unrestricted to be able to prove conv_subst.
