@@ -77,28 +77,33 @@ Definition delocal M t :=
 Definition delocal_lift M k t :=
   t <[ ups k (assm M) ].
 
-(** Pattern linear instantiation **)
+(** Pattern linear instantiation
+
+  This version keeps forced subterms intact.
+
+**)
 
 Definition plinst_args (plinst_arg : parg → nat → term * nat) (l : list parg) n :=
   fold_left (λ '(acc, k) p,
     let '(t,m) := plinst_arg p k in (t :: acc, m)
   ) l ([], n).
 
-Fixpoint plinst_arg M (p : parg) n : term * nat :=
+Fixpoint plinst_arg (p : parg) n : term * nat :=
   match p with
   | pvar => (var n, S n)
-  | pforce t => (delocal M t, n)
+  | pforce t => (t, n)
   | psymb x l =>
-      let '(l', m) := plinst_args (plinst_arg M) l n in
-      (apps (assm M x) (rev l'), m)
+      let '(l', m) := plinst_args plinst_arg l n in
+      (apps (var x) (rev l'), m)
   end.
 
-Definition plinst M (p : pat) : term :=
-  let '(l,_) := plinst_args (plinst_arg M) p.(pat_args) 0 in
-  apps (assm M p.(pat_head)) (rev l).
+Definition plinst k (p : pat) : term :=
+  let '(l,_) := plinst_args plinst_arg p.(pat_args) k in
+  apps (var p.(pat_head)) (rev l).
 
 Definition rule_lhs M rule :=
-  plinst M rule.(cr_pat).
+  let k := length rule.(cr_env) in
+  delocal_lift M k (plinst k rule.(cr_pat)).
 
 Definition rule_rhs M rule :=
   delocal_lift M (length rule.(cr_env)) rule.(cr_rep).
