@@ -132,8 +132,8 @@ Section Inst.
       let m := length rule.(cr_env) in
       let δ := length Δ in
       let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
-      let lhs := einst (liftn 0 ξ) (rule_lhs M ξ' δ rule) in
-      let rhs := einst (liftn 0 ξ) (rule_rhs M ξ' δ rule) in
+      let lhs := einst (liftn m ξ) (rule_lhs M ξ' δ rule) in
+      let rhs := einst (liftn m ξ) (rule_rhs M ξ' δ rule) in
       Γ ,,, Θ ⊢ lhs ≡ rhs.
 
   Definition inst_eget_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=

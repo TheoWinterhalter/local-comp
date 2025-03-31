@@ -1010,9 +1010,7 @@ Proof.
     rewrite einst_einst. reflexivity.
   - erewrite 2!subst_inst. 2,3: admit.
     eapply conv_subst.
-    (* Ok, now we must align with hξ *)
-
-
+    eapply hξ. all: eassumption.
     (* Maybe the unrestricted σ is a bit problematic?
 
       It has to be unrestricted to be able to prove conv_subst.
@@ -1026,8 +1024,6 @@ Proof.
       condition is not necessary/relaxed?
 
     *)
-    (* red in hξ. *)
-    admit.
   - cbn. constructor. 1: eauto.
     rewrite lift_liftn.
     apply IHh2. assumption.
