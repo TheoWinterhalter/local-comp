@@ -598,7 +598,14 @@ Proof.
     cbn. intros t [h1 h2]. eauto.
 Qed.
 
-(** Corollary: every substitution acts like a list of terms **)
+(** Corollary: every substitution acts like a list of terms
+
+  We present two versions: one with actual lists, and one where we truncate
+  a substitution directly, behaving as the identity substitution outside.
+  The latter has the advantage that it verifies the condition for
+  [subst_inst] later.
+
+**)
 
 Fixpoint listify k (σ : nat → term) :=
   match k with
@@ -614,6 +621,30 @@ Proof.
   cbn. destruct x as [| x].
   - reflexivity.
   - cbn. apply (ih (S >> σ)). lia.
+Qed.
+
+Fixpoint trunc k (σ : nat → term) :=
+  match k with
+  | 0 => ids
+  | S k => σ 0 .: trunc k (S >> σ)
+  end.
+
+Lemma eq_subst_trunc k σ :
+  eq_subst_on k σ (trunc k σ).
+Proof.
+  intros x h.
+  induction k as [| k ih] in x, h, σ |- *. 1: lia.
+  cbn. destruct x as [| x].
+  - reflexivity.
+  - cbn. apply (ih (S >> σ)). lia.
+Qed.
+
+Lemma trunc_bounds k σ x :
+  trunc k σ (k + x) = var x.
+Proof.
+  induction k as [| k ih] in σ, x |- *.
+  - cbn. reflexivity.
+  - cbn. apply ih.
 Qed.
 
 (** Substitution preserves typing **)
