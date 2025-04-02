@@ -1098,21 +1098,14 @@ Proof.
     cbn. rewrite lift_liftn. apply ext_term. intros []. all: reflexivity.
   - cbn. eapply meta_conv_trans_r. 1:{ eapply conv_unfold. all: eassumption. }
     rewrite einst_einst. reflexivity.
-  - erewrite 2!subst_inst. 2,3: admit.
+  - erewrite ext_term_scoped. 3: eapply eq_subst_trunc. 2: admit.
+    erewrite (ext_term_scoped _ (rule_rhs _ _ _ _)).
+    3: eapply eq_subst_trunc. 2: admit.
+    erewrite 2!subst_inst. (* 2,3: eapply trunc_bounds. *) 2,3: admit.
     eapply conv_subst.
     eapply hξ. all: eassumption.
-    (* Maybe the unrestricted σ is a bit problematic?
-
-      It has to be unrestricted to be able to prove conv_subst.
-      But, maybe we can use eta laws to show that each unrestricted substitution
-      acts the same as a restricted one, given the scope of a term.
-      Like ∃ θ, t <[ σ ] = t <[ θ ] and θ restricted.
-
-      First test, whether it would work.
-
-      If it works, we can probably show all terms have a scope, and so the
-      condition is not necessary/relaxed?
-
+    (* It doesn't work with the current truncation. Are we free to choose one
+      with an arbitrary offset?
     *)
   - cbn. constructor. 1: eauto.
     rewrite lift_liftn.
