@@ -1317,6 +1317,11 @@ Lemma inst_equations_gweak Σ Σ' Ξ Γ ξ Ξ' :
   Σ ⊑ Σ' →
   inst_equations Σ' Ξ Γ ξ Ξ'.
 Proof.
+  intros h hle.
+  intros E Ξ'' Δ R M ξ' n rule hE hM hn m δ θ lhs rhs.
+  eapply conv_gweak. 2: eassumption.
+  eapply h. 2,3: eassumption.
+  red in hle.
 Admitted.
 
 Lemma inst_eget_gweak Σ Σ' Ξ Γ ξ Ξ' :
