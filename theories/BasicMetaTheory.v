@@ -1266,7 +1266,13 @@ Lemma inst_equations_eweak Σ Ξ d Γ ξ Ξ' :
   inst_equations Σ Ξ Γ ξ Ξ' →
   inst_equations Σ (d :: Ξ) Γ ξ Ξ'.
 Proof.
-Admitted.
+  intros h.
+  intros E M ξ' hM.
+  specialize (h _ _ _ hM) as (Ξ'' & Δ & R & e & h).
+  eexists _,_,_. split. 1: eauto.
+  intros n rule hn m δ θ lhs rhs.
+  eapply conv_eweak. eauto.
+Qed.
 
 Lemma inst_eget_eweak Σ Ξ d Γ ξ Ξ' :
   inst_eget Σ Ξ Γ ξ Ξ' →
