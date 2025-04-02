@@ -557,6 +557,47 @@ Proof.
     eapply conv_ren. all: eassumption.
 Qed.
 
+(** Reproving [ext_term] but with scoping assumption **)
+
+Definition eq_subst_on k (σ θ : nat → term) :=
+  ∀ x, x < k → σ x = θ x.
+
+Lemma eq_subst_on_up k σ θ :
+  eq_subst_on k σ θ →
+  eq_subst_on (S k) (up_term σ) (up_term θ).
+Proof.
+  intros h [] he.
+  - reflexivity.
+  - cbn. repeat core.unfold_funcomp. f_equal.
+    apply h. lia.
+Qed.
+
+Lemma ext_term_scoped k t σ θ :
+  scoped k t = true →
+  eq_subst_on k σ θ →
+  t <[ σ ] = t <[ θ ].
+Proof.
+  intros h e.
+  induction t using term_rect in k, h, σ, θ, e |- *.
+  all: try solve [ cbn ; eauto ].
+  all: try solve [
+    cbn in * ; apply andb_prop in h ;
+    f_equal ; intuition eauto using eq_subst_on_up
+  ].
+  - cbn. apply e. cbn - ["<?"] in h. rewrite Nat.ltb_lt in h. assumption.
+  - cbn in *. f_equal.
+    apply map_ext_All.
+    apply forallb_All in h. move h at top.
+    eapply All_prod in h. 2: eassumption.
+    eapply All_impl. 2: eassumption. clear - e.
+    cbn. intros l [h1 h2].
+    apply map_ext_All.
+    apply forallb_All in h2.
+    eapply All_prod in h1. 2: eassumption.
+    eapply All_impl. 2: eassumption. clear - e.
+    cbn. intros t [h1 h2]. eauto.
+Qed.
+
 (** Substitution preserves typing **)
 
 Inductive styping Σ Ξ (Γ : ctx) (σ : nat → term) : ctx → Prop :=
