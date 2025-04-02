@@ -1097,6 +1097,24 @@ Proof.
   - cbn. apply einst_eget.
 Qed.
 
+Lemma conv_equations Σ Ξ Ξ' Γ ξ M E ξ' Ξ'' Δ R n rule :
+  inst_equations Σ Ξ Γ ξ Ξ' →
+  ectx_get Ξ' M = Some (E, ξ') →
+  Σ E = Some (Ext Ξ'' Δ R) →
+  nth_error R n = Some rule →
+  let m := length rule.(cr_env) in
+  let δ := length Δ in
+  let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
+  let lhs := einst (liftn m ξ) (rule_lhs M ξ' δ rule) in
+  let rhs := einst (liftn m ξ) (rule_rhs M ξ' δ rule) in
+  Σ ;; Ξ | Γ ,,, Θ ⊢ lhs ≡ rhs.
+Proof.
+  intros hξ hM hE hn.
+  specialize (hξ _ _ _ hM) as [? [? [? [e h]]]].
+  rewrite e in hE. inversion hE. subst.
+  eauto.
+Qed.
+
 Lemma conv_einst Σ Ξ Ξ' Γ Δ u v ξ :
   inst_equations Σ Ξ Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ u ≡ v →
@@ -1116,7 +1134,7 @@ Proof.
     3: eapply eq_subst_trunc. 2: eassumption.
     erewrite 2!subst_inst. 2,3: eapply trunc_bounds.
     eapply conv_subst.
-    eapply hξ. all: eassumption.
+    eapply conv_equations. all: eassumption.
   - cbn. constructor. 1: eauto.
     rewrite lift_liftn.
     apply IHh2. assumption.
@@ -1183,7 +1201,7 @@ Proof.
     + econstructor. 1,3: eassumption.
       destruct H1.
       split.
-      * intros E Ξ'' Θ R M ξ' σ n rule hE hM hξM hn. cbn.
+      * (* intros E Ξ'' Θ R M ξ' σ n rule hE hM hξM hn. cbn. *)
         (* rewrite <- einst_einst. *)
         admit.
       * rename H3 into ih2.
@@ -1318,11 +1336,13 @@ Lemma inst_equations_gweak Σ Σ' Ξ Γ ξ Ξ' :
   inst_equations Σ' Ξ Γ ξ Ξ'.
 Proof.
   intros h hle.
-  intros E Ξ'' Δ R M ξ' n rule hE hM hn m δ θ lhs rhs.
+  intros E M ξ' hM.
+  specialize (h _ _ _ hM) as (Ξ'' & Δ & R & e & h).
+  eexists _,_,_. split. 1: eauto.
+  intros n rule hn m δ θ lhs rhs.
   eapply conv_gweak. 2: eassumption.
-  eapply h. 2,3: eassumption.
-  red in hle.
-Admitted.
+  eapply h. eassumption.
+Qed.
 
 Lemma inst_eget_gweak Σ Σ' Ξ Γ ξ Ξ' :
   inst_eget Σ Ξ Γ ξ Ξ' →

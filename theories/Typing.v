@@ -130,16 +130,18 @@ Section Inst.
   Notation "Γ ⊢ u : A" := (typing Γ u A).
 
   Definition inst_equations (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
-    ∀ E Ξ'' Δ R M ξ' n rule,
-      Σ E = Some (Ext Ξ'' Δ R) →
+    ∀ E M ξ',
       ectx_get Ξ' M = Some (E, ξ') →
-      nth_error R n = Some rule →
-      let m := length rule.(cr_env) in
-      let δ := length Δ in
-      let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
-      let lhs := einst (liftn m ξ) (rule_lhs M ξ' δ rule) in
-      let rhs := einst (liftn m ξ) (rule_rhs M ξ' δ rule) in
-      Γ ,,, Θ ⊢ lhs ≡ rhs.
+      ∃ Ξ'' Δ R,
+        Σ E = Some (Ext Ξ'' Δ R) ∧
+        ∀ n rule,
+          nth_error R n = Some rule →
+          let m := length rule.(cr_env) in
+          let δ := length Δ in
+          let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
+          let lhs := einst (liftn m ξ) (rule_lhs M ξ' δ rule) in
+          let rhs := einst (liftn m ξ) (rule_rhs M ξ' δ rule) in
+          Γ ,,, Θ ⊢ lhs ≡ rhs.
 
   Definition inst_eget_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
     ∀ M E ξ',
