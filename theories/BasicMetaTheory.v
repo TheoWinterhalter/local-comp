@@ -55,7 +55,12 @@ Lemma conversion_ind :
       ectx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
       let δ := length Δ in
-      P Γ ((rule_lhs M ξ' δ rule) <[ σ ]) ((rule_rhs M ξ' δ rule) <[ σ ])
+      let lhs := rule_lhs M ξ' δ rule in
+      let rhs := rule_rhs M ξ' δ rule in
+      let k := length rule.(cr_env) in
+      scoped k lhs = true →
+      scoped k rhs = true →
+      P Γ (lhs <[ σ ]) (rhs <[ σ ])
     ) →
     (∀ Γ A A' B B',
       Σ ;; Ξ | Γ ⊢ A ≡ A' →
@@ -1106,9 +1111,9 @@ Proof.
     cbn. rewrite lift_liftn. apply ext_term. intros []. all: reflexivity.
   - cbn. eapply meta_conv_trans_r. 1:{ eapply conv_unfold. all: eassumption. }
     rewrite einst_einst. reflexivity.
-  - erewrite ext_term_scoped. 3: eapply eq_subst_trunc. 2: admit.
-    erewrite (ext_term_scoped _ (rule_rhs _ _ _ _)).
-    3: eapply eq_subst_trunc. 2: admit.
+  - erewrite ext_term_scoped. 3: eapply eq_subst_trunc. 2: eassumption.
+    erewrite (ext_term_scoped _ rhs).
+    3: eapply eq_subst_trunc. 2: eassumption.
     erewrite 2!subst_inst. 2,3: eapply trunc_bounds.
     eapply conv_subst.
     eapply hξ. all: eassumption.
@@ -1125,7 +1130,7 @@ Proof.
     apply Forall2_map_l, Forall2_map_r.
     eapply Forall2_impl. 2: eassumption.
     cbn. auto.
-Admitted.
+Qed.
 
 Lemma type_eget Σ Ξ Ξ' Γ ξ M x E ξ' Ξ'' Δ R A :
   inst_eget Σ Ξ Γ ξ Ξ' →
@@ -1235,7 +1240,7 @@ Lemma conv_eweak Σ Ξ d Γ u v :
 Proof.
   intros h. induction h using conversion_ind.
   all: try solve [ econstructor ; eauto ].
-  econstructor. 1,3: eauto.
+  econstructor. 1,3-5: eauto.
   apply ectx_get_weak. eassumption.
 Qed.
 

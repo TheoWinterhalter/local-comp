@@ -61,7 +61,12 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
       ectx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
       let δ := length Δ in
-      Γ ⊢ (rule_lhs M ξ' δ rule) <[ σ ] ≡ (rule_rhs M ξ' δ rule) <[ σ ]
+      let lhs := rule_lhs M ξ' δ rule in
+      let rhs := rule_rhs M ξ' δ rule in
+      let k := length rule.(cr_env) in
+      scoped k lhs = true →
+      scoped k rhs = true →
+      Γ ⊢ lhs <[ σ ] ≡ rhs <[ σ ]
 
 (** Congruence rules **)
 
