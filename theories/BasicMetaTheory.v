@@ -598,6 +598,24 @@ Proof.
     cbn. intros t [h1 h2]. eauto.
 Qed.
 
+(** Corollary: every substitution acts like a list of terms **)
+
+Fixpoint listify k (σ : nat → term) :=
+  match k with
+  | 0 => []
+  | S k => σ 0 :: listify k (S >> σ)
+  end.
+
+Lemma eq_subst_slist k σ :
+  eq_subst_on k σ (slist (listify k σ)).
+Proof.
+  intros x h.
+  induction k as [| k ih] in x, h, σ |- *. 1: lia.
+  cbn. destruct x as [| x].
+  - reflexivity.
+  - cbn. apply (ih (S >> σ)). lia.
+Qed.
+
 (** Substitution preserves typing **)
 
 Inductive styping Σ Ξ (Γ : ctx) (σ : nat → term) : ctx → Prop :=
