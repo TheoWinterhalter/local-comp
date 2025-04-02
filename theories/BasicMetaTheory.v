@@ -1062,6 +1062,17 @@ Proof.
   - cbn. eauto.
 Qed.
 
+Lemma ctx_einst_app ξ Γ Δ :
+  ctx_einst ξ (Γ ,,, Δ) = ctx_einst ξ Γ ,,, ctx_einst (liftn (length Γ) ξ) Δ.
+Proof.
+  induction Δ as [| A Δ ih] in Γ |- *.
+  - reflexivity.
+  - cbn. f_equal. 2: eauto.
+    rewrite ren_eargs_comp. f_equal.
+    apply ren_eargs_ext. intro.
+    rewrite length_app. unfold core.funcomp. lia.
+Qed.
+
 Lemma einst_eget ξ ξ' M x :
   einst ξ (eget ξ' M x) = eget (map (map (einst ξ)) ξ') M x.
 Proof.
@@ -1095,6 +1106,18 @@ Proof.
     eapply All_impl. 2: eassumption.
     auto.
   - cbn. apply einst_eget.
+Qed.
+
+Lemma ctx_einst_comp ξ ξ' Γ :
+  ctx_einst ξ (ctx_einst ξ' Γ) = ctx_einst (map (map (einst ξ)) ξ') Γ.
+Proof.
+  induction Γ as [| A Γ ih].
+  - reflexivity.
+  - cbn. rewrite ih. f_equal. rewrite einst_einst. f_equal.
+    rewrite length_ctx_einst.
+    rewrite !map_map. apply map_ext. intro.
+    rewrite !map_map. apply map_ext. intro.
+    rewrite ren_inst. reflexivity.
 Qed.
 
 Lemma conv_equations Σ Ξ Ξ' Γ ξ M E ξ' Ξ'' Δ R n rule :
@@ -1201,8 +1224,19 @@ Proof.
     + econstructor. 1,3: eassumption.
       destruct H1.
       split.
-      * (* intros E Ξ'' Θ R M ξ' σ n rule hE hM hξM hn. cbn. *)
-        (* rewrite <- einst_einst. *)
+      * intros E M ξ' hM.
+        specialize (H1 _ _ _ hM) as (Ξ'' & Δ' & R & e & h).
+        eexists _,_,_. split. 1: eauto.
+        intros n rule hn m δ. cbn.
+        (* forward for now *)
+        specialize h with (1 := hn).
+        eapply conv_einst in h. 2: apply hξ.
+        rewrite ctx_einst_app in h. rewrite <- app_assoc in h.
+        rewrite ctx_einst_comp in h.
+        rewrite !length_app in h. rewrite !length_ctx_einst in h.
+        fold δ m rξ in h.
+        rewrite !einst_einst in h.
+        (* There is probably a useful hidden lemma in ctx_einst_comp *)
         admit.
       * rename H3 into ih2.
         intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].

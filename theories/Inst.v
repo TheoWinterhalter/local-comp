@@ -45,7 +45,7 @@ Fixpoint einst (ξ : eargs) (t : term) :=
 Fixpoint ctx_einst (ξ : eargs) (Γ : ctx) : ctx :=
   match Γ with
   | [] => []
-  | A :: Γ => ctx_einst ξ Γ ,, einst (ren_eargs (plus (length Γ)) ξ) A
+  | A :: Γ => ctx_einst ξ Γ ,, einst (liftn (length Γ) ξ) A
   end.
 
 (** n-ary application **)
