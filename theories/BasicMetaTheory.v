@@ -601,7 +601,7 @@ Qed.
 (** Corollary: every substitution acts like a list of terms
 
   We present two versions: one with actual lists, and one where we truncate
-  a substitution directly, behaving as the identity substitution outside.
+  a substitution directly, behaving as a shift outside.
   The latter has the advantage that it verifies the condition for
   [subst_inst] later.
 
@@ -623,14 +623,14 @@ Proof.
   - cbn. apply (ih (S >> σ)). lia.
 Qed.
 
-Fixpoint trunc k (σ : nat → term) :=
+Fixpoint trunc k d (σ : nat → term) :=
   match k with
-  | 0 => ids
-  | S k => σ 0 .: trunc k (S >> σ)
+  | 0 => plus d >> ids
+  | S k => σ 0 .: trunc k d (S >> σ)
   end.
 
-Lemma eq_subst_trunc k σ :
-  eq_subst_on k σ (trunc k σ).
+Lemma eq_subst_trunc k d σ :
+  eq_subst_on k σ (trunc k d σ).
 Proof.
   intros x h.
   induction k as [| k ih] in x, h, σ |- *. 1: lia.
@@ -639,8 +639,8 @@ Proof.
   - cbn. apply (ih (S >> σ)). lia.
 Qed.
 
-Lemma trunc_bounds k σ x :
-  trunc k σ (k + x) = var x.
+Lemma trunc_bounds k d σ x :
+  trunc k d σ (k + x) = var (d + x).
 Proof.
   induction k as [| k ih] in σ, x |- *.
   - cbn. reflexivity.
@@ -713,6 +713,14 @@ Lemma lift_liftn n ξ :
 Proof.
   rewrite ren_eargs_comp. reflexivity.
 Qed.
+
+(**
+
+  Note: the condition is weird, because we can just use [trunc] to make it work
+  for any [m]. The fact that we're free to choose [m] suggests there is a better
+  lemma to be had.
+
+**)
 
 Lemma subst_inst σ ξ t n m :
   (∀ k, σ (m + k) = var (n + k)) →
@@ -1101,12 +1109,9 @@ Proof.
   - erewrite ext_term_scoped. 3: eapply eq_subst_trunc. 2: admit.
     erewrite (ext_term_scoped _ (rule_rhs _ _ _ _)).
     3: eapply eq_subst_trunc. 2: admit.
-    erewrite 2!subst_inst. (* 2,3: eapply trunc_bounds. *) 2,3: admit.
+    erewrite 2!subst_inst. 2,3: eapply trunc_bounds.
     eapply conv_subst.
     eapply hξ. all: eassumption.
-    (* It doesn't work with the current truncation. Are we free to choose one
-      with an arbitrary offset?
-    *)
   - cbn. constructor. 1: eauto.
     rewrite lift_liftn.
     apply IHh2. assumption.
