@@ -424,14 +424,13 @@ Proof.
   cbn. rasimpl. apply closed_ren.
 Qed.
 
-Lemma conv_ren :
-  ∀ Σ Ξ Γ Δ ρ u v,
-    rtyping Γ ρ Δ →
-    Σ ;; Ξ | Δ ⊢ u ≡ v →
-    Σ ;; Ξ | Γ ⊢ ρ ⋅ u ≡ ρ ⋅ v.
+Lemma conv_ren Σ Ξ Γ Δ ρ u v :
+  (* rtyping Γ ρ Δ → *)
+  Σ ;; Ξ | Δ ⊢ u ≡ v →
+  Σ ;; Ξ | Γ ⊢ ρ ⋅ u ≡ ρ ⋅ v.
 Proof.
-  intros Σ Ξ Γ Δ ρ u v hρ h.
-  induction h using conversion_ind in Γ, ρ, hρ |- *.
+  intros (* hρ *) h.
+  induction h using conversion_ind in Γ, ρ (* , hρ *) |- *.
   all: try solve [ rasimpl ; econstructor ; eauto using rtyping_up ].
   - rasimpl. eapply meta_conv_trans_r. 1: econstructor.
     rasimpl. reflexivity.
@@ -578,18 +577,14 @@ Proof.
     specialize h with (1 := hn) (2 := hl) (3 := hr). cbn in h.
     fold m δ lhs0 rhs0 in h.
     eapply conv_ren with (ρ := uprens m ρ) in h.
-    2:{
+    (* 2:{
       eapply rtyping_uprens_eq. 1: eassumption.
       rewrite 2!length_ctx_einst. reflexivity.
-    }
+    } *)
     rewrite 2!ren_inst in h.
     rewrite 2!scoped_ren in h. 2,3: eassumption.
     rewrite liftn_ren_eargs.
-    (* eassumption. *)
-    (* Either we require closedness of the context, or we remove the rtyping
-      assumption in conv_ren.
-    *)
-    admit.
+    eassumption.
   - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].
     split. 1: assumption.
     eexists _,_,_. split. 1: eassumption.
@@ -598,7 +593,7 @@ Proof.
     + eauto.
     + rewrite !ren_inst. f_equal.
       apply closed_ren. apply closed_delocal.
-Admitted.
+Qed.
 
 Lemma typing_ren :
   ∀ Σ Ξ Γ Δ ρ t A,
