@@ -1071,13 +1071,13 @@ Proof.
   - intros E M ξ' hM.
     specialize (h1 _ _ _ hM) as (Ξ'' & Δ' & R & e & h).
     eexists _,_,_. split. 1: eauto.
-    intros n rule hn m δ Θ. cbn.
+    intros n rule hn m δ Θ lhs0 rhs0 hl hr. cbn.
     rewrite liftn_subst_eargs.
     (* forward *)
-    specialize h with (1 := hn). cbn in h.
+    specialize h with (1 := hn) (2 := hl) (3 := hr). cbn in h.
+    fold m δ lhs0 rhs0 in h.
     eapply conv_subst with (σ := ups m σ) in h .
-    erewrite 2!subst_inst_ups in h. 2,3: admit. (* Could require them too *)
-    fold m δ in h.
+    erewrite 2!subst_inst_ups in h. 2,3: eassumption.
     eassumption.
   - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].
     split. 1: assumption.
@@ -1086,7 +1086,7 @@ Proof.
     rewrite eget_subst. eapply meta_conv.
     + eauto.
     + apply subst_inst_closed. apply closed_delocal.
-Admitted.
+Qed.
 
 Lemma typing_subst Σ Ξ Γ Δ σ t A :
   styping Σ Ξ Δ σ Γ →
@@ -1206,11 +1206,15 @@ Lemma conv_equations Σ Ξ Ξ' Γ ξ M E ξ' Ξ'' Δ R n rule :
   let m := length rule.(cr_env) in
   let δ := length Δ in
   let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
-  let lhs := einst (liftn m ξ) (rule_lhs M ξ' δ rule) in
-  let rhs := einst (liftn m ξ) (rule_rhs M ξ' δ rule) in
+  let lhs0 := rule_lhs M ξ' δ rule in
+  let rhs0 := rule_rhs M ξ' δ rule in
+  scoped m lhs0 = true →
+  scoped m rhs0 = true →
+  let lhs := einst (liftn m ξ) lhs0 in
+  let rhs := einst (liftn m ξ) rhs0 in
   Σ ;; Ξ | Γ ,,, Θ ⊢ lhs ≡ rhs.
 Proof.
-  intros hξ hM hE hn.
+  intros hξ hM hE hn m δ Θ lhs0 rhs0 hl hr.
   specialize (hξ _ _ _ hM) as [? [? [? [e h]]]].
   rewrite e in hE. inversion hE. subst.
   eauto.
@@ -1305,9 +1309,9 @@ Proof.
       * intros E M ξ' hM.
         specialize (H1 _ _ _ hM) as (Ξ'' & Δ' & R & e & h).
         eexists _,_,_. split. 1: eauto.
-        intros n rule hn m δ. cbn.
+        intros n rule hn m δ ??? hl hr. cbn.
         (* forward for now *)
-        specialize h with (1 := hn).
+        specialize h with (1 := hn) (2 := hl) (3 := hr).
         eapply conv_einst in h. 2: apply hξ.
         rewrite ctx_einst_app in h. rewrite <- app_assoc in h.
         rewrite ctx_einst_comp in h.
@@ -1383,7 +1387,7 @@ Proof.
   intros E M ξ' hM.
   specialize (h _ _ _ hM) as (Ξ'' & Δ & R & e & h).
   eexists _,_,_. split. 1: eauto.
-  intros n rule hn m δ θ lhs rhs.
+  intros n rule hn m δ θ lhs0 rhs0 hl hr.
   eapply conv_eweak. eauto.
 Qed.
 
@@ -1458,9 +1462,9 @@ Proof.
   intros E M ξ' hM.
   specialize (h _ _ _ hM) as (Ξ'' & Δ & R & e & h).
   eexists _,_,_. split. 1: eauto.
-  intros n rule hn m δ θ lhs rhs.
+  intros n rule hn m δ θ lhs0 rhs0 hl hr.
   eapply conv_gweak. 2: eassumption.
-  eapply h. eassumption.
+  eapply h. all: eassumption.
 Qed.
 
 Lemma inst_eget_gweak Σ Σ' Ξ Γ ξ Ξ' :
