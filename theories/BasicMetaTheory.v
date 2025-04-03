@@ -967,16 +967,25 @@ Proof.
   rasimpl. reflexivity.
 Qed.
 
-Corollary liftn_subst_eargs n σ ξ :
-  liftn n (subst_eargs σ ξ) = subst_eargs (ups n σ) ξ.
+Lemma subst_ren_eargs ρ σ ξ :
+  subst_eargs σ (ren_eargs ρ ξ) = subst_eargs (ρ >> σ) ξ.
 Proof.
-  rewrite ren_subst_eargs. apply subst_eargs_ext.
-  intros m. core.unfold_funcomp.
+  rewrite map_map. apply map_ext. intro.
+  rewrite map_map. apply map_ext. intro.
+  rasimpl. reflexivity.
+Qed.
+
+Corollary liftn_subst_eargs n σ ξ :
+  liftn n (subst_eargs σ ξ) = subst_eargs (ups n σ) (liftn n ξ).
+Proof.
+  rewrite subst_ren_eargs. rewrite ren_subst_eargs.
+  apply subst_eargs_ext. intro m.
+  unfold core.funcomp.
   induction n as [| n ih] in m, σ |- *.
   - cbn. rasimpl. reflexivity.
-  - cbn. rasimpl. destruct m.
-    + cbn. rasimpl.
-Abort.
+  - cbn. unfold core.funcomp. rewrite <- ih.
+    rasimpl. reflexivity.
+Qed.
 
 Lemma closed_lift_eargs ξ :
   closed_eargs ξ = true →
@@ -1062,12 +1071,14 @@ Proof.
   - intros E M ξ' hM.
     specialize (h1 _ _ _ hM) as (Ξ'' & Δ' & R & e & h).
     eexists _,_,_. split. 1: eauto.
-    intros n rule hn m δ Θ lhs rhs.
+    intros n rule hn m δ Θ. cbn.
+    rewrite liftn_subst_eargs.
     (* forward *)
     specialize h with (1 := hn). cbn in h.
     eapply conv_subst with (σ := ups m σ) in h .
     erewrite 2!subst_inst_ups in h. 2,3: admit. (* Could require them too *)
-    admit.
+    fold m δ in h.
+    eassumption.
   - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].
     split. 1: assumption.
     eexists _,_,_. split. 1: eassumption.
