@@ -849,6 +849,25 @@ Proof.
   - lia.
 Qed.
 
+Corollary subst_inst_ups σ ξ t k :
+  scoped k t = true →
+  (einst ξ t) <[ ups k σ ] = einst (subst_eargs (ups k σ) ξ) t.
+Proof.
+  intros h.
+  eapply subst_inst_scoped. 1: eassumption.
+  intros n hn.
+  induction k as [| k ih] in n, hn |- *. 1: lia.
+  cbn. destruct n.
+  - reflexivity.
+  - cbn. unfold core.funcomp. rewrite ih. 2: lia.
+    reflexivity.
+Qed.
+
+(** Note:
+
+  It is a bit silly because the context is ignored for conversion (for now).
+
+**)
 Lemma conv_subst Σ Ξ Γ Δ σ u v :
   Σ ;; Ξ | Δ ⊢ u ≡ v →
   Σ ;; Ξ | Γ ⊢ u <[ σ ] ≡ v <[ σ ].
@@ -929,6 +948,35 @@ Proof.
   apply map_ext_All. eapply All_impl. 2: eassumption.
   cbn. rasimpl. apply closed_subst.
 Qed.
+
+Lemma subst_eargs_ext σ θ ξ :
+  (∀ n, σ n = θ n) →
+  subst_eargs σ ξ = subst_eargs θ ξ.
+Proof.
+  intros h.
+  apply map_ext. intro.
+  apply map_ext. intro.
+  apply ext_term. assumption.
+Qed.
+
+Lemma ren_subst_eargs ρ σ ξ :
+  ren_eargs ρ (subst_eargs σ ξ) = subst_eargs (σ >> (ren_term ρ)) ξ.
+Proof.
+  rewrite map_map. apply map_ext. intro.
+  rewrite map_map. apply map_ext. intro.
+  rasimpl. reflexivity.
+Qed.
+
+Corollary liftn_subst_eargs n σ ξ :
+  liftn n (subst_eargs σ ξ) = subst_eargs (ups n σ) ξ.
+Proof.
+  rewrite ren_subst_eargs. apply subst_eargs_ext.
+  intros m. core.unfold_funcomp.
+  induction n as [| n ih] in m, σ |- *.
+  - cbn. rasimpl. reflexivity.
+  - cbn. rasimpl. destruct m.
+    + cbn. rasimpl.
+Abort.
 
 Lemma closed_lift_eargs ξ :
   closed_eargs ξ = true →
@@ -1011,7 +1059,15 @@ Lemma inst_typing_subst Σ Ξ Δ Γ σ ξ Ξ' :
 Proof.
   intros hσ [h1 h2] [ih1 ih2].
   split.
-  - admit.
+  - intros E M ξ' hM.
+    specialize (h1 _ _ _ hM) as (Ξ'' & Δ' & R & e & h).
+    eexists _,_,_. split. 1: eauto.
+    intros n rule hn m δ Θ lhs rhs.
+    (* forward *)
+    specialize h with (1 := hn). cbn in h.
+    eapply conv_subst with (σ := ups m σ) in h .
+    erewrite 2!subst_inst_ups in h. 2,3: admit. (* Could require them too *)
+    admit.
   - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].
     split. 1: assumption.
     eexists _,_,_. split. 1: eassumption.
