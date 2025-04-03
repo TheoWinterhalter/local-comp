@@ -292,6 +292,40 @@ Proof.
   rewrite !ren_eargs_comp. reflexivity.
 Qed.
 
+Lemma ren_eargs_ext ρ ζ ξ :
+  (∀ n, ρ n = ζ n) →
+  ren_eargs ρ ξ = ren_eargs ζ ξ.
+Proof.
+  intros h.
+  apply map_ext. intro.
+  apply map_ext. intro.
+  apply extRen_term. assumption.
+Qed.
+
+Lemma liftn_liftn n m ξ :
+  liftn n (liftn m ξ) = liftn (n + m) ξ.
+Proof.
+  rewrite ren_eargs_comp.
+  apply ren_eargs_ext. unfold core.funcomp. intro. lia.
+Qed.
+
+Fixpoint uprens k (ρ : nat → nat) :=
+  match k with
+  | 0 => ρ
+  | S k => upRen_term_term (uprens k ρ)
+  end.
+
+Lemma liftn_ren_eargs n ρ ξ :
+  liftn n (ren_eargs ρ ξ) = ren_eargs (uprens n ρ) (liftn n ξ).
+Proof.
+  rewrite 2!ren_eargs_comp. apply ren_eargs_ext.
+  intros m. unfold core.funcomp.
+  induction n as [| n ih] in m, ρ |- *.
+  - reflexivity.
+  - cbn. unfold core.funcomp. rewrite <- ih.
+    reflexivity.
+Qed.
+
 Lemma ren_inst :
   ∀ ρ ξ t,
     ρ ⋅ (einst ξ t) = einst (ren_eargs ρ ξ) (ρ ⋅ t).
@@ -313,12 +347,6 @@ Proof.
     destruct (nth_error σ _) as [t |]. 2: reflexivity.
     cbn. reflexivity.
 Qed.
-
-Fixpoint uprens k (ρ : nat → nat) :=
-  match k with
-  | 0 => ρ
-  | S k => upRen_term_term (uprens k ρ)
-  end.
 
 Lemma scoped_ren :
   ∀ ρ k t,
@@ -363,16 +391,6 @@ Corollary closed_ren :
 Proof.
   intros ρ t h.
   eapply scoped_ren in h. eauto.
-Qed.
-
-Lemma ren_eargs_ext ρ ζ ξ :
-  (∀ n, ρ n = ζ n) →
-  ren_eargs ρ ξ = ren_eargs ζ ξ.
-Proof.
-  intros h.
-  apply map_ext. intro.
-  apply map_ext. intro.
-  apply extRen_term. assumption.
 Qed.
 
 Lemma ren_eargs_id ξ :
@@ -446,6 +464,15 @@ Proof.
   - cbn. rewrite app_comm_cons. cbn. eapply rtyping_up. assumption.
 Qed.
 
+Corollary rtyping_uprens_eq Γ Δ Θ ρ k :
+  rtyping Δ ρ Γ →
+  k = length Θ →
+  rtyping (Δ ,,, ren_ctx ρ Θ) (uprens k ρ) (Γ ,,, Θ).
+Proof.
+  intros h ->.
+  eapply rtyping_uprens. assumption.
+Qed.
+
 Lemma slist_ren σ ρ :
   pointwise_relation _ eq (slist (map (ren_term ρ) σ)) (slist σ >> ren_term ρ).
 Proof.
@@ -512,6 +539,27 @@ Proof.
   apply scoped_delocal with (k := 0).
 Qed.
 
+Lemma length_ctx_einst ξ Γ :
+  length (ctx_einst ξ Γ) = length Γ.
+Proof.
+  induction Γ in ξ |- *.
+  - reflexivity.
+  - cbn. eauto.
+Qed.
+
+Lemma ren_ctx_einst ρ ξ Γ :
+  ren_ctx ρ (ctx_einst ξ Γ) = ctx_einst (ren_eargs ρ ξ) Γ.
+Proof.
+  induction Γ as [| A Γ ih] in ρ, ξ |- *.
+  - reflexivity.
+  - cbn. rewrite ih. f_equal.
+    rewrite length_ctx_einst.
+    rewrite ren_inst.
+    rewrite <- liftn_ren_eargs. f_equal.
+    apply scoped_ren.
+    (* Would need the context to be closed *)
+Abort.
+
 Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →
   inst_typing Σ Ξ Γ ξ Ξ' →
@@ -522,7 +570,26 @@ Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
 Proof.
   intros hρ [h1 h2] [ih1 ih2].
   split.
-  - admit.
+  - intros E M ξ' hM.
+    specialize (h1 _ _ _ hM) as (Ξ'' & Δ' & R & e & h).
+    eexists _,_,_. split. 1: eauto.
+    intros n rule hn m δ Θ lhs0 rhs0 hl hr. cbn.
+    (* forward *)
+    specialize h with (1 := hn) (2 := hl) (3 := hr). cbn in h.
+    fold m δ lhs0 rhs0 in h.
+    eapply conv_ren with (ρ := uprens m ρ) in h.
+    2:{
+      eapply rtyping_uprens_eq. 1: eassumption.
+      rewrite 2!length_ctx_einst. reflexivity.
+    }
+    rewrite 2!ren_inst in h.
+    rewrite 2!scoped_ren in h. 2,3: eassumption.
+    rewrite liftn_ren_eargs.
+    (* eassumption. *)
+    (* Either we require closedness of the context, or we remove the rtyping
+      assumption in conv_ren.
+    *)
+    admit.
   - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].
     split. 1: assumption.
     eexists _,_,_. split. 1: eassumption.
@@ -717,13 +784,6 @@ Lemma lift_liftn n ξ :
   lift_eargs (liftn n ξ) = liftn (S n) ξ.
 Proof.
   rewrite ren_eargs_comp. reflexivity.
-Qed.
-
-Lemma liftn_liftn n m ξ :
-  liftn n (liftn m ξ) = liftn (n + m) ξ.
-Proof.
-  rewrite ren_eargs_comp.
-  apply ren_eargs_ext. unfold core.funcomp. intro. lia.
 Qed.
 
 (**
@@ -1076,7 +1136,7 @@ Proof.
     (* forward *)
     specialize h with (1 := hn) (2 := hl) (3 := hr). cbn in h.
     fold m δ lhs0 rhs0 in h.
-    eapply conv_subst with (σ := ups m σ) in h .
+    eapply conv_subst with (σ := ups m σ) in h.
     erewrite 2!subst_inst_ups in h. 2,3: eassumption.
     eassumption.
   - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].
@@ -1126,14 +1186,6 @@ Proof.
     + cbn. replace (length Γ - 0) with (length Γ) by lia.
       reflexivity.
     + cbn. eauto.
-Qed.
-
-Lemma length_ctx_einst ξ Γ :
-  length (ctx_einst ξ Γ) = length Γ.
-Proof.
-  induction Γ in ξ |- *.
-  - reflexivity.
-  - cbn. eauto.
 Qed.
 
 Lemma ctx_einst_app ξ Γ Δ :
