@@ -719,6 +719,13 @@ Proof.
   rewrite ren_eargs_comp. reflexivity.
 Qed.
 
+Lemma liftn_liftn n m ξ :
+  liftn n (liftn m ξ) = liftn (n + m) ξ.
+Proof.
+  rewrite ren_eargs_comp.
+  apply ren_eargs_ext. unfold core.funcomp. intro. lia.
+Qed.
+
 (**
 
   Note: the condition is weird, because we can just use [trunc] to make it work
@@ -1068,9 +1075,7 @@ Proof.
   induction Δ as [| A Δ ih] in Γ |- *.
   - reflexivity.
   - cbn. f_equal. 2: eauto.
-    rewrite ren_eargs_comp. f_equal.
-    apply ren_eargs_ext. intro.
-    rewrite length_app. unfold core.funcomp. lia.
+    rewrite liftn_liftn. rewrite length_app. reflexivity.
 Qed.
 
 Lemma einst_eget ξ ξ' M x :
@@ -1108,6 +1113,14 @@ Proof.
   - cbn. apply einst_eget.
 Qed.
 
+Lemma liftn_map_map n ξ ξ' :
+  liftn n (map (map (einst ξ)) ξ') = map (map (einst (liftn n ξ))) (liftn n ξ').
+Proof.
+  rewrite !map_map. apply map_ext. intro.
+  rewrite !map_map. apply map_ext. intro.
+  rewrite ren_inst. reflexivity.
+Qed.
+
 Lemma ctx_einst_comp ξ ξ' Γ :
   ctx_einst ξ (ctx_einst ξ' Γ) = ctx_einst (map (map (einst ξ)) ξ') Γ.
 Proof.
@@ -1115,9 +1128,7 @@ Proof.
   - reflexivity.
   - cbn. rewrite ih. f_equal. rewrite einst_einst. f_equal.
     rewrite length_ctx_einst.
-    rewrite !map_map. apply map_ext. intro.
-    rewrite !map_map. apply map_ext. intro.
-    rewrite ren_inst. reflexivity.
+    rewrite liftn_map_map. reflexivity.
 Qed.
 
 Lemma conv_equations Σ Ξ Ξ' Γ ξ M E ξ' Ξ'' Δ R n rule :
@@ -1201,7 +1212,7 @@ Proof.
       rewrite nth_error_ctx_einst.
       rewrite H. cbn. reflexivity.
     + rewrite ren_inst. f_equal.
-      rewrite ren_eargs_comp.
+      rewrite liftn_liftn.
       apply ren_eargs_ext.
       cbn. intro.
       pose proof (nth_error_Some Γ x) as e%proj1.
@@ -1236,8 +1247,9 @@ Proof.
         rewrite !length_app in h. rewrite !length_ctx_einst in h.
         fold δ m rξ in h.
         rewrite !einst_einst in h.
-        (* There is probably a useful hidden lemma in ctx_einst_comp *)
-        admit.
+        rewrite liftn_map_map. subst rξ.
+        rewrite liftn_liftn.
+        assumption.
       * rename H3 into ih2.
         intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].
         split. 1: assumption.
@@ -1257,7 +1269,7 @@ Proof.
   - econstructor. 1,3: eauto.
     eapply conv_einst. 2: eassumption.
     apply hξ.
-Admitted.
+Qed.
 
 Corollary typing_einst_closed Σ Ξ Ξ' Γ t A ξ :
   inst_typing Σ Ξ Γ ξ Ξ' →
