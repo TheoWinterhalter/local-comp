@@ -18,63 +18,66 @@ Set Default Goal Selector "!".
 
 Section Inline.
 
-  Context (Σ : gctx) (Ξ : ectx).
+  Context (Σ : gctx).
   Context (κ : gref → eargs → term).
-  Context (χ : eargs).
 
-  Reserved Notation "⟦ t ⟧" (at level 0).
+  Reserved Notation "⟦ t ⟧⟨ e ⟩" (at level 0).
 
-  Fixpoint inline (t : term) :=
+  Fixpoint inline (χ : eargs) (t : term) :=
     match t with
     | var n => var n
     | Sort i => Sort i
-    | Pi A B => Pi ⟦ A ⟧ ⟦ B ⟧
-    | lam A t => lam ⟦ A ⟧ ⟦ t ⟧
-    | app u v => app ⟦ u ⟧ ⟦ v ⟧
-    | const c ξ => κ c (map (map (inline)) ξ)
+    | Pi A B => Pi ⟦ A ⟧⟨ χ ⟩ ⟦ B ⟧⟨ χ ⟩
+    | lam A t => lam ⟦ A ⟧⟨ χ ⟩ ⟦ t ⟧⟨ χ ⟩
+    | app u v => app ⟦ u ⟧⟨ χ ⟩ ⟦ v ⟧⟨ χ ⟩
+    | const c ξ => κ c (map (map (inline χ)) ξ)
     | assm M x => eget χ M x
     end
 
-  where "⟦ t ⟧" := (inline t).
+  where "⟦ t ⟧⟨ e ⟩" := (inline e t).
 
-  Notation "⟦ l ⟧*" := (map inline l).
+  Notation "⟦ l ⟧*⟨ e ⟩" := (map (inline e) l).
+
+  Notation "⟦ k ⟧⟪ e ⟫" := (map (map (inline e)) k).
 
   (* For now, wrong on purpose *)
 
-  Definition gcond :=
-    ∀ c Ξ' A t Γ ξ,
-      Σ c = Some (Def Ξ' A t) →
-      [] ;; [] | Γ ⊢ κ c (map (map inline) ξ) : ⟦ einst ξ A ⟧.
-
-  Context (hκ : gcond).
-
-  Definition econd :=
+  Definition econd Ξ χ :=
     ∀ M x E ξ Ξ' Δ R A Γ,
       ectx_get Ξ M = Some (E, ξ) →
       Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
-      [] ;; [] | Γ ⊢ eget χ M x : ⟦ delocal M (einst ξ (plus (S x) ⋅ A)) ⟧.
+      [] ;; [] | ⟦ Γ ⟧*⟨ χ ⟩ ⊢ eget χ M x : ⟦ delocal M (einst ξ (plus (S x) ⋅ A)) ⟧⟨ χ ⟩.
 
-  Context (hχ : econd).
+  Definition gcond :=
+    ∀ Ξ c Ξ' A t Γ ξ χ,
+      econd Ξ χ →
+      Σ c = Some (Def Ξ' A t) →
+      [] ;; [] | ⟦ Γ ⟧*⟨ χ ⟩ ⊢ κ c ⟦ ξ ⟧⟪ χ ⟫ : ⟦ einst ξ A ⟧⟨ χ ⟩.
 
-  Lemma typing_inline Γ t A :
+  Context (hκ : gcond).
+
+  Lemma typing_inline Ξ Γ t A χ :
+    econd Ξ χ →
     Σ ;; Ξ | Γ ⊢ t : A →
-    [] ;; [] | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
+    [] ;; [] | ⟦ Γ ⟧*⟨ χ ⟩ ⊢ ⟦ t ⟧⟨ χ ⟩ : ⟦ A ⟧⟨ χ ⟩.
   Proof.
-    intro h.
-    induction h using typing_ind.
+    intros hχ h.
+    induction h in χ, hχ |- * using typing_ind.
     all: try solve [ cbn ; tttype ].
     - cbn. admit.
     - cbn. admit.
-    - cbn. eapply hκ. eassumption.
+    - cbn. eapply hκ. all: eassumption.
     - cbn. eapply hχ. all: eassumption.
-    - econstructor. 1,3: eassumption.
+    - econstructor. 1,3: eauto.
       admit.
   Admitted.
 
 End Inline.
 
 Notation "⟦ t ⟧⟨ k | c ⟩" := (inline k c t) (at level 0).
+Notation "⟦ l ⟧*⟨ k | e ⟩" := (map (inline k e) l).
+Notation "⟦ t ⟧⟪ k | e ⟫" := (map (map (inline k e)) t).
 
 Reserved Notation "⟦ s ⟧κ" (at level 0).
 
@@ -95,3 +98,17 @@ Fixpoint inline_gctx Σ :=
   | [] => gnil
   end
 where "⟦ s ⟧κ" := (inline_gctx s).
+
+Lemma gwf_gcond Σ :
+  gwf Σ →
+  gcond Σ ⟦ Σ ⟧κ.
+Proof.
+  intro h. intros Ξ c Ξ' A t Γ ξ χ hχ e.
+  induction h.
+  1:{ cbn in e. discriminate. }
+  - cbn in *. destruct (_ =? _)%string eqn:ec.
+    1:{ apply eqb_eq in ec. subst. congruence. }
+    apply IHh. 2: assumption.
+    admit.
+  - admit.
+Abort.
