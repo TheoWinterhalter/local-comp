@@ -11,6 +11,8 @@ From Stdlib Require Import Utf8 String List Arith.
 From LocalComp.autosubst Require Import AST.
 From LocalComp Require Import BasicAST.
 
+Import ListNotations.
+
 (** Local environment, a list of types **)
 Definition ctx := list term.
 
@@ -64,13 +66,15 @@ Inductive gdecl :=
 | Ext (Ξ : ectx) (Δ : ctx) (R : list crule)
 | Def (Ξ : ectx) (A : term) (t : term).
 
-Definition gctx : Type := gref → option gdecl.
+Definition gctx : Type := list (gref * gdecl).
 
-Definition gnil : gctx :=
-  λ _, None.
+Fixpoint gctx_get (Σ : gctx) (c : gref) : option gdecl :=
+  match Σ with
+  | [] => None
+  | (k,d) :: Σ => if (c =? k)%string then Some d else gctx_get Σ c
+  end.
 
-Definition gcons (k : gref) (d : gdecl) (Σ : gctx) : gctx :=
-  λ r, if (r =? k)%string then Some d else Σ r.
+Coercion gctx_get : gctx >-> Funclass.
 
 Definition extends (Σ Σ' : gctx) :=
   ∀ r d,

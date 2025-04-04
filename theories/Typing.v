@@ -263,23 +263,23 @@ Definition rule_typing Σ Ξ Δ rule :=
 (** Global environment typing **)
 
 Inductive gwf : gctx → Prop :=
-| gwf_nil : gwf gnil
+| gwf_nil : gwf []
 
-| gwf_ext c Σ Ξ Δ R :
+| gwf_ext c (Σ : gctx) Ξ Δ R :
     Σ c = None → (* freshness *)
     gwf Σ →
     ewf Σ Ξ →
     wf Σ Ξ Δ →
     Forall (rule_typing Σ Ξ Δ) R →
-    gwf (gcons c (Ext Ξ Δ R) Σ)
+    gwf ((c, Ext Ξ Δ R) :: Σ)
 
-| gwf_def c Σ Ξ A t i :
+| gwf_def c (Σ : gctx) Ξ A t i :
     Σ c = None → (* freshness *)
     gwf Σ →
     ewf Σ Ξ →
     Σ ;; Ξ | ∙ ⊢ A : Sort i → (* Redundant, makes proofs easier *)
     Σ ;; Ξ | ∙ ⊢ t : A →
-    gwf (gcons c (Def Ξ A t) Σ).
+    gwf ((c, Def Ξ A t) :: Σ).
 
 (** Automation **)
 

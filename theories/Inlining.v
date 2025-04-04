@@ -44,7 +44,7 @@ Section Inline.
   Definition gcond :=
     ∀ c Ξ' A t Γ ξ,
       Σ c = Some (Def Ξ' A t) →
-      gnil ;; [] | Γ ⊢ κ c (map (map inline) ξ) : ⟦ einst ξ A ⟧.
+      [] ;; [] | Γ ⊢ κ c (map (map inline) ξ) : ⟦ einst ξ A ⟧.
 
   Context (hκ : gcond).
 
@@ -53,13 +53,13 @@ Section Inline.
       ectx_get Ξ M = Some (E, ξ) →
       Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
-      gnil ;; [] | Γ ⊢ χ M x : ⟦ delocal M (einst ξ (plus (S x) ⋅ A)) ⟧.
+      [] ;; [] | Γ ⊢ χ M x : ⟦ delocal M (einst ξ (plus (S x) ⋅ A)) ⟧.
 
   Context (hχ : econd).
 
   Lemma typing_inline Γ t A :
     Σ ;; Ξ | Γ ⊢ t : A →
-    gnil ;; [] | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
+    [] ;; [] | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
   Proof.
     intro h.
     induction h using typing_ind.

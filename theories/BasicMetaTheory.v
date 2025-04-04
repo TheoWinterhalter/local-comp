@@ -43,7 +43,7 @@ Defined.
 (** Better induction principle for [conversion] **)
 
 Lemma conversion_ind :
-  ∀ Σ Ξ (P : ctx → term → term → Prop),
+  ∀ (Σ : gctx) Ξ (P : ctx → term → term → Prop),
     (∀ Γ A t u, P Γ (app (lam A t) u) (t <[ u.. ])) →
     (∀ Γ c ξ Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
@@ -1687,12 +1687,12 @@ Proof.
   assumption.
 Qed.
 
-Lemma extends_gcons Σ c d :
+Lemma extends_gcons (Σ : gctx) c d :
   Σ c = None →
-  Σ ⊑ gcons c d Σ.
+  Σ ⊑ (c, d) :: Σ.
 Proof.
   intros h. intros c' d' e.
-  unfold gcons. destruct (_ =? _)%string eqn:ec.
+  cbn. destruct (_ =? _)%string eqn:ec.
   - apply eqb_eq in ec. subst. congruence.
   - assumption.
 Qed.
@@ -1707,13 +1707,13 @@ Proof.
   intros hΣ hc.
   induction hΣ as [ | c' ?????? ih | c' ??????? ih ] in c, Ξ, A, t, hc |- *.
   - discriminate.
-  - unfold gcons in hc. destruct (c =? c')%string. 1: discriminate.
+  - cbn in hc. destruct (c =? c')%string. 1: discriminate.
     specialize ih with (1 := hc) as [? [[i ?] ?]].
     split. 2: split.
     + eapply ewf_gweak. all: eauto using extends_gcons.
     + eexists. eapply typing_gweak. all: eauto using extends_gcons.
     + eapply typing_gweak. all: eauto using extends_gcons.
-  - unfold gcons in hc. destruct (c =? c')%string.
+  - cbn in hc. destruct (c =? c')%string.
     + inversion hc. subst.
       intuition eauto using ewf_gweak, typing_gweak, extends_gcons.
     + specialize ih with (1 := hc) as [? [[j ?] ?]].
@@ -1728,12 +1728,12 @@ Proof.
   intros hΣ hc.
   induction hΣ as [ | c' ?????? ih | c' ??????? ih ] in c, Ξ, Δ, R, hc |- *.
   - discriminate.
-  - unfold gcons in hc. destruct (c =? c')%string.
+  - cbn in hc. destruct (c =? c')%string.
     + inversion hc. subst.
       intuition eauto using wf_gweak, ewf_gweak, typing_gweak, extends_gcons.
     + specialize ih with (1 := hc) as [? ?].
       intuition eauto using wf_gweak, ewf_gweak, typing_gweak, extends_gcons.
-  - unfold gcons in hc. destruct (c =? c')%string. 1: discriminate.
+  - cbn in hc. destruct (c =? c')%string. 1: discriminate.
     specialize ih with (1 := hc) as [? ?].
     intuition eauto using wf_gweak, ewf_gweak, typing_gweak, extends_gcons.
 Qed.
