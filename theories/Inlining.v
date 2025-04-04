@@ -42,6 +42,14 @@ Section Inline.
 
   (* For now, wrong on purpose *)
 
+  (* Would there be something to gain by simply reusing inst_typing?
+
+    This actually sounds like a good plan: instead of doing both at the same
+    time, inline should just deal with definitions (so the inlining), while
+    instantiation should just be done with einst.
+    This way we don't need to thread χ/ξ again. This was already done!
+
+  *)
   Definition econd Ξ χ :=
     ∀ M x E ξ Ξ' Δ R A Γ,
       ectx_get Ξ M = Some (E, ξ) →
