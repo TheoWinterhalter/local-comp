@@ -39,12 +39,23 @@ Section Inline.
 
   Notation "⟦ l ⟧*" := (map inline l).
 
-  Definition ginst :=
+  (* For now, wrong on purpose *)
+
+  Definition gcond :=
     ∀ c Ξ' A t Γ ξ,
       Σ c = Some (Def Ξ' A t) →
       gnil ;; [] | Γ ⊢ κ c (map (map inline) ξ) : ⟦ einst ξ A ⟧.
 
-  Context (hκ : ginst).
+  Context (hκ : gcond).
+
+  Definition econd :=
+    ∀ M x E ξ Ξ' Δ R A Γ,
+      ectx_get Ξ M = Some (E, ξ) →
+      Σ E = Some (Ext Ξ' Δ R) →
+      nth_error Δ x = Some A →
+      gnil ;; [] | Γ ⊢ χ M x : ⟦ delocal M (einst ξ (plus (S x) ⋅ A)) ⟧.
+
+  Context (hχ : econd).
 
   Lemma typing_inline Γ t A :
     Σ ;; Ξ | Γ ⊢ t : A →
@@ -56,9 +67,16 @@ Section Inline.
     - cbn. admit.
     - cbn. admit.
     - cbn. eapply hκ. eassumption.
-    - cbn. admit.
+    - cbn. eapply hχ. all: eassumption.
     - econstructor. 1,3: eassumption.
       admit.
   Admitted.
 
 End Inline.
+
+Notation "⟦ t ⟧⟨ k | c ⟩" := (inline k c t) (at level 0).
+
+(* Can't do it because Σ isn't defined recursively *)
+(* Definition κ Σ c ξ :=
+  match Σ c with
+  | Some (Def Ξ A t) =>  *)
