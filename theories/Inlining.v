@@ -20,7 +20,7 @@ Section Inline.
 
   Context (Σ : gctx) (Ξ : ectx).
   Context (κ : gref → eargs → term).
-  Context (χ : eref → aref → term).
+  Context (χ : eargs).
 
   Reserved Notation "⟦ t ⟧" (at level 0).
 
@@ -32,7 +32,7 @@ Section Inline.
     | lam A t => lam ⟦ A ⟧ ⟦ t ⟧
     | app u v => app ⟦ u ⟧ ⟦ v ⟧
     | const c ξ => κ c (map (map (inline)) ξ)
-    | assm M x => χ M x
+    | assm M x => eget χ M x
     end
 
   where "⟦ t ⟧" := (inline t).
@@ -53,7 +53,7 @@ Section Inline.
       ectx_get Ξ M = Some (E, ξ) →
       Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
-      [] ;; [] | Γ ⊢ χ M x : ⟦ delocal M (einst ξ (plus (S x) ⋅ A)) ⟧.
+      [] ;; [] | Γ ⊢ eget χ M x : ⟦ delocal M (einst ξ (plus (S x) ⋅ A)) ⟧.
 
   Context (hχ : econd).
 
@@ -76,7 +76,22 @@ End Inline.
 
 Notation "⟦ t ⟧⟨ k | c ⟩" := (inline k c t) (at level 0).
 
-(* Can't do it because Σ isn't defined recursively *)
-(* Definition κ Σ c ξ :=
-  match Σ c with
-  | Some (Def Ξ A t) =>  *)
+Reserved Notation "⟦ s ⟧κ" (at level 0).
+
+Definition gnil (c : gref) (χ : eargs) :=
+  dummy.
+
+Definition gcons r f κ (c : gref) (χ : eargs) : term :=
+  if (c =? r)%string then f χ else κ c χ.
+
+Fixpoint inline_gctx Σ :=
+  match Σ with
+  | (c, d) :: Σ =>
+    let κ := ⟦ Σ ⟧κ in
+    match d with
+    | Def Ξ A t => gcons c (λ χ, ⟦ t ⟧⟨ κ | χ ⟩) κ
+    | _ => κ
+    end
+  | [] => gnil
+  end
+where "⟦ s ⟧κ" := (inline_gctx s).
