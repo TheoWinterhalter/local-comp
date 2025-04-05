@@ -21,10 +21,12 @@ Import CombineNotations.
 
 Set Default Goal Selector "!".
 
+#[local] Notation ginst := (gref → eargs → term).
+
 Section Inline.
 
   Context (Σ : gctx).
-  Context (κ : gref → eargs → term).
+  Context (κ : ginst).
 
   Reserved Notation "⟦ t ⟧" (at level 0).
 
@@ -45,12 +47,12 @@ Section Inline.
 
   Notation "⟦ k ⟧×" := (map (map inline) k).
 
-  Definition gcond :=
+  Definition gcond' :=
     ∀ c Ξ' A t Γ ξ,
       Σ c = Some (Def Ξ' A t) →
       [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ⟦ ξ ⟧× : ⟦ einst ξ A ⟧.
 
-  Context (hκ : gcond).
+  Context (hκ : gcond').
 
   Lemma typing_inline Γ t A :
     Σ ;; [] | Γ ⊢ t : A →
@@ -93,11 +95,43 @@ Fixpoint inline_gctx Σ :=
   end
 where "⟦ s ⟧κ" := (inline_gctx s).
 
-(* Maybe instead gcond should be inductive, following gwf more closely
-  and then we would deduce the lemma we want.
-  Sounds better no?
-*)
+Inductive gcond : gctx → ginst → Prop :=
+| gcond_nil : gcond [] gnil
+
+| gcond_ext c Σ κ Ξ Δ R :
+    gcond Σ κ →
+    gcond ((c, Ext Ξ Δ R) :: Σ) κ
+
+| gcond_def c Σ κ Ξ A t :
+    gcond Σ κ →
+    (∀ ξ,
+      inst_typing Σ [] ∙ ξ Ξ →
+      [] ;; [] | ∙ ⊢ ⟦ einst ξ t ⟧⟨ κ ⟩ : ⟦ einst ξ A ⟧⟨ κ ⟩
+    ) →
+    gcond ((c, Def Ξ A t) :: Σ) (gcons c (λ ξ, ⟦ einst ξ t ⟧⟨ κ ⟩) κ).
+
+Lemma gcond_gcond' Σ κ :
+  gcond Σ κ →
+  gcond' Σ κ.
+Proof.
+Admitted.
+
 Lemma gwf_gcond Σ :
+  gwf Σ →
+  gcond Σ ⟦ Σ ⟧κ.
+Proof.
+  intro h.
+  induction h as [ | c' ?????? ih | c' ??????? ih ].
+  - constructor.
+  - cbn. constructor. assumption.
+  - cbn. constructor. 1: assumption.
+    intros ξ hξ.
+    eapply typing_inline with (Γ := ∙).
+    + eapply gcond_gcond'. eassumption.
+    + eapply typing_einst_closed. all: eassumption.
+Qed.
+
+(* Lemma gwf_gcond Σ :
   gwf Σ →
   gcond Σ ⟦ Σ ⟧κ.
 Proof.
@@ -111,4 +145,4 @@ Proof.
     + inversion e. subst. clear e.
       (* eapply typing_inline. *)
     (* + *)
-Abort.
+Abort. *)
