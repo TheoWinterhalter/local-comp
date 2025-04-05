@@ -3,6 +3,11 @@
   Here we prove one of the main results about our theory: that it is a
   conservative extension of MLTT.
 
+  We do so by inlining global definitions inside a term.
+
+  We represent MLTT by out type theory where both global (Σ) and extension (Ξ)
+  environments are empty.
+
 **)
 
 From Stdlib Require Import Utf8 String List Arith Lia.
@@ -21,71 +26,52 @@ Section Inline.
   Context (Σ : gctx).
   Context (κ : gref → eargs → term).
 
-  Reserved Notation "⟦ t ⟧⟨ e ⟩" (at level 0).
+  Reserved Notation "⟦ t ⟧" (at level 0).
 
-  Fixpoint inline (χ : eargs) (t : term) :=
+  Fixpoint inline (t : term) :=
     match t with
     | var n => var n
     | Sort i => Sort i
-    | Pi A B => Pi ⟦ A ⟧⟨ χ ⟩ ⟦ B ⟧⟨ χ ⟩
-    | lam A t => lam ⟦ A ⟧⟨ χ ⟩ ⟦ t ⟧⟨ χ ⟩
-    | app u v => app ⟦ u ⟧⟨ χ ⟩ ⟦ v ⟧⟨ χ ⟩
-    | const c ξ => κ c (map (map (inline χ)) ξ)
-    | assm M x => eget χ M x
+    | Pi A B => Pi ⟦ A ⟧ ⟦ B ⟧
+    | lam A t => lam ⟦ A ⟧ ⟦ t ⟧
+    | app u v => app ⟦ u ⟧ ⟦ v ⟧
+    | const c ξ => κ c (map (map inline) ξ)
+    | assm M x => assm M x
     end
 
-  where "⟦ t ⟧⟨ e ⟩" := (inline e t).
+  where "⟦ t ⟧" := (inline t).
 
-  Notation "⟦ l ⟧*⟨ e ⟩" := (map (inline e) l).
+  Notation "⟦ l ⟧*" := (map inline l).
 
-  Notation "⟦ k ⟧⟪ e ⟫" := (map (map (inline e)) k).
-
-  (* For now, wrong on purpose *)
-
-  (* Would there be something to gain by simply reusing inst_typing?
-
-    This actually sounds like a good plan: instead of doing both at the same
-    time, inline should just deal with definitions (so the inlining), while
-    instantiation should just be done with einst.
-    This way we don't need to thread χ/ξ again. This was already done!
-
-  *)
-  Definition econd Ξ χ :=
-    ∀ M x E ξ Ξ' Δ R A Γ,
-      ectx_get Ξ M = Some (E, ξ) →
-      Σ E = Some (Ext Ξ' Δ R) →
-      nth_error Δ x = Some A →
-      [] ;; [] | ⟦ Γ ⟧*⟨ χ ⟩ ⊢ eget χ M x : ⟦ delocal M (einst ξ (plus (S x) ⋅ A)) ⟧⟨ χ ⟩.
+  Notation "⟦ k ⟧×" := (map (map inline) k).
 
   Definition gcond :=
-    ∀ Ξ c Ξ' A t Γ ξ χ,
-      econd Ξ χ →
+    ∀ c Ξ' A t Γ ξ,
       Σ c = Some (Def Ξ' A t) →
-      [] ;; [] | ⟦ Γ ⟧*⟨ χ ⟩ ⊢ κ c ⟦ ξ ⟧⟪ χ ⟫ : ⟦ einst ξ A ⟧⟨ χ ⟩.
+      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ⟦ ξ ⟧× : ⟦ einst ξ A ⟧.
 
   Context (hκ : gcond).
 
-  Lemma typing_inline Ξ Γ t A χ :
-    econd Ξ χ →
-    Σ ;; Ξ | Γ ⊢ t : A →
-    [] ;; [] | ⟦ Γ ⟧*⟨ χ ⟩ ⊢ ⟦ t ⟧⟨ χ ⟩ : ⟦ A ⟧⟨ χ ⟩.
+  Lemma typing_inline Γ t A :
+    Σ ;; [] | Γ ⊢ t : A →
+    [] ;; [] | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
   Proof.
-    intros hχ h.
-    induction h in χ, hχ |- * using typing_ind.
+    intros h.
+    induction h using typing_ind.
     all: try solve [ cbn ; tttype ].
     - cbn. admit.
     - cbn. admit.
-    - cbn. eapply hκ. all: eassumption.
-    - cbn. eapply hχ. all: eassumption.
-    - econstructor. 1,3: eauto.
+    - cbn. eapply hκ. eassumption.
+    - cbn. discriminate.
+    - econstructor. 1,3: eassumption.
       admit.
   Admitted.
 
 End Inline.
 
-Notation "⟦ t ⟧⟨ k | c ⟩" := (inline k c t) (at level 0).
-Notation "⟦ l ⟧*⟨ k | e ⟩" := (map (inline k e) l).
-Notation "⟦ t ⟧⟪ k | e ⟫" := (map (map (inline k e)) t).
+Notation "⟦ t ⟧⟨ k ⟩" := (inline k t) (at level 0).
+Notation "⟦ l ⟧*⟨ k ⟩" := (map (inline k) l).
+Notation "⟦ t ⟧×⟨ k ⟩" := (map (map (inline k)) t).
 
 Reserved Notation "⟦ s ⟧κ" (at level 0).
 
@@ -100,23 +86,29 @@ Fixpoint inline_gctx Σ :=
   | (c, d) :: Σ =>
     let κ := ⟦ Σ ⟧κ in
     match d with
-    | Def Ξ A t => gcons c (λ χ, ⟦ t ⟧⟨ κ | χ ⟩) κ
+    | Def Ξ A t => gcons c (λ ξ, ⟦ einst ξ t ⟧⟨ κ ⟩) κ
     | _ => κ
     end
   | [] => gnil
   end
 where "⟦ s ⟧κ" := (inline_gctx s).
 
+(* Maybe instead gcond should be inductive, following gwf more closely
+  and then we would deduce the lemma we want.
+  Sounds better no?
+*)
 Lemma gwf_gcond Σ :
   gwf Σ →
   gcond Σ ⟦ Σ ⟧κ.
 Proof.
-  intro h. intros Ξ c Ξ' A t Γ ξ χ hχ e.
-  induction h.
+  intro h. intros c Ξ' A t Γ ξ e.
+  induction h in c, Ξ', A, t, ξ, e |- *.
   1:{ cbn in e. discriminate. }
-  - cbn in *. destruct (_ =? _)%string eqn:ec.
+  - cbn in e |- *. destruct (_ =? _)%string eqn:ec.
     1:{ apply eqb_eq in ec. subst. congruence. }
-    apply IHh. 2: assumption.
-    admit.
-  - admit.
+    eapply IHh. eassumption.
+  - cbn in e |- *. destruct (_ =? _)%string eqn:ec.
+    + inversion e. subst. clear e.
+      (* eapply typing_inline. *)
+    (* + *)
 Abort.
