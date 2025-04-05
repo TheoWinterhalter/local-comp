@@ -110,10 +110,41 @@ Inductive gcond : gctx → ginst → Prop :=
     ) →
     gcond ((c, Def Ξ A t) :: Σ) (gcons c (λ ξ, ⟦ einst ξ t ⟧⟨ κ ⟩) κ).
 
+Lemma gcons_eq c c' f κ :
+  (c' =? c)%string = true →
+  gcons c f κ c' = f.
+Proof.
+  intro h.
+  unfold gcons. rewrite h. reflexivity.
+Qed.
+
+Lemma gcons_neq c c' f κ :
+  (c' =? c)%string = false →
+  gcons c f κ c' = κ c'.
+Proof.
+  intro h.
+  unfold gcons. rewrite h. reflexivity.
+Qed.
+
 Lemma gcond_gcond' Σ κ :
   gcond Σ κ →
   gcond' Σ κ.
 Proof.
+  intro h. intros c Ξ' A t Γ ξ e.
+  induction h in c, Ξ', A, t, ξ, e |- *.
+  1:{ cbn in e. discriminate. }
+  - cbn in e |- *. destruct (_ =? _)%string eqn:ec.
+    1:{ apply eqb_eq in ec. subst. congruence. }
+    eapply IHh. eassumption.
+  - cbn in e |- *. destruct (_ =? _)%string eqn:ec.
+    + inversion e. subst. clear e.
+      rewrite gcons_eq. 2: eassumption.
+      eapply typing_lift_closed. 2,3: admit.
+      eapply meta_conv.
+      * eapply H. admit.
+      * admit.
+    + rewrite gcons_neq. 2: eassumption.
+      admit.
 Admitted.
 
 Lemma gwf_gcond Σ :
@@ -130,19 +161,3 @@ Proof.
     + eapply gcond_gcond'. eassumption.
     + eapply typing_einst_closed. all: eassumption.
 Qed.
-
-(* Lemma gwf_gcond Σ :
-  gwf Σ →
-  gcond Σ ⟦ Σ ⟧κ.
-Proof.
-  intro h. intros c Ξ' A t Γ ξ e.
-  induction h in c, Ξ', A, t, ξ, e |- *.
-  1:{ cbn in e. discriminate. }
-  - cbn in e |- *. destruct (_ =? _)%string eqn:ec.
-    1:{ apply eqb_eq in ec. subst. congruence. }
-    eapply IHh. eassumption.
-  - cbn in e |- *. destruct (_ =? _)%string eqn:ec.
-    + inversion e. subst. clear e.
-      (* eapply typing_inline. *)
-    (* + *)
-Abort. *)
