@@ -1,4 +1,4 @@
-From Stdlib Require Import Utf8 List Bool.
+From Stdlib Require Import Utf8 List Bool Setoid Morphisms Relation_Definitions.
 From Equations Require Import Equations.
 
 Import ListNotations.
@@ -157,3 +157,20 @@ Definition onSome [A] (P : A → Prop) (o : option A) : Prop :=
   | Some a => P a
   | None => True
   end.
+
+Lemma onSome_map A B f P o :
+  onSome P (@option_map A B f o) ↔ onSome (λ a, P (f a)) o.
+Proof.
+  destruct o as [x|].
+  - cbn. reflexivity.
+  - cbn. reflexivity.
+Qed.
+
+#[export] Instance onSome_morphism A :
+  Proper (pointwise_relation _ iff ==> eq ==> iff) (@onSome A).
+Proof.
+  intros P Q hPQ o ? <-.
+  destruct o.
+  - cbn. apply hPQ.
+  - cbn. reflexivity.
+Qed.

@@ -593,24 +593,6 @@ Proof.
     (* Would need the context to be closed *)
 Abort.
 
-(* TODO MOVE *)
-Lemma onSome_map A B f P o :
-  onSome P (@option_map A B f o) ↔ onSome (λ a, P (f a)) o.
-Proof.
-  destruct o as [x|].
-  - cbn. reflexivity.
-  - cbn. reflexivity.
-Qed.
-
-#[export] Instance onSome_morphism A :
-  Proper (pointwise_relation _ iff ==> eq ==> iff) (@onSome A).
-Proof.
-  intros P Q hPQ o ? <-.
-  destruct o.
-  - cbn. apply hPQ.
-  - cbn. reflexivity.
-Qed.
-
 Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →
   inst_typing Σ Ξ Γ ξ Ξ' →
