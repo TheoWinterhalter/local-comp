@@ -69,6 +69,39 @@ Section Inline.
     cbn. auto.
   Qed.
 
+  Lemma up_term_inline σ n :
+    (up_term_term (σ >> inline)) n = (up_term_term σ >> inline) n.
+  Proof.
+    rasimpl. destruct n.
+    - reflexivity.
+    - cbn. unfold core.funcomp. rewrite inline_ren. reflexivity.
+  Qed.
+
+  Definition gsubst :=
+    ∀ σ c ξ, (κ c ξ) <[ σ ] = κ c (subst_eargs σ ξ).
+
+  Context (hsubst : gsubst).
+
+  Lemma inline_subst σ t :
+    ⟦ t <[ σ ] ⟧ = ⟦ t ⟧ <[ σ >> inline ].
+  Proof.
+    induction t in σ |- * using term_rect.
+    all: try solve [ cbn ; f_equal ; eauto ].
+    - cbn. f_equal. 1: eauto.
+      rewrite IHt2. eapply ext_term. intro.
+      rewrite up_term_inline. reflexivity.
+    - cbn. f_equal. 1: eauto.
+      rewrite IHt2. eapply ext_term. intro.
+      rewrite up_term_inline. reflexivity.
+    - cbn. rewrite hsubst. f_equal.
+      rewrite !map_map. apply map_ext_All.
+      eapply All_impl. 2: eassumption.
+      intros ? h.
+      rewrite !map_map. apply map_ext_All.
+      eapply All_impl. 2: eassumption.
+      cbn. auto.
+  Qed.
+
   Lemma inline_einst ξ t :
     ⟦ einst ξ t ⟧ = einst ⟦ ξ ⟧× ⟦ t ⟧.
   Proof.
@@ -94,8 +127,11 @@ Section Inline.
     intros h.
     induction h using typing_ind.
     all: try solve [ cbn ; tttype ].
-    - cbn. admit.
-    - cbn. admit.
+    - cbn. rewrite inline_ren. econstructor.
+      rewrite nth_error_map. rewrite H. reflexivity.
+    - cbn in *. eapply meta_conv.
+      + tttype.
+      + rewrite inline_subst. apply ext_term. intros []. all: reflexivity.
     - cbn. eapply hκ. eassumption.
     - cbn. discriminate.
     - econstructor. 1,3: eassumption.
@@ -160,6 +196,24 @@ Proof.
     + eauto.
 Qed.
 
+Lemma gwf_gsubst Σ :
+  gwf Σ →
+  gsubst ⟦ Σ ⟧κ.
+Proof.
+  intros h σ c ξ.
+  induction h as [ | c' ?????? ih | c' ??????? ih ] in σ, c, ξ |- *.
+  - reflexivity.
+  - cbn. eauto.
+  - cbn. unfold gcons. destruct (_ =? _)%string eqn:e.
+    + erewrite <- subst_inst_closed.
+      2:{ eapply typing_scoped with (Γ := []). eassumption. }
+      rewrite inline_subst. 3: eauto.
+      2:{ eapply gwf_gren. eassumption. }
+      (* What's going on? *)
+      admit.
+    + eauto.
+Abort.
+
 Inductive gcond : gctx → ginst → Prop :=
 | gcond_nil : gcond [] gnil
 
@@ -208,6 +262,7 @@ Proof.
     intros ξ hξ.
     eapply typing_inline with (Γ := ∙).
     + eapply gwf_gren. assumption.
+    + admit.
     + eapply gcond_gcond'. eassumption.
     + eapply typing_einst_closed. all: eassumption.
-Qed.
+Abort.
