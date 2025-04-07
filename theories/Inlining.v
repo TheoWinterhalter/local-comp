@@ -50,6 +50,17 @@ Section Inline.
 
   Notation "⟦ k ⟧×" := (map (map inline) k).
 
+  Lemma inline_einst ξ t :
+    ⟦ einst ξ t ⟧ = einst ⟦ ξ ⟧× ⟦ t ⟧.
+  Proof.
+    induction t in ξ |- * using term_rect.
+    all: try solve [ cbn ; f_equal ; eauto ].
+    - cbn. f_equal. 1: eauto.
+      rewrite IHt2. admit.
+    - admit.
+    - cbn. (* Would this be true? *)
+  Abort.
+
   Definition gcond' :=
     ∀ c Ξ' A t Γ ξ,
       Σ c = Some (Def Ξ' A t) →
