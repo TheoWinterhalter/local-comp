@@ -209,7 +209,10 @@ Proof.
       2:{ eapply typing_scoped with (Γ := []). eassumption. }
       rewrite inline_subst. 3: eauto.
       2:{ eapply gwf_gren. eassumption. }
-      (* What's going on? *)
+      (* The problem is in the def of κ, because the ξ that it receives is
+        already inlined, but it appears below the inlining.
+        Fixing that is probably necessary for typing anyway.
+      *)
       admit.
     + eauto.
 Abort.
