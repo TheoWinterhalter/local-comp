@@ -8,6 +8,9 @@
   We represent MLTT by out type theory where both global (Σ) and extension (Ξ)
   environments are empty.
 
+  By doing this, we get more than by going through ETT: typically we don't need
+  any form of UIP or funext, or even of equality!
+
 **)
 
 From Stdlib Require Import Utf8 String List Arith Lia.
@@ -139,6 +142,7 @@ Proof.
   - cbn in e |- *. destruct (_ =? _)%string eqn:ec.
     + inversion e. subst. clear e.
       rewrite gcons_eq. 2: eassumption.
+      (* TODO: Prove a stronger version without the need for closed condition *)
       eapply typing_lift_closed. 2,3: admit.
       eapply meta_conv.
       * eapply H. admit.
