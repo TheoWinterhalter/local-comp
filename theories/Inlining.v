@@ -50,6 +50,25 @@ Section Inline.
 
   Notation "⟦ k ⟧×" := (map (map inline) k).
 
+  Definition gren :=
+    ∀ ρ c ξ, ρ ⋅ κ c ξ = κ c (ren_eargs ρ ξ).
+
+  Context (hren : gren).
+
+  Lemma inline_ren ρ t :
+    ⟦ ρ ⋅ t ⟧ = ρ ⋅ ⟦ t ⟧.
+  Proof.
+    induction t in ρ |- * using term_rect.
+    all: try solve [ cbn ; f_equal ; eauto ].
+    cbn. rewrite hren. f_equal.
+    rewrite !map_map. apply map_ext_All.
+    eapply All_impl. 2: eassumption.
+    intros σ h.
+    rewrite !map_map. apply map_ext_All.
+    eapply All_impl. 2: eassumption.
+    cbn. auto.
+  Qed.
+
   Lemma inline_einst ξ t :
     ⟦ einst ξ t ⟧ = einst ⟦ ξ ⟧× ⟦ t ⟧.
   Proof.
@@ -109,21 +128,6 @@ Fixpoint inline_gctx Σ :=
   end
 where "⟦ s ⟧κ" := (inline_gctx s).
 
-Inductive gcond : gctx → ginst → Prop :=
-| gcond_nil : gcond [] gnil
-
-| gcond_ext c Σ κ Ξ Δ R :
-    gcond Σ κ →
-    gcond ((c, Ext Ξ Δ R) :: Σ) κ
-
-| gcond_def c Σ κ Ξ A t :
-    gcond Σ κ →
-    (∀ ξ,
-      inst_typing Σ [] ∙ ξ Ξ →
-      [] ;; [] | ∙ ⊢ ⟦ einst ξ t ⟧⟨ κ ⟩ : ⟦ einst ξ A ⟧⟨ κ ⟩
-    ) →
-    gcond ((c, Def Ξ A t) :: Σ) (gcons c (λ ξ, ⟦ einst ξ t ⟧⟨ κ ⟩) κ).
-
 Lemma gcons_eq c c' f κ :
   (c' =? c)%string = true →
   gcons c f κ c' = f.
@@ -139,6 +143,35 @@ Proof.
   intro h.
   unfold gcons. rewrite h. reflexivity.
 Qed.
+
+Lemma get_gren Σ :
+  gren ⟦ Σ ⟧κ.
+Proof.
+  intros ρ c ξ.
+  induction Σ as [| [r []] Σ ih] in ρ, c, ξ |- *.
+  - reflexivity.
+  - cbn. eauto.
+  - cbn. unfold gcons. destruct (_ =? _)%string eqn:e.
+    + rewrite <- inline_ren. 2: eauto.
+      rewrite ren_inst. f_equal. f_equal.
+      admit.
+    + eauto.
+Admitted.
+
+Inductive gcond : gctx → ginst → Prop :=
+| gcond_nil : gcond [] gnil
+
+| gcond_ext c Σ κ Ξ Δ R :
+    gcond Σ κ →
+    gcond ((c, Ext Ξ Δ R) :: Σ) κ
+
+| gcond_def c Σ κ Ξ A t :
+    gcond Σ κ →
+    (∀ ξ,
+      inst_typing Σ [] ∙ ξ Ξ →
+      [] ;; [] | ∙ ⊢ ⟦ einst ξ t ⟧⟨ κ ⟩ : ⟦ einst ξ A ⟧⟨ κ ⟩
+    ) →
+    gcond ((c, Def Ξ A t) :: Σ) (gcons c (λ ξ, ⟦ einst ξ t ⟧⟨ κ ⟩) κ).
 
 Lemma gcond_gcond' Σ κ :
   gcond Σ κ →
@@ -172,6 +205,7 @@ Proof.
   - cbn. constructor. 1: assumption.
     intros ξ hξ.
     eapply typing_inline with (Γ := ∙).
+    + eapply get_gren.
     + eapply gcond_gcond'. eassumption.
     + eapply typing_einst_closed. all: eassumption.
 Qed.
