@@ -142,8 +142,7 @@ Proof.
   - cbn in e |- *. destruct (_ =? _)%string eqn:ec.
     + inversion e. subst. clear e.
       rewrite gcons_eq. 2: eassumption.
-      (* TODO: Prove a stronger version without the need for closed condition *)
-      eapply typing_lift_closed. 2,3: admit.
+      eapply typing_lift_closed. 2: admit.
       eapply meta_conv.
       * eapply H. admit.
       * admit.

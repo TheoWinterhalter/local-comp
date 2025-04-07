@@ -1831,12 +1831,12 @@ Proof.
 Qed.
 
 Lemma typing_lift_closed Σ Ξ Γ t A :
-Σ ;; Ξ | ∙ ⊢ t : A →
-  closed t = true →
+  Σ ;; Ξ | ∙ ⊢ t : A →
   closed A = true →
   Σ ;; Ξ | Γ ⊢ t : A.
 Proof.
-  intros h ht hA.
+  intros h hA.
+  eapply typing_scoped in h as ht. cbn in ht.
   eapply typing_ren in h. 2: eapply rtyping_add.
   rewrite !closed_ren in h. 2,3: assumption.
   rewrite app_nil_r in h.
@@ -1869,7 +1869,6 @@ Proof.
     eapply valid_wf in hΔ as hA. 2: eassumption.
     destruct hA as [i hA].
     exists i. eapply typing_lift_closed.
-    2: apply closed_delocal.
     2: reflexivity.
     eapply valid_ewf_alt in hΞ as hξ. 2,3: eassumption.
     eapply typing_einst in hA. 2: eassumption.
