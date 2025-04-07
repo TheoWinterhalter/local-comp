@@ -593,6 +593,24 @@ Proof.
     (* Would need the context to be closed *)
 Abort.
 
+(* TODO MOVE *)
+Lemma onSome_map A B f P o :
+  onSome P (@option_map A B f o) ↔ onSome (λ a, P (f a)) o.
+Proof.
+  destruct o as [x|].
+  - cbn. reflexivity.
+  - cbn. reflexivity.
+Qed.
+
+#[export] Instance onSome_morphism A :
+  Proper (pointwise_relation _ iff ==> eq ==> iff) (@onSome A).
+Proof.
+  intros P Q hPQ o ? <-.
+  destruct o.
+  - cbn. apply hPQ.
+  - cbn. reflexivity.
+Qed.
+
 Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →
   inst_typing Σ Ξ Γ ξ Ξ' →
@@ -619,9 +637,13 @@ Proof.
     rewrite 2!scoped_ren in h. 2,3: eassumption.
     rewrite liftn_ren_eargs.
     eassumption.
-  - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].
+  - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? [? ih2]]]]]].
     split. 1: assumption.
     eexists _,_,_. split. 1: eassumption.
+    split.
+    1:{
+      rewrite nth_error_map, onSome_map. setoid_rewrite length_map. assumption.
+    }
     intros ?? h.
     rewrite eget_ren. eapply meta_conv.
     + eauto.
@@ -1169,9 +1191,13 @@ Proof.
     eapply conv_subst with (σ := ups m σ) in h.
     erewrite 2!subst_inst_ups in h. 2,3: eassumption.
     eassumption.
-  - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].
+  - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? [? ih2]]]]]].
     split. 1: assumption.
     eexists _,_,_. split. 1: eassumption.
+    split.
+    1:{
+      rewrite nth_error_map, onSome_map. setoid_rewrite length_map. assumption.
+    }
     intros ?? h.
     rewrite eget_subst. eapply meta_conv.
     + eauto.
@@ -1405,9 +1431,15 @@ Proof.
         rewrite liftn_liftn.
         assumption.
       * rename H3 into ih2.
-        intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? ih2]]]]].
+        intros M E ξ' e.
+        specialize (ih2 _ _ _ e) as [? [? [? [? [? [? ih2]]]]]].
         split. 1: assumption.
         eexists _,_,_. split. 1: eassumption.
+        split.
+        1:{
+          rewrite nth_error_map, onSome_map. setoid_rewrite length_map.
+          assumption.
+        }
         intros ?? h.
         rewrite <- einst_eget. rewrite <- einst_einst.
         eauto.
@@ -1521,9 +1553,10 @@ Proof.
   eapply inst_typing_eweak_. 1: eassumption.
   destruct h as [h1 [h2 h3]]. split. 2: split.
   - assumption.
-  - intros M E ξ' e. specialize (h2 _ _ _ e) as [? [? [? [? [? ih]]]]].
+  - intros M E ξ' e. specialize (h2 _ _ _ e) as [? [? [? [? [? [? ih]]]]]].
     split. 1: assumption.
     eexists _,_,_. split. 1: eassumption.
+    split. 1: assumption.
     eauto using typing_eweak.
   - assumption.
 Qed.
@@ -1602,9 +1635,9 @@ Proof.
   eapply inst_typing_gweak_. 1,3: eassumption.
   destruct h as [h1 [h2 h3]]. split. 2: split.
   - assumption.
-  - intros M E ξ' e. specialize (h2 _ _ _ e) as [? [? [? [? [? h2]]]]].
+  - intros M E ξ' e. specialize (h2 _ _ _ e) as [? [? [? [? [? [? h2]]]]]].
     split. 1: assumption.
-    eexists _,_,_. split. 1: eassumption.
+    eexists _,_,_. split. 1: eassumption. split. 1: assumption.
     eauto using typing_gweak.
   - assumption.
 Qed.

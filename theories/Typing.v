@@ -153,6 +153,7 @@ Section Inst.
       closed_eargs ξ' = true ∧
       ∃ Ξ'' Δ R,
         Σ E = Some (Ext Ξ'' Δ R) ∧
+        onSome (λ σ, length σ = length Δ) (nth_error ξ M) ∧
         ∀ x A,
           nth_error Δ x = Some A →
           Γ ⊢ eget ξ M x : einst ξ (delocal M (einst ξ' (plus (S x) ⋅ A))).

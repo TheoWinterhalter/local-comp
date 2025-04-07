@@ -149,3 +149,11 @@ Proof.
   - intro h. apply Forall2_flip in h.
     apply Forall2_flip. rewrite Forall2_map_l. assumption.
 Qed.
+
+(** [option] util **)
+
+Definition onSome [A] (P : A → Prop) (o : option A) : Prop :=
+  match o with
+  | Some a => P a
+  | None => True
+  end.
