@@ -144,19 +144,21 @@ Proof.
   unfold gcons. rewrite h. reflexivity.
 Qed.
 
-Lemma get_gren Σ :
+Lemma gwf_gren Σ :
+  gwf Σ →
   gren ⟦ Σ ⟧κ.
 Proof.
-  intros ρ c ξ.
-  induction Σ as [| [r []] Σ ih] in ρ, c, ξ |- *.
+  intros h ρ c ξ.
+  induction h as [ | c' ?????? ih | c' ??????? ih ] in ρ, c, ξ |- *.
   - reflexivity.
   - cbn. eauto.
   - cbn. unfold gcons. destruct (_ =? _)%string eqn:e.
     + rewrite <- inline_ren. 2: eauto.
-      rewrite ren_inst. f_equal. f_equal.
-      admit.
+      rewrite ren_inst. rewrite closed_ren.
+      2:{ eapply typing_scoped with (Γ := []). eassumption. }
+      reflexivity.
     + eauto.
-Admitted.
+Qed.
 
 Inductive gcond : gctx → ginst → Prop :=
 | gcond_nil : gcond [] gnil
@@ -205,7 +207,7 @@ Proof.
   - cbn. constructor. 1: assumption.
     intros ξ hξ.
     eapply typing_inline with (Γ := ∙).
-    + eapply get_gren.
+    + eapply gwf_gren. assumption.
     + eapply gcond_gcond'. eassumption.
     + eapply typing_einst_closed. all: eassumption.
 Qed.
