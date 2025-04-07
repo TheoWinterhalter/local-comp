@@ -184,6 +184,32 @@ Proof.
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
 
+(** Typing implies scoping **)
+
+Lemma typing_scoped Σ Ξ Γ t A :
+  Σ ;; Ξ | Γ ⊢ t : A →
+  scoped (length Γ) t = true.
+Proof.
+  intro h.
+  induction h using typing_ind.
+  all: try solve [ cbn - ["<?"] in * ; eauto ].
+  all: try solve [
+    cbn - ["<?"] in * ;
+    rewrite Bool.andb_true_iff in * ;
+    intuition eauto
+  ].
+  - cbn - ["<?"]. rewrite Nat.ltb_lt. eapply nth_error_Some. congruence.
+  - cbn. eapply forallb_forall. intros σ hσ.
+    eapply forallb_forall. intros u hu.
+    eapply In_nth_error in hσ as [M hM].
+    eapply In_nth_error in hu as [x hx].
+    destruct H1 as [_ ih]. red in ih. specialize (ih M).
+    unfold ectx_get in ih.
+    (* inst_eget is still too weak I guess.
+      It might allow some garbage.
+    *)
+Abort.
+
 (** Renaming preserves typing **)
 
 Definition rtyping (Γ : ctx) (ρ : nat → nat) (Δ : ctx) : Prop :=
