@@ -158,7 +158,7 @@ Section Inst.
           Γ ⊢ eget ξ M x : einst ξ (delocal M (einst ξ' (plus (S x) ⋅ A))).
 
   Definition inst_typing_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
-    inst_equations Γ ξ Ξ' ∧ inst_eget_ Γ ξ Ξ'.
+    inst_equations Γ ξ Ξ' ∧ inst_eget_ Γ ξ Ξ' ∧ length ξ = length Ξ'.
 
 End Inst.
 
