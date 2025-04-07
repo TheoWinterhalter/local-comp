@@ -214,9 +214,17 @@ Proof.
         rewrite Nat.leb_gt in e1. lia.
     }
     specialize ih with (1 := eq_refl).
-    destruct ih as (hξ' & Ξ'' & Δ & R & hE & ih).
-    (* Missing length σ = length Δ probably *)
-Abort.
+    destruct ih as (hξ' & Ξ'' & Δ & R & hE & eM & ih).
+    rewrite hM in eM. cbn in eM.
+    destruct (nth_error Δ x) eqn: eΔ.
+    2:{
+      rewrite nth_error_None in eΔ. rewrite <- eM in eΔ.
+      rewrite <- nth_error_None in eΔ. congruence.
+    }
+    specialize ih with (1 := eΔ).
+    unfold eget in ih. rewrite hM, hx in ih.
+    assumption.
+Qed.
 
 (** Renaming preserves typing **)
 
