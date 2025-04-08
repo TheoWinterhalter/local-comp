@@ -40,7 +40,7 @@ Section Inline.
     | Pi A B => Pi ⟦ A ⟧ ⟦ B ⟧
     | lam A t => lam ⟦ A ⟧ ⟦ t ⟧
     | app u v => app ⟦ u ⟧ ⟦ v ⟧
-    | const c ξ => κ c (map (map inline) ξ)
+    | const c ξ => κ c ξ (* (map (map inline) ξ) *)
     | assm M x => assm M x
     end
 
@@ -48,7 +48,7 @@ Section Inline.
 
   Notation "⟦ l ⟧*" := (map inline l).
 
-  Notation "⟦ k ⟧×" := (map (map inline) k).
+  (* Notation "⟦ k ⟧×" := (map (map inline) k). *)
 
   Definition gren :=
     ∀ ρ c ξ, ρ ⋅ κ c ξ = κ c (ren_eargs ρ ξ).
@@ -59,14 +59,7 @@ Section Inline.
     ⟦ ρ ⋅ t ⟧ = ρ ⋅ ⟦ t ⟧.
   Proof.
     induction t in ρ |- * using term_rect.
-    all: try solve [ cbn ; f_equal ; eauto ].
-    cbn. rewrite hren. f_equal.
-    rewrite !map_map. apply map_ext_All.
-    eapply All_impl. 2: eassumption.
-    intros σ h.
-    rewrite !map_map. apply map_ext_All.
-    eapply All_impl. 2: eassumption.
-    cbn. auto.
+    all: solve [ cbn ; f_equal ; eauto ].
   Qed.
 
   Lemma up_term_inline σ n :
@@ -78,7 +71,7 @@ Section Inline.
   Qed.
 
   Definition gsubst :=
-    ∀ σ c ξ, (κ c ξ) <[ σ ] = κ c (subst_eargs σ ξ).
+    ∀ σ c ξ, (κ c ξ) <[ σ >> inline ] = κ c (subst_eargs σ ξ).
 
   Context (hsubst : gsubst).
 
@@ -93,16 +86,9 @@ Section Inline.
     - cbn. f_equal. 1: eauto.
       rewrite IHt2. eapply ext_term. intro.
       rewrite up_term_inline. reflexivity.
-    - cbn. rewrite hsubst. f_equal.
-      rewrite !map_map. apply map_ext_All.
-      eapply All_impl. 2: eassumption.
-      intros ? h.
-      rewrite !map_map. apply map_ext_All.
-      eapply All_impl. 2: eassumption.
-      cbn. auto.
   Qed.
 
-  Lemma inline_einst ξ t :
+  (* Lemma inline_einst ξ t :
     ⟦ einst ξ t ⟧ = einst ⟦ ξ ⟧× ⟦ t ⟧.
   Proof.
     induction t in ξ |- * using term_rect.
@@ -111,12 +97,13 @@ Section Inline.
       rewrite IHt2. admit.
     - admit.
     - cbn. (* Would this be true? *)
-  Abort.
+  Abort. *)
 
   Definition gcond' :=
     ∀ c Ξ' A t Γ ξ,
       Σ c = Some (Def Ξ' A t) →
-      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ⟦ ξ ⟧× : ⟦ einst ξ A ⟧.
+      inst_typing Σ [] Γ ξ Ξ' →
+      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ξ : ⟦ einst ξ A ⟧.
 
   Context (hκ : gcond').
 
@@ -132,7 +119,7 @@ Section Inline.
     - cbn in *. eapply meta_conv.
       + tttype.
       + rewrite inline_subst. apply ext_term. intros []. all: reflexivity.
-    - cbn. eapply hκ. eassumption.
+    - cbn. eapply hκ. all: eassumption.
     - cbn. discriminate.
     - econstructor. 1,3: eassumption.
       admit.
@@ -142,7 +129,7 @@ End Inline.
 
 Notation "⟦ t ⟧⟨ k ⟩" := (inline k t) (at level 0).
 Notation "⟦ l ⟧*⟨ k ⟩" := (map (inline k) l).
-Notation "⟦ t ⟧×⟨ k ⟩" := (map (map (inline k)) t).
+(* Notation "⟦ t ⟧×⟨ k ⟩" := (map (map (inline k)) t). *)
 
 Reserved Notation "⟦ s ⟧κ" (at level 0).
 
@@ -204,17 +191,22 @@ Proof.
   induction h as [ | c' ?????? ih | c' ??????? ih ] in σ, c, ξ |- *.
   - reflexivity.
   - cbn. eauto.
-  - cbn. unfold gcons. destruct (_ =? _)%string eqn:e.
-    + erewrite <- subst_inst_closed.
+  - cbn. destruct (c =? c')%string eqn:e.
+    + rewrite gcons_eq. 2: assumption.
+      erewrite <- subst_inst_closed.
       2:{ eapply typing_scoped with (Γ := []). eassumption. }
       rewrite inline_subst. 3: eauto.
       2:{ eapply gwf_gren. eassumption. }
-      (* The problem is in the def of κ, because the ξ that it receives is
-        already inlined, but it appears below the inlining.
-        Fixing that is probably necessary for typing anyway.
-      *)
+      apply ext_term. intro n.
+      unfold core.funcomp.
+      (* We need some form of irrelevance, but we need more info. *)
       admit.
-    + eauto.
+    + rewrite gcons_neq. 2: assumption.
+      rewrite <- ih.
+      apply ext_term. intro n.
+      unfold core.funcomp.
+      (* Same here *)
+      admit.
 Abort.
 
 Inductive gcond : gctx → ginst → Prop :=
@@ -236,12 +228,15 @@ Lemma gcond_gcond' Σ κ :
   gcond Σ κ →
   gcond' Σ κ.
 Proof.
-  intro h. intros c Ξ' A t Γ ξ e.
-  induction h in c, Ξ', A, t, ξ, e |- *.
+  intro h. intros c Ξ' A t Γ ξ e hξ.
+  induction h in c, Ξ', A, t, ξ, e, hξ |- *.
   1:{ cbn in e. discriminate. }
   - cbn in e |- *. destruct (_ =? _)%string eqn:ec.
     1:{ apply eqb_eq in ec. subst. congruence. }
-    eapply IHh. eassumption.
+    eapply IHh.
+    + eassumption.
+    + (* Global context mismatch here too! *)
+      admit.
   - cbn in e |- *. destruct (_ =? _)%string eqn:ec.
     + inversion e. subst. clear e.
       rewrite gcons_eq. 2: eassumption.
