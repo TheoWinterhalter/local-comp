@@ -272,9 +272,10 @@ Inductive gcond : gctx → ginst → Prop :=
 
 | gcond_def c Σ κ Ξ A t :
     gcond Σ κ →
-    (∀ ξ,
-      inst_typing Σ [] ∙ ξ Ξ →
-      [] ;; [] | ∙ ⊢ ⟦ einst ξ t ⟧⟨ κ ⟩ : ⟦ einst ξ A ⟧⟨ κ ⟩
+    (∀ Γ Σ' ξ,
+      Σ ⊑ Σ' →
+      inst_typing Σ' [] Γ ξ Ξ →
+      [] ;; [] | ⟦ Γ ⟧*⟨ κ ⟩ ⊢ ⟦ einst ξ t ⟧⟨ κ ⟩ : ⟦ einst ξ A ⟧⟨ κ ⟩
     ) →
     gcond ((c, Def Ξ A t) :: Σ) (gcons c (λ ξ, ⟦ einst ξ t ⟧⟨ κ ⟩) κ).
 
@@ -294,9 +295,8 @@ Proof.
   - cbn in e |- *. destruct (_ =? _)%string eqn:ec.
     + inversion e. subst. clear e.
       rewrite gcons_eq. 2: eassumption.
-      eapply typing_lift_closed. 2: admit.
       eapply meta_conv.
-      * eapply H. admit.
+      * admit.
       * admit.
     + rewrite gcons_neq. 2: eassumption.
       admit.
@@ -311,14 +311,14 @@ Proof.
   - constructor.
   - cbn. constructor. assumption.
   - cbn. constructor. 1: assumption.
-    intros ξ hξ.
-    eapply typing_inline with (Γ := ∙).
+    intros Γ Σ' ξ hle hξ.
+    eapply typing_inline.
     + eapply gwf_gren. assumption.
     + admit.
     + eapply gwf_unfold. assumption.
     + eapply gwf_cong. assumption.
     + eapply gcond_gcond'. eassumption.
-    + eapply typing_einst_closed. all: eassumption.
+    + eapply typing_einst_closed. all: admit.
 Abort.
 
 Theorem inlining Σ Γ t A :
