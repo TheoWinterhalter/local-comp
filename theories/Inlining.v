@@ -206,44 +206,22 @@ Section Inline.
   Qed.
 
   Definition g_unfold :=
-    ∀ Ξ Γ c ξ Ξ' A t,
+    ∀ Γ c ξ Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
-      Σ ;; Ξ | ⟦ Γ ⟧* ⊢ κ c ⟦ ξ ⟧× ≡ ⟦ einst ξ t ⟧.
+      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ⟦ ξ ⟧× ≡ ⟦ einst ξ t ⟧.
 
   Context (hufd : g_unfold).
 
   Definition g_cong :=
     ∀ Γ c ξ ξ',
-      Forall2 (Forall2 (conversion Σ [] Γ)) ξ ξ' →
-      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ξ ≡ κ c ξ'.
+      Forall2 (Forall2 (conversion [] [] Γ)) ξ ξ' →
+      [] ;; [] | Γ ⊢ κ c ξ ≡ κ c ξ'.
 
   Context (hcong : g_cong).
 
-  Lemma inline_rule_tm M ξ δ k t :
-    ⟦ rule_tm M ξ δ k t ⟧ = rule_tm M ⟦ ξ ⟧× δ k ⟦ t ⟧.
-  Proof.
-    unfold rule_tm. unfold delocal_lift.
-    rewrite inline_subst. rewrite inline_einst.
-    rewrite inline_ren_eargs. apply ext_term.
-    intros n. unfold core.funcomp.
-    destruct (lt_dec n k).
-    - rewrite ups_below. 2: assumption.
-      reflexivity.
-    - pose (m := n - k). replace n with (k + m) by lia.
-      rewrite ups_above. reflexivity.
-  Qed.
-
-  Lemma inline_rule_lhs M ξ δ rule :
-    ⟦ rule_lhs M ξ δ rule ⟧ = rule_lhs M ⟦ ξ ⟧× δ rule.
-  Proof.
-    unfold rule_lhs. rewrite inline_rule_tm.
-    (* Because of forced terms, this won't work. Same for the rhs. *)
-    (* Was this the right idea in the end? *)
-  Abort.
-
-  Lemma conv_inline Ξ Γ u v :
-    Σ ;; Ξ | Γ ⊢ u ≡ v →
-    Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
+  Lemma conv_inline Γ u v :
+    Σ ;; [] | Γ ⊢ u ≡ v →
+    [] ;; [] | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
   Proof.
     intros h.
     induction h using conversion_ind.
@@ -251,18 +229,21 @@ Section Inline.
     - cbn. rewrite inline_subst. eapply meta_conv_trans_r. 1: econstructor.
       apply ext_term. intros []. all: reflexivity.
     - cbn. eapply hufd. eassumption.
-    - rewrite !inline_subst.
-      admit.
-    - cbn. admit.
+    - discriminate.
+    - cbn. apply hcong. apply Forall2_map_l, Forall2_map_r.
+      eapply Forall2_impl. 2: eassumption.
+      intros. apply Forall2_map_l, Forall2_map_r.
+      eapply Forall2_impl. 2: eassumption.
+      cbn. auto.
     - econstructor. assumption.
     - eapply conv_trans. all: eassumption.
-  Admitted.
+  Qed.
 
   Definition gcond' :=
     ∀ c Ξ' A t Γ ξ,
       Σ c = Some (Def Ξ' A t) →
       inst_typing Σ [] Γ ξ Ξ' →
-      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ξ : ⟦ einst ξ A ⟧.
+      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ⟦ ξ ⟧× : ⟦ einst ξ A ⟧.
 
   Context (hκ : gcond').
 
@@ -288,7 +269,7 @@ End Inline.
 
 Notation "⟦ t ⟧⟨ k ⟩" := (inline k t) (at level 0).
 Notation "⟦ l ⟧*⟨ k ⟩" := (map (inline k) l).
-(* Notation "⟦ t ⟧×⟨ k ⟩" := (map (map (inline k)) t). *)
+Notation "⟦ t ⟧×⟨ k ⟩" := (map (map (inline k)) t).
 
 Reserved Notation "⟦ s ⟧κ" (at level 0).
 
@@ -326,6 +307,11 @@ Proof.
   unfold gcons. rewrite h. reflexivity.
 Qed.
 
+Lemma scoped_inline k t κ :
+  scoped k ⟦ t ⟧⟨ κ ⟩ = scoped k t.
+Proof.
+Admitted.
+
 Lemma gwf_gren Σ :
   gwf Σ →
   gren ⟦ Σ ⟧κ.
@@ -335,9 +321,10 @@ Proof.
   - reflexivity.
   - cbn. eauto.
   - cbn. unfold gcons. destruct (_ =? _)%string eqn:e.
-    + rewrite <- inline_ren. 2: eauto.
-      rewrite ren_inst. rewrite closed_ren.
-      2:{ eapply typing_scoped with (Γ := []). eassumption. }
+    + rewrite ren_inst. rewrite closed_ren.
+      2:{
+        rewrite scoped_inline. eapply typing_scoped with (Γ := []). eassumption.
+      }
       reflexivity.
     + eauto.
 Qed.
@@ -353,20 +340,12 @@ Proof.
   - cbn. destruct (c =? c')%string eqn:e.
     + rewrite gcons_eq. 2: assumption.
       erewrite <- subst_inst_closed.
-      2:{ eapply typing_scoped with (Γ := []). eassumption. }
-      rewrite inline_subst. 3: eauto.
-      2:{ eapply gwf_gren. eassumption. }
-      apply ext_term. intro n.
-      unfold core.funcomp.
-      (* We need some form of irrelevance, but we need more info. *)
-      admit.
-    + rewrite gcons_neq. 2: assumption.
-      rewrite <- ih.
-      apply ext_term. intro n.
-      unfold core.funcomp.
-      (* Same here *)
-      admit.
-Abort.
+      2:{
+        rewrite scoped_inline. eapply typing_scoped with (Γ := []). eassumption.
+      }
+      reflexivity.
+    + rewrite gcons_neq. 2: assumption. eauto.
+Qed.
 
 Lemma gwf_unfold Σ :
   gwf Σ →
@@ -381,14 +360,12 @@ Admitted.
 
 Lemma gwf_cong Σ :
   gwf Σ →
-  g_cong Σ ⟦ Σ ⟧κ.
+  g_cong ⟦ Σ ⟧κ.
 Proof.
   intros h Γ c ξ ξ' e.
   induction h as [ | c' ?????? ih | c' ??????? ih ] in Γ, c, ξ, ξ', e |- *.
   - cbn. constructor.
-  - cbn. eapply ih.
-    (* This is really problematic because this is strengthening we need! *)
-    admit.
+  - cbn. eauto.
   - cbn. admit.
 Admitted.
 
@@ -401,12 +378,11 @@ Inductive gcond : gctx → ginst → Prop :=
 
 | gcond_def c Σ κ Ξ A t :
     gcond Σ κ →
-    (∀ Γ Σ' ξ,
-      Σ ⊑ Σ' →
-      inst_typing Σ' [] Γ ξ Ξ →
-      [] ;; [] | ⟦ Γ ⟧*⟨ κ ⟩ ⊢ ⟦ einst ξ t ⟧⟨ κ ⟩ : ⟦ einst ξ A ⟧⟨ κ ⟩
+    (∀ Γ ξ,
+      inst_typing [] [] Γ ξ Ξ →
+      [] ;; [] | ⟦ Γ ⟧*⟨ κ ⟩ ⊢ einst ξ ⟦ t ⟧⟨ κ ⟩ : ⟦ einst ξ A ⟧⟨ κ ⟩
     ) →
-    gcond ((c, Def Ξ A t) :: Σ) (gcons c (λ ξ, ⟦ einst ξ t ⟧⟨ κ ⟩) κ).
+    gcond ((c, Def Ξ A t) :: Σ) (gcons c (λ ξ, einst ξ ⟦ t ⟧⟨ κ ⟩) κ).
 
 Lemma gcond_gcond' Σ κ :
   gcond Σ κ →
@@ -440,14 +416,20 @@ Proof.
   - constructor.
   - cbn. constructor. assumption.
   - cbn. constructor. 1: assumption.
-    intros Γ Σ' ξ hle hξ.
-    eapply typing_inline.
+    intros Γ ξ hξ.
+    rewrite inline_einst.
+    2:{ eapply gwf_gren. assumption. }
+    2:{ admit. }
+    (* inline is the identity on terms closed for the global context *)
+    replace (⟦ ξ ⟧×⟨ ⟦ Σ ⟧κ ⟩) with ξ by admit.
+    eapply typing_einst_closed. 1: admit.
+    eapply typing_inline with (Γ := ∙).
     + eapply gwf_gren. assumption.
-    + admit.
+    + eapply gwf_gsubst. assumption.
     + eapply gwf_unfold. assumption.
     + eapply gwf_cong. assumption.
     + eapply gcond_gcond'. eassumption.
-    + eapply typing_einst_closed. all: admit.
+    + (* Of course this is wrong. *)
 Abort.
 
 Theorem inlining Σ Γ t A :
