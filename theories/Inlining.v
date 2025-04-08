@@ -24,6 +24,61 @@ Import CombineNotations.
 
 Set Default Goal Selector "!".
 
+(** Notion of global scoping
+
+  We ignore the fact that [assm] because we consider the case where [Ξ] is
+  empty.
+
+**)
+
+Inductive gscope (Σ : gctx) : term → Prop :=
+| gscope_var x : gscope Σ (var x)
+| gscope_sort i : gscope Σ (Sort i)
+| gscope_pi A B : gscope Σ A → gscope Σ B → gscope Σ (Pi A B)
+| gscope_lam A t : gscope Σ A → gscope Σ t → gscope Σ (lam A t)
+| gscope_app u v : gscope Σ u → gscope Σ v → gscope Σ (app u v)
+| gscope_const c ξ Ξ' A t :
+    Σ c = Some (Def Ξ' A t) →
+    Forall (Forall (gscope Σ)) ξ →
+    gscope Σ (const c ξ).
+
+Lemma typing_gscope Σ Γ t A :
+  Σ ;; [] | Γ ⊢ t : A →
+  gscope Σ t.
+Proof.
+  intro h. induction h using typing_ind.
+  all: try solve [ econstructor ; eauto ].
+  - econstructor. 1: eassumption.
+    rewrite Forall_forall. intros σ hσ.
+    rewrite Forall_forall. intros u hu.
+    eapply In_nth_error in hσ as [M hM].
+    eapply In_nth_error in hu as [x hx].
+    destruct H1 as [_ [ih e]]. red in ih. specialize (ih M).
+    destruct (ectx_get Ξ' M) as [[E ξ'] |] eqn:e'.
+    2:{
+      unfold ectx_get in e'. destruct (_ <=? _) eqn: e1.
+      - rewrite Nat.leb_le in e1. rewrite <- e in e1.
+        rewrite <- nth_error_None in e1. congruence.
+      - rewrite nth_error_None in e'.
+        rewrite Nat.leb_gt in e1. lia.
+    }
+    specialize ih with (1 := eq_refl).
+    destruct ih as (hξ' & Ξ'' & Δ & R & hE & eM & ih).
+    rewrite hM in eM. cbn in eM.
+    destruct (nth_error Δ x) eqn: eΔ.
+    2:{
+      rewrite nth_error_None in eΔ. rewrite <- eM in eΔ.
+      rewrite <- nth_error_None in eΔ. congruence.
+    }
+    specialize ih with (1 := eΔ).
+    unfold eget in ih. rewrite hM, hx in ih.
+    assumption.
+  - discriminate.
+  - assumption.
+Qed.
+
+(** Inlining **)
+
 #[local] Notation ginst := (gref → eargs → term).
 
 Section Inline.
