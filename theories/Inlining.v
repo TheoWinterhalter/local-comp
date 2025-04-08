@@ -4,6 +4,8 @@
   conservative extension of MLTT.
 
   We do so by inlining global definitions inside a term.
+  We will leave [assm] though, and only get rid of them in a second phase using
+  [einst]. Only then will we be able to remove [Σ] by strengthening.
 
   We represent MLTT by out type theory where both global (Σ) and extension (Ξ)
   environments are empty.
@@ -87,6 +89,7 @@ Section Inline.
   Context (κ : ginst).
 
   Reserved Notation "⟦ t ⟧" (at level 0).
+  Reserved Notation "⟦ k ⟧×" (at level 0).
 
   Fixpoint inline (t : term) :=
     match t with
@@ -95,15 +98,15 @@ Section Inline.
     | Pi A B => Pi ⟦ A ⟧ ⟦ B ⟧
     | lam A t => lam ⟦ A ⟧ ⟦ t ⟧
     | app u v => app ⟦ u ⟧ ⟦ v ⟧
-    | const c ξ => κ c ξ (* (map (map inline) ξ) *)
+    | const c ξ => κ c ⟦ ξ ⟧×
     | assm M x => assm M x
     end
 
-  where "⟦ t ⟧" := (inline t).
+  where "⟦ t ⟧" := (inline t)
+
+  and "⟦ k ⟧×" := (map (map inline) k).
 
   Notation "⟦ l ⟧*" := (map inline l).
-
-  (* Notation "⟦ k ⟧×" := (map (map inline) k). *)
 
   Definition gren :=
     ∀ ρ c ξ, ρ ⋅ κ c ξ = κ c (ren_eargs ρ ξ).
@@ -114,7 +117,14 @@ Section Inline.
     ⟦ ρ ⋅ t ⟧ = ρ ⋅ ⟦ t ⟧.
   Proof.
     induction t in ρ |- * using term_rect.
-    all: solve [ cbn ; f_equal ; eauto ].
+    all: try solve [ cbn ; f_equal ; eauto ].
+    cbn. rewrite hren. f_equal.
+    rewrite !map_map. apply map_ext_All.
+    eapply All_impl. 2: eassumption.
+    intros σ h.
+    rewrite !map_map. apply map_ext_All.
+    eapply All_impl. 2: eassumption.
+    cbn. auto.
   Qed.
 
   Lemma up_term_inline σ n :
@@ -126,7 +136,7 @@ Section Inline.
   Qed.
 
   Definition gsubst :=
-    ∀ σ c ξ, (κ c ξ) <[ σ >> inline ] = κ c (subst_eargs σ ξ).
+    ∀ σ c ξ, (κ c ξ) <[ σ ] = κ c (subst_eargs σ ξ).
 
   Context (hsubst : gsubst).
 
@@ -141,23 +151,64 @@ Section Inline.
     - cbn. f_equal. 1: eauto.
       rewrite IHt2. eapply ext_term. intro.
       rewrite up_term_inline. reflexivity.
+    - cbn. rewrite hsubst. f_equal.
+      rewrite !map_map. apply map_ext_All.
+      eapply All_impl. 2: eassumption.
+      intros ? h.
+      rewrite !map_map. apply map_ext_All.
+      eapply All_impl. 2: eassumption.
+      cbn. auto.
   Qed.
 
-  (* Lemma inline_einst ξ t :
+  Lemma inline_ren_eargs ρ ξ :
+    ⟦ ren_eargs ρ ξ ⟧× = ren_eargs ρ ⟦ ξ ⟧×.
+  Proof.
+    rewrite !map_map. apply map_ext. intro.
+    rewrite !map_map. apply map_ext. intro.
+    apply inline_ren.
+  Qed.
+
+  (* TODO MOVE *)
+  Notation einst_eargs ξ ξ' := (map (map (einst ξ)) ξ').
+
+  Definition geinst :=
+    ∀ c ξ ξ',
+      κ c (einst_eargs ξ ξ') = einst ξ (κ c ξ').
+
+  Context (heinst : geinst).
+
+  Lemma inline_eget ξ M x :
+    ⟦ eget ξ M x ⟧ = eget ⟦ ξ ⟧× M x.
+  Proof.
+    unfold eget. rewrite nth_error_map.
+    destruct nth_error as [σ |] eqn: e1. 2: reflexivity.
+    cbn. rewrite nth_error_map.
+    destruct (nth_error σ _) as [t|] eqn:e2. 2: reflexivity.
+    cbn. reflexivity.
+  Qed.
+
+  Lemma inline_einst ξ t :
     ⟦ einst ξ t ⟧ = einst ⟦ ξ ⟧× ⟦ t ⟧.
   Proof.
     induction t in ξ |- * using term_rect.
     all: try solve [ cbn ; f_equal ; eauto ].
     - cbn. f_equal. 1: eauto.
-      rewrite IHt2. admit.
-    - admit.
-    - cbn. (* Would this be true? *)
-  Abort. *)
+      rewrite IHt2. rewrite inline_ren_eargs. reflexivity.
+    - cbn. f_equal. 1: eauto.
+      rewrite IHt2. rewrite inline_ren_eargs. reflexivity.
+    - cbn. rewrite <- heinst. f_equal.
+      rewrite !map_map. apply map_ext_All.
+      eapply All_impl. 2: eassumption.
+      intros σ hσ. rewrite !map_map. apply map_ext_All.
+      eapply All_impl. 2: eassumption.
+      auto.
+    - cbn. apply inline_eget.
+  Qed.
 
   Definition g_unfold :=
-    ∀ Γ c ξ Ξ' A t,
+    ∀ Ξ Γ c ξ Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
-      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ξ ≡ ⟦ einst ξ t ⟧.
+      Σ ;; Ξ | ⟦ Γ ⟧* ⊢ κ c ⟦ ξ ⟧× ≡ ⟦ einst ξ t ⟧.
 
   Context (hufd : g_unfold).
 
@@ -168,9 +219,31 @@ Section Inline.
 
   Context (hcong : g_cong).
 
-  Lemma conv_inline Γ u v :
-    Σ ;; [] | Γ ⊢ u ≡ v →
-    [] ;; [] | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
+  Lemma inline_rule_tm M ξ δ k t :
+    ⟦ rule_tm M ξ δ k t ⟧ = rule_tm M ⟦ ξ ⟧× δ k ⟦ t ⟧.
+  Proof.
+    unfold rule_tm. unfold delocal_lift.
+    rewrite inline_subst. rewrite inline_einst.
+    rewrite inline_ren_eargs. apply ext_term.
+    intros n. unfold core.funcomp.
+    destruct (lt_dec n k).
+    - rewrite ups_below. 2: assumption.
+      reflexivity.
+    - pose (m := n - k). replace n with (k + m) by lia.
+      rewrite ups_above. reflexivity.
+  Qed.
+
+  Lemma inline_rule_lhs M ξ δ rule :
+    ⟦ rule_lhs M ξ δ rule ⟧ = rule_lhs M ⟦ ξ ⟧× δ rule.
+  Proof.
+    unfold rule_lhs. rewrite inline_rule_tm.
+    (* Because of forced terms, this won't work. Same for the rhs. *)
+    (* Was this the right idea in the end? *)
+  Abort.
+
+  Lemma conv_inline Ξ Γ u v :
+    Σ ;; Ξ | Γ ⊢ u ≡ v →
+    Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
   Proof.
     intros h.
     induction h using conversion_ind.
@@ -178,11 +251,12 @@ Section Inline.
     - cbn. rewrite inline_subst. eapply meta_conv_trans_r. 1: econstructor.
       apply ext_term. intros []. all: reflexivity.
     - cbn. eapply hufd. eassumption.
-    - discriminate.
-    - cbn. apply hcong. assumption.
+    - rewrite !inline_subst.
+      admit.
+    - cbn. admit.
     - econstructor. assumption.
     - eapply conv_trans. all: eassumption.
-  Qed.
+  Admitted.
 
   Definition gcond' :=
     ∀ c Ξ' A t Γ ξ,
@@ -229,7 +303,7 @@ Fixpoint inline_gctx Σ :=
   | (c, d) :: Σ =>
     let κ := ⟦ Σ ⟧κ in
     match d with
-    | Def Ξ A t => gcons c (λ ξ, ⟦ einst ξ t ⟧⟨ κ ⟩) κ
+    | Def Ξ A t => gcons c (λ ξ, einst ξ ⟦ t ⟧⟨ κ ⟩) κ
     | _ => κ
     end
   | [] => gnil
