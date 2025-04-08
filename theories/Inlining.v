@@ -357,6 +357,59 @@ Proof.
       admit.
 Admitted.
 
+Lemma inline_ext_gscope Σ t κ κ' :
+  gscope Σ t →
+  (∀ c Ξ' A t ξ, Σ c = Some (Def Ξ' A t) → κ c ξ = κ' c ξ) →
+  ⟦ t ⟧⟨ κ ⟩ = ⟦ t ⟧⟨ κ' ⟩.
+Proof.
+  intros ht he.
+  induction ht in κ, κ', he |- *.
+  all: try solve [ cbn ; eauto ].
+  all: solve [ cbn ; f_equal ; eauto ].
+Qed.
+
+Lemma gwf_get Σ c ξ Ξ' A t :
+  gwf Σ →
+  Σ c = Some (Def Ξ' A t) →
+  ⟦ Σ ⟧κ c ξ = ⟦ einst ξ t ⟧⟨ ⟦ Σ ⟧κ ⟩.
+Proof.
+  intros h hc.
+  induction h as [ | c' ?????? ih | c' ??????? ih ] in c, Ξ', A, t, hc |- *.
+  - discriminate.
+  - cbn. cbn in hc. destruct (_ =? _)%string eqn:ec.
+    1:{ apply eqb_eq in ec. subst. congruence. }
+    eauto.
+  - cbn in hc |- *. destruct (_ =? _)%string eqn:ec.
+    + inversion hc. subst. clear hc.
+      rewrite gcons_eq. 2: eassumption.
+      eapply inline_ext_gscope.
+      (* If we ask for ξ to be well typed, we get back the issue of it being in
+        a future context.
+
+        In fact, this is much more serious than that! The current definition of
+        ⟦ Σ ⟧κ is wrong because it uses the wrong κ! It's enough for t but not
+        for ξ.
+
+        Because I'm tempted to go back to the weird situation where ξ gets
+        inlined twice, with the second time being useless.
+
+        Or we go a third way and parametrise the translation by a ξ.
+        The problem is that I would like to avoid reimplementing (and proving)
+        einst again.
+      *)
+      1:{ eapply typing_gscope. admit. }
+      intros ????? e.
+      admit.
+    + admit.
+Abort.
+
+Lemma gwf_gcond' Σ :
+  gwf Σ →
+  gcond' Σ ⟦ Σ ⟧κ.
+Proof.
+  intro h. intros c Ξ' A t Γ ξ e hξ.
+Abort.
+
 Lemma gwf_gcond Σ :
   gwf Σ →
   gcond Σ ⟦ Σ ⟧κ.
