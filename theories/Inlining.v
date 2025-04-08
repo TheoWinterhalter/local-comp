@@ -99,6 +99,36 @@ Section Inline.
     - cbn. (* Would this be true? *)
   Abort. *)
 
+  Definition g_unfold :=
+    ∀ Γ c ξ Ξ' A t,
+      Σ c = Some (Def Ξ' A t) →
+      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ξ ≡ ⟦ einst ξ t ⟧.
+
+  Context (hufd : g_unfold).
+
+  Definition g_cong :=
+    ∀ Γ c ξ ξ',
+      Forall2 (Forall2 (conversion Σ [] Γ)) ξ ξ' →
+      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ξ ≡ κ c ξ'.
+
+  Context (hcong : g_cong).
+
+  Lemma conv_inline Γ u v :
+    Σ ;; [] | Γ ⊢ u ≡ v →
+    [] ;; [] | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
+  Proof.
+    intros h.
+    induction h using conversion_ind.
+    all: try solve [ cbn ; ttconv ].
+    - cbn. rewrite inline_subst. eapply meta_conv_trans_r. 1: econstructor.
+      apply ext_term. intros []. all: reflexivity.
+    - cbn. eapply hufd. eassumption.
+    - discriminate.
+    - cbn. apply hcong. assumption.
+    - econstructor. assumption.
+    - eapply conv_trans. all: eassumption.
+  Qed.
+
   Definition gcond' :=
     ∀ c Ξ' A t Γ ξ,
       Σ c = Some (Def Ξ' A t) →
@@ -122,8 +152,8 @@ Section Inline.
     - cbn. eapply hκ. all: eassumption.
     - cbn. discriminate.
     - econstructor. 1,3: eassumption.
-      admit.
-  Admitted.
+      eapply conv_inline. assumption.
+  Qed.
 
 End Inline.
 
@@ -209,6 +239,30 @@ Proof.
       admit.
 Abort.
 
+Lemma gwf_unfold Σ :
+  gwf Σ →
+  g_unfold Σ ⟦ Σ ⟧κ.
+Proof.
+  intros h Γ c ξ Ξ' A t hc.
+  induction h as [ | c' ?????? ih | c' ??????? ih ] in Γ, c, ξ, Ξ', A, t, hc |- *.
+  - discriminate.
+  - cbn. admit.
+  - cbn. admit.
+Admitted.
+
+Lemma gwf_cong Σ :
+  gwf Σ →
+  g_cong Σ ⟦ Σ ⟧κ.
+Proof.
+  intros h Γ c ξ ξ' e.
+  induction h as [ | c' ?????? ih | c' ??????? ih ] in Γ, c, ξ, ξ', e |- *.
+  - cbn. constructor.
+  - cbn. eapply ih.
+    (* This is really problematic because this is strengthening we need! *)
+    admit.
+  - cbn. admit.
+Admitted.
+
 Inductive gcond : gctx → ginst → Prop :=
 | gcond_nil : gcond [] gnil
 
@@ -261,6 +315,38 @@ Proof.
     eapply typing_inline with (Γ := ∙).
     + eapply gwf_gren. assumption.
     + admit.
+    + eapply gwf_unfold. assumption.
+    + eapply gwf_cong. assumption.
     + eapply gcond_gcond'. eassumption.
     + eapply typing_einst_closed. all: eassumption.
 Abort.
+
+Theorem inlining Σ Γ t A :
+  gwf Σ →
+  let κ := ⟦ Σ ⟧κ in
+  Σ ;; [] | Γ ⊢ t : A →
+  [] ;; [] | ⟦ Γ ⟧*⟨ κ ⟩ ⊢ ⟦ t ⟧⟨ κ ⟩ : ⟦ A ⟧⟨ κ ⟩.
+Proof.
+  intros hΣ κ h.
+  eapply typing_inline.
+  - eapply gwf_gren. assumption.
+  - admit.
+  - eapply gwf_unfold. assumption.
+  - eapply gwf_cong. assumption.
+  - eapply gcond_gcond'. admit.
+  - eassumption.
+Admitted.
+
+Theorem conservativity Σ t A i :
+  gwf Σ →
+  [] ;; [] | ∙ ⊢ A : Sort i →
+  Σ ;; [] | ∙ ⊢ t : A →
+  let κ := ⟦ Σ ⟧κ in
+  [] ;; [] | ∙ ⊢ ⟦ t ⟧⟨ κ ⟩ : A.
+Proof.
+  intros hΣ hA ht κ.
+  eapply inlining in ht. 2: assumption.
+  cbn in ht.
+  (* TODO: Show that inline is the identity on MLTT. *)
+  (* Do we use a typing judgment or a global scoping one? *)
+Admitted.
