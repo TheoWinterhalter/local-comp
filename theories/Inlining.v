@@ -483,6 +483,15 @@ Lemma gwf_gcond' Σ :
   gcond' Σ ⟦ Σ ⟧κ.
 Proof.
   intro h. intros c Ξ' A t Γ ξ e hξ.
+  erewrite gwf_get. 2,3: eassumption. 2: admit.
+  eapply typing_inline.
+  - eapply gwf_gren. assumption.
+  - admit.
+  - eapply gwf_unfold. assumption.
+  - eapply gwf_cong. assumption.
+  - (* Not great, a loop *)
+    admit.
+  - (* Not true anyway *)
 Abort.
 
 Lemma gwf_gcond Σ :
