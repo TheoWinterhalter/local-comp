@@ -87,6 +87,7 @@ Section Inline.
   Context (κ : ginst).
 
   Reserved Notation "⟦ t ⟧" (at level 0).
+  Reserved Notation "⟦ k ⟧×" (at level 0).
 
   Fixpoint inline (t : term) :=
     match t with
@@ -95,15 +96,14 @@ Section Inline.
     | Pi A B => Pi ⟦ A ⟧ ⟦ B ⟧
     | lam A t => lam ⟦ A ⟧ ⟦ t ⟧
     | app u v => app ⟦ u ⟧ ⟦ v ⟧
-    | const c ξ => κ c ξ (* (map (map inline) ξ) *)
+    | const c ξ => κ c ⟦ ξ ⟧×
     | assm M x => assm M x
     end
 
-  where "⟦ t ⟧" := (inline t).
+  where "⟦ t ⟧" := (inline t)
+  and "⟦ k ⟧×" := (map (map inline) k).
 
   Notation "⟦ l ⟧*" := (map inline l).
-
-  (* Notation "⟦ k ⟧×" := (map (map inline) k). *)
 
   Definition gren :=
     ∀ ρ c ξ, ρ ⋅ κ c ξ = κ c (ren_eargs ρ ξ).
@@ -114,7 +114,14 @@ Section Inline.
     ⟦ ρ ⋅ t ⟧ = ρ ⋅ ⟦ t ⟧.
   Proof.
     induction t in ρ |- * using term_rect.
-    all: solve [ cbn ; f_equal ; eauto ].
+    all: try solve [ cbn ; f_equal ; eauto ].
+    cbn. rewrite hren. f_equal.
+    rewrite !map_map. apply map_ext_All.
+    eapply All_impl. 2: eassumption.
+    intros σ h.
+    rewrite !map_map. apply map_ext_All.
+    eapply All_impl. 2: eassumption.
+    cbn. auto.
   Qed.
 
   Lemma up_term_inline σ n :
@@ -126,7 +133,7 @@ Section Inline.
   Qed.
 
   Definition gsubst :=
-    ∀ σ c ξ, (κ c ξ) <[ σ >> inline ] = κ c (subst_eargs σ ξ).
+    ∀ σ c ξ, (κ c ξ) <[ σ ] = κ c (subst_eargs σ ξ).
 
   Context (hsubst : gsubst).
 
@@ -141,6 +148,13 @@ Section Inline.
     - cbn. f_equal. 1: eauto.
       rewrite IHt2. eapply ext_term. intro.
       rewrite up_term_inline. reflexivity.
+    - cbn. rewrite hsubst. f_equal.
+      rewrite !map_map. apply map_ext_All.
+      eapply All_impl. 2: eassumption.
+      intros ? h.
+      rewrite !map_map. apply map_ext_All.
+      eapply All_impl. 2: eassumption.
+      cbn. auto.
   Qed.
 
   (* Lemma inline_einst ξ t :
@@ -157,14 +171,14 @@ Section Inline.
   Definition g_unfold :=
     ∀ Γ c ξ Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
-      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ξ ≡ ⟦ einst ξ t ⟧.
+      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ⟦ ξ ⟧× ≡ ⟦ einst ξ t ⟧.
 
   Context (hufd : g_unfold).
 
   Definition g_cong :=
     ∀ Γ c ξ ξ',
-      Forall2 (Forall2 (conversion Σ [] Γ)) ξ ξ' →
-      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ξ ≡ κ c ξ'.
+      Forall2 (Forall2 (conversion [] [] Γ)) ξ ξ' →
+      [] ;; [] | Γ ⊢ κ c ξ ≡ κ c ξ'.
 
   Context (hcong : g_cong).
 
@@ -179,7 +193,12 @@ Section Inline.
       apply ext_term. intros []. all: reflexivity.
     - cbn. eapply hufd. eassumption.
     - discriminate.
-    - cbn. apply hcong. assumption.
+    - cbn. apply hcong.
+      apply Forall2_map_l, Forall2_map_r.
+      eapply Forall2_impl. 2: eassumption.
+      intros. apply Forall2_map_l, Forall2_map_r.
+      eapply Forall2_impl. 2: eassumption.
+      cbn. auto.
     - econstructor. assumption.
     - eapply conv_trans. all: eassumption.
   Qed.
@@ -188,7 +207,7 @@ Section Inline.
     ∀ c Ξ' A t Γ ξ,
       Σ c = Some (Def Ξ' A t) →
       inst_typing Σ [] Γ ξ Ξ' →
-      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ξ : ⟦ einst ξ A ⟧.
+      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ⟦ ξ ⟧× : ⟦ einst ξ A ⟧.
 
   Context (hκ : gcond').
 
@@ -214,7 +233,7 @@ End Inline.
 
 Notation "⟦ t ⟧⟨ k ⟩" := (inline k t) (at level 0).
 Notation "⟦ l ⟧*⟨ k ⟩" := (map (inline k) l).
-(* Notation "⟦ t ⟧×⟨ k ⟩" := (map (map (inline k)) t). *)
+Notation "⟦ t ⟧×⟨ k ⟩" := (map (map (inline k)) t).
 
 Reserved Notation "⟦ s ⟧κ" (at level 0).
 
@@ -284,14 +303,10 @@ Proof.
       2:{ eapply gwf_gren. eassumption. }
       apply ext_term. intro n.
       unfold core.funcomp.
-      (* We need some form of irrelevance, but we need more info. *)
+      (* We need to know σ has already been inlined I guess? *)
       admit.
     + rewrite gcons_neq. 2: assumption.
-      rewrite <- ih.
-      apply ext_term. intro n.
-      unfold core.funcomp.
-      (* Same here *)
-      admit.
+      rewrite <- ih. reflexivity.
 Abort.
 
 Lemma gwf_unfold Σ :
@@ -307,7 +322,7 @@ Admitted.
 
 Lemma gwf_cong Σ :
   gwf Σ →
-  g_cong Σ ⟦ Σ ⟧κ.
+  g_cong ⟦ Σ ⟧κ.
 Proof.
   intros h Γ c ξ ξ' e.
   induction h as [ | c' ?????? ih | c' ??????? ih ] in Γ, c, ξ, ξ', e |- *.
@@ -359,7 +374,7 @@ Admitted.
 
 Lemma inline_ext_gscope Σ t κ κ' :
   gscope Σ t →
-  (∀ c Ξ' A t ξ, Σ c = Some (Def Ξ' A t) → κ c ξ = κ' c ξ) →
+  (∀ c Ξ' A t ξ, Σ c = Some (Def Ξ' A t) → κ c ⟦ ξ ⟧×⟨ κ ⟩ = κ' c ⟦ ξ ⟧×⟨ κ' ⟩) →
   ⟦ t ⟧⟨ κ ⟩ = ⟦ t ⟧⟨ κ' ⟩.
 Proof.
   intros ht he.
