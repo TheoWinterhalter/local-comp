@@ -77,6 +77,8 @@ Proof.
   - assumption.
 Qed.
 
+Notation gscope_eargs Σ ξ := (Forall (Forall (gscope Σ)) ξ).
+
 (** Inlining **)
 
 #[local] Notation ginst := (gref → eargs → term).
@@ -374,7 +376,11 @@ Admitted.
 
 Lemma inline_ext_gscope Σ t κ κ' :
   gscope Σ t →
-  (∀ c Ξ' A t ξ, Σ c = Some (Def Ξ' A t) → κ c ⟦ ξ ⟧×⟨ κ ⟩ = κ' c ⟦ ξ ⟧×⟨ κ' ⟩) →
+  (∀ c Ξ' A t ξ,
+    Σ c = Some (Def Ξ' A t) →
+    gscope_eargs Σ ξ →
+    κ c ⟦ ξ ⟧×⟨ κ ⟩ = κ' c ⟦ ξ ⟧×⟨ κ' ⟩
+  ) →
   ⟦ t ⟧⟨ κ ⟩ = ⟦ t ⟧⟨ κ' ⟩.
 Proof.
   intros ht he.
@@ -398,22 +404,16 @@ Proof.
     + inversion hc. subst. clear hc.
       rewrite gcons_eq. 2: eassumption.
       eapply inline_ext_gscope.
-      (* If we ask for ξ to be well typed, we get back the issue of it being in
-        a future context.
-
-        In fact, this is much more serious than that! The current definition of
-        ⟦ Σ ⟧κ is wrong because it uses the wrong κ! It's enough for t but not
-        for ξ.
-
-        Because I'm tempted to go back to the weird situation where ξ gets
-        inlined twice, with the second time being useless.
-
-        Or we go a third way and parametrise the translation by a ξ.
-        The problem is that I would like to avoid reimplementing (and proving)
-        einst again.
-      *)
-      1:{ eapply typing_gscope. admit. }
-      intros ????? e.
+      1:{
+        eapply typing_gscope. eapply typing_einst_closed. 2: eassumption.
+        admit.
+      }
+      intros c0 ???? e hs.
+      destruct (c0 =? c')%string eqn:e0.
+      1:{ rewrite String.eqb_eq in e0. congruence. }
+      rewrite gcons_neq. 2: assumption.
+      f_equal.
+      (* If we keep going, this is a loop *)
       admit.
     + admit.
 Abort.
