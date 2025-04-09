@@ -241,9 +241,23 @@ Section Inline.
     ∀ c Ξ' A t Γ ξ,
       Σ c = Some (Def Ξ' A t) →
       inst_typing Σ [] Γ ξ Ξ' →
+      (* inst_typing [] [] Γ ⟦ ξ ⟧× Ξ' → *)
       [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ⟦ ξ ⟧× : ⟦ einst ξ A ⟧.
 
   Context (hκ : gcond').
+
+  Lemma inst_typing_inline Γ ξ Ξ :
+    inst_typing_ Σ [] (λ Γ t A, [] ;; [] | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧) Γ ξ Ξ →
+    inst_typing [] [] Γ ⟦ ξ ⟧× Ξ.
+  Proof.
+    intros (he & hg & e).
+    split. 2: split.
+    - intros E M Ξ' hM.
+      specialize (he _ _ _ hM). destruct he as (Ξ'' & Δ & R & hE & h).
+      eexists _,_,_.
+      (* Nothing like that is going to work of course. *)
+      give_up.
+  Abort.
 
   Lemma typing_inline Γ t A :
     Σ ;; [] | Γ ⊢ t : A →
@@ -257,7 +271,7 @@ Section Inline.
     - cbn in *. eapply meta_conv.
       + tttype.
       + rewrite inline_subst. apply ext_term. intros []. all: reflexivity.
-    - cbn. eapply hκ. all: eassumption.
+    - cbn. eapply hκ. 1,2: eassumption.
     - cbn. discriminate.
     - econstructor. 1,3: eassumption.
       eapply conv_inline. assumption.
@@ -376,9 +390,8 @@ Inductive gcond : gctx → ginst → Prop :=
 
 | gcond_def c Σ κ Ξ A t :
     gcond Σ κ →
-    (∀ Γ Σ' ξ,
-      Σ ⊑ Σ' →
-      inst_typing Σ' [] Γ ξ Ξ →
+    (∀ Γ ξ,
+      inst_typing [] [] Γ ξ Ξ →
       [] ;; [] | ⟦ Γ ⟧*⟨ κ ⟩ ⊢ ⟦ einst ξ t ⟧⟨ κ ⟩ : ⟦ einst ξ A ⟧⟨ κ ⟩
     ) →
     gcond ((c, Def Ξ A t) :: Σ) (gcons c (λ ξ, ⟦ einst ξ t ⟧⟨ κ ⟩) κ).
@@ -503,14 +516,16 @@ Proof.
   - constructor.
   - cbn. constructor. assumption.
   - cbn. constructor. 1: assumption.
-    intros Γ Σ' ξ hle hξ.
+    intros Γ ξ hξ.
     eapply typing_inline.
     + eapply gwf_gren. assumption.
     + admit.
     + eapply gwf_unfold. assumption.
     + eapply gwf_cong. assumption.
     + eapply gcond_gcond'. eassumption.
-    + eapply typing_einst_closed. all: admit.
+    + eapply typing_einst_closed. 2: eassumption.
+      eapply inst_typing_gweak. 1: eassumption.
+      apply extends_nil.
 Abort.
 
 Theorem inlining Σ Γ t A :
