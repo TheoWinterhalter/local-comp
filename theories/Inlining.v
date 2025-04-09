@@ -79,6 +79,38 @@ Qed.
 
 Notation gscope_eargs Σ ξ := (Forall (Forall (gscope Σ)) ξ).
 
+Lemma gscope_ind_alt :
+  ∀ Σ (P : term → Prop),
+  (∀ x, P (var x)) →
+  (∀ i, P (Sort i)) →
+  (∀ A B, gscope Σ A → P A → gscope Σ B → P B → P (Pi A B)) →
+  (∀ A t, gscope Σ A → P A → gscope Σ t → P t → P (lam A t)) →
+  (∀ u v, gscope Σ u → P u → gscope Σ v → P v → P (app u v)) →
+  (∀ c ξ Ξ' A t,
+    Σ c = Some (Def Ξ' A t) →
+    gscope_eargs Σ ξ →
+    Forall (Forall P) ξ →
+    P (const c ξ)
+  ) →
+  ∀ t, gscope Σ t → P t.
+Proof.
+  intros Σ P hvar hsort hpi hlam happ hconst.
+  fix aux 2. move aux at top.
+  intros t h. destruct h as [| | | | | ????? hc h].
+  6:{
+    eapply hconst. 1,2: eassumption.
+    revert ξ h.
+    fix aux1 2.
+    intros ξ h. destruct h as [| σ ξ hσ hξ].
+    - constructor.
+    - constructor. 2: eauto.
+      revert σ hσ. fix aux2 2. intros σ hσ.
+      destruct hσ as [| u σ h hσ]. 1: constructor.
+      constructor. all: eauto.
+  }
+  all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
+Qed.
+
 (** Inlining **)
 
 #[local] Notation ginst := (gref → eargs → term).
