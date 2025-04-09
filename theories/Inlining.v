@@ -251,6 +251,25 @@ Section Inline.
     inst_typing [] [] Γ ⟦ ξ ⟧× Ξ.
   Proof.
     intros (he & hg & e).
+    (* inst_equations says nothing about inlining,
+      but we can probably get what we need from conv_inline.
+      Still I wonder if this inst_typing_ isn't what we want to use for some
+      other notion of einst.
+
+      Actually no, because we really want Σ to be gone I guess.
+      But there is no way not to mention Σ to show that equations are indeed
+      preserved.
+      Although, we only need to the prefix of Σ in which t lives, not ξ.
+
+      Does this mean that we need to have inlining take some χ as I intially
+      thought?
+
+      Well the unfold rule says it has to be ⟦ einst ξ t ⟧ no? So how would we
+      go around that anyway? This means we somehow have to account for the bit
+      of κ that we get when we instantiate.
+
+      What can we know about ⟦ ξ ⟧×?
+    *)
     split. 2: split.
     - intros E M Ξ' hM.
       specialize (he _ _ _ hM). destruct he as (Ξ'' & Δ & R & hE & h).
