@@ -362,10 +362,18 @@ Lemma gwf_unfold Σ :
   g_unfold Σ ⟦ Σ ⟧κ.
 Proof.
   intros h Γ c ξ Ξ' A t hc.
-  induction h as [ | c' ?????? ih | c' ??????? ih ] in Γ, c, ξ, Ξ', A, t, hc |- *.
+  apply meta_conv_refl. clear Γ.
+  induction h as [ | c' ?????? ih | c' ??????? ih ] in c, ξ, Ξ', A, t, hc |- *.
   - discriminate.
-  - cbn. admit.
-  - cbn. admit.
+  - cbn in hc |- *. destruct (c =? c')%string eqn:e. 1: discriminate.
+    eapply ih. eassumption.
+  - cbn in hc |- *. destruct (c =? c')%string eqn:e.
+    + inversion hc. subst. clear hc.
+      rewrite gcons_eq. 2: assumption.
+      (* If we want to stay on that route, we need this probably *)
+      admit.
+    + rewrite gcons_neq. 2: assumption.
+      (* Why would this hold? *)
 Admitted.
 
 Lemma gwf_cong Σ :
