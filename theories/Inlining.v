@@ -268,7 +268,25 @@ Section Inline.
       go around that anyway? This means we somehow have to account for the bit
       of κ that we get when we instantiate.
 
+      True, but there is probably no way to see einst ξ t as smaller than
+      anything.
+
       What can we know about ⟦ ξ ⟧×?
+
+
+      OK. So probably we need to go back to what I did in the other branch.
+      We will have κ : gref → term such that κ c is morally ⟦ t ⟧ when c points
+      to t. This should simplify things quite a lot on the outside.
+
+      We will have to also produce some ⟦ Σ ⟧σ (and maybe even translate Ξ)
+      to make the computation rule still work. In a sense, it's normal we have
+      to deal with equations somewhere.
+
+      Then ⟦ const c ξ ⟧ should just be einst ⟦ ξ ⟧× (κ c).
+      Hopefully this solves all termination problems.
+
+      And for the unfolding rule, we'll rely on a proof that ⟦ einst ξ t ⟧ is
+      equal to einst ⟦ t ⟧ ⟦ ξ ⟧×.
     *)
     split. 2: split.
     - intros E M Ξ' hM.
