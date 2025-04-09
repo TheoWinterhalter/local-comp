@@ -429,13 +429,21 @@ Proof.
   eapply he. eassumption.
 Qed.
 
-Lemma gwf_get Σ c ξ Ξ' A t :
+(* TODO MOVE *)
+Lemma extends_nil Σ :
+  [] ⊑ Σ.
+Proof.
+  intros ?? e. discriminate.
+Qed.
+
+Lemma gwf_get Σ Γ c ξ Ξ' A t :
   gwf Σ →
   Σ c = Some (Def Ξ' A t) →
+  inst_typing [] [] Γ ξ Ξ' →
   ⟦ Σ ⟧κ c ξ = ⟦ einst ξ t ⟧⟨ ⟦ Σ ⟧κ ⟩.
 Proof.
-  intros h hc.
-  induction h as [ | c' ?????? ih | c' ??????? ih ] in c, Ξ', A, t, hc |- *.
+  intros h hc hξ.
+  induction h as [ | c' ?????? ih | c' ??????? ih ] in ξ, hξ, c, Ξ', A, t, hc |- *.
   - discriminate.
   - cbn. cbn in hc. destruct (_ =? _)%string eqn:ec.
     1:{ apply eqb_eq in ec. subst. congruence. }
@@ -446,7 +454,8 @@ Proof.
       eapply inline_ext_gscope.
       1:{
         eapply typing_gscope. eapply typing_einst_closed. 2: eassumption.
-        admit.
+        eapply inst_typing_gweak. 1: eassumption.
+        apply extends_nil.
       }
       intros c0 ???? e.
       destruct (c0 =? c')%string eqn:e0.
@@ -454,19 +463,20 @@ Proof.
       rewrite gcons_neq. 2: assumption.
       reflexivity.
     + rewrite gcons_neq. 2: assumption.
-      erewrite ih. 2: eassumption.
+      erewrite ih. 2,3: eassumption.
       eapply valid_def in hc as hd. 2: assumption.
       eapply inline_ext_gscope.
       1:{
         eapply typing_gscope. eapply typing_einst_closed. 2: eapply hd.
-        admit.
+        eapply inst_typing_gweak. 1: eassumption.
+        apply extends_nil.
       }
       intros c0 ???? e.
       destruct (c0 =? c')%string eqn:e0.
       1:{ rewrite String.eqb_eq in e0. congruence. }
       rewrite gcons_neq. 2: assumption.
       reflexivity.
-Admitted.
+Qed.
 
 Lemma gwf_gcond' Σ :
   gwf Σ →
