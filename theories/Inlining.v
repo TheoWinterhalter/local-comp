@@ -410,15 +410,23 @@ Lemma inline_ext_gscope Σ t κ κ' :
   gscope Σ t →
   (∀ c Ξ' A t ξ,
     Σ c = Some (Def Ξ' A t) →
-    gscope_eargs Σ ξ →
-    κ c ⟦ ξ ⟧×⟨ κ ⟩ = κ' c ⟦ ξ ⟧×⟨ κ' ⟩
+    κ c ξ = κ' c ξ
   ) →
   ⟦ t ⟧⟨ κ ⟩ = ⟦ t ⟧⟨ κ' ⟩.
 Proof.
   intros ht he.
-  induction ht in κ, κ', he |- *.
+  induction ht in κ, κ', he |- * using gscope_ind_alt.
   all: try solve [ cbn ; eauto ].
-  all: solve [ cbn ; f_equal ; eauto ].
+  all: try solve [ cbn ; f_equal ; eauto ].
+  cbn.
+  assert (e : ⟦ ξ ⟧×⟨ κ ⟩ = ⟦ ξ ⟧×⟨ κ' ⟩).
+  { apply map_ext_Forall. eapply Forall_impl. 2: eassumption.
+    intros σ hσ.
+    apply map_ext_Forall. eapply Forall_impl. 2: eassumption.
+    cbn. auto.
+  }
+  rewrite <- e.
+  eapply he. eassumption.
 Qed.
 
 Lemma gwf_get Σ c ξ Ξ' A t :
@@ -440,15 +448,25 @@ Proof.
         eapply typing_gscope. eapply typing_einst_closed. 2: eassumption.
         admit.
       }
-      intros c0 ???? e hs.
+      intros c0 ???? e.
       destruct (c0 =? c')%string eqn:e0.
       1:{ rewrite String.eqb_eq in e0. congruence. }
       rewrite gcons_neq. 2: assumption.
-      f_equal.
-      (* If we keep going, this is a loop *)
-      admit.
-    + admit.
-Abort.
+      reflexivity.
+    + rewrite gcons_neq. 2: assumption.
+      erewrite ih. 2: eassumption.
+      eapply valid_def in hc as hd. 2: assumption.
+      eapply inline_ext_gscope.
+      1:{
+        eapply typing_gscope. eapply typing_einst_closed. 2: eapply hd.
+        admit.
+      }
+      intros c0 ???? e.
+      destruct (c0 =? c')%string eqn:e0.
+      1:{ rewrite String.eqb_eq in e0. congruence. }
+      rewrite gcons_neq. 2: assumption.
+      reflexivity.
+Admitted.
 
 Lemma gwf_gcond' Σ :
   gwf Σ →
