@@ -40,6 +40,8 @@ Fixpoint einst (ξ : eargs) (t : term) :=
   | assm M x => eget ξ M x
   end.
 
+Notation einst_eargs ξ ξ' := (map (map (einst ξ)) ξ').
+
 (** Instance for a context **)
 
 Fixpoint ctx_einst (ξ : eargs) (Γ : ctx) : ctx :=

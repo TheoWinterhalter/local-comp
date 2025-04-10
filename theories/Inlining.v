@@ -188,9 +188,6 @@ Section Inline.
       cbn. auto.
   Qed.
 
-  (* TODO MOVE *)
-  Notation einst_eargs ξ ξ' := (map (map (einst ξ)) ξ').
-
   Lemma inline_eget ξ M x :
     ⟦ eget ξ M x ⟧ = eget ⟦ ξ ⟧× M x.
   Proof.

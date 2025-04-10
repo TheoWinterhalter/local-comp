@@ -1245,7 +1245,7 @@ Proof.
 Qed.
 
 Lemma einst_eget ξ ξ' M x :
-  einst ξ (eget ξ' M x) = eget (map (map (einst ξ)) ξ') M x.
+  einst ξ (eget ξ' M x) = eget (einst_eargs ξ ξ') M x.
 Proof.
   unfold eget. rewrite nth_error_map.
   destruct nth_error. 2: reflexivity.
@@ -1255,7 +1255,7 @@ Proof.
 Qed.
 
 Lemma einst_einst ξ ξ' t :
-  einst ξ (einst ξ' t) = einst (map (map (einst ξ)) ξ') t.
+  einst ξ (einst ξ' t) = einst (einst_eargs ξ ξ') t.
 Proof.
   induction t using term_rect in ξ, ξ' |- *.
   all: try solve [ cbn ; f_equal ; eauto ].
@@ -1280,7 +1280,7 @@ Proof.
 Qed.
 
 Lemma liftn_map_map n ξ ξ' :
-  liftn n (map (map (einst ξ)) ξ') = map (map (einst (liftn n ξ))) (liftn n ξ').
+  liftn n (einst_eargs ξ ξ') = einst_eargs (liftn n ξ) (liftn n ξ').
 Proof.
   rewrite !map_map. apply map_ext. intro.
   rewrite !map_map. apply map_ext. intro.
@@ -1288,7 +1288,7 @@ Proof.
 Qed.
 
 Lemma ctx_einst_comp ξ ξ' Γ :
-  ctx_einst ξ (ctx_einst ξ' Γ) = ctx_einst (map (map (einst ξ)) ξ') Γ.
+  ctx_einst ξ (ctx_einst ξ' Γ) = ctx_einst (einst_eargs ξ ξ') Γ.
 Proof.
   induction Γ as [| A Γ ih].
   - reflexivity.
