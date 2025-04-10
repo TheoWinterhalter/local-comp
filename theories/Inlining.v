@@ -287,6 +287,10 @@ Section Inline.
 
       And for the unfolding rule, we'll rely on a proof that ⟦ einst ξ t ⟧ is
       equal to einst ⟦ t ⟧ ⟦ ξ ⟧×.
+
+      We can probably avoid ⟦ Σ ⟧ by showing ⟦ t ⟧ ≡ t instead of conv_inline,
+      which is then proven by transitivity. This should only require some
+      assumption that κ c = ⟦ t ⟧⟨ κ ⟩ and a congruence lemma for einst.
     *)
     split. 2: split.
     - intros E M Ξ' hM.
