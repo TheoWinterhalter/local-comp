@@ -1354,6 +1354,17 @@ Proof.
     cbn. auto.
 Qed.
 
+Corollary conv_einst_closed Σ Ξ Ξ' Δ u v ξ :
+  inst_equations Σ Ξ Δ ξ Ξ' →
+  Σ ;; Ξ' | ∙ ⊢ u ≡ v →
+  Σ ;; Ξ | Δ ⊢ einst ξ u ≡ einst ξ v.
+Proof.
+  intros hξ h.
+  eapply conv_einst in h. 2: eassumption.
+  cbn in h. rewrite ren_eargs_id_ext in h. 2: auto.
+  assumption.
+Qed.
+
 Lemma type_eget Σ Ξ Ξ' Γ ξ M x E ξ' Ξ'' Δ R A :
   inst_eget Σ Ξ Γ ξ Ξ' →
   ectx_get Ξ' M = Some (E, ξ') →
@@ -1458,6 +1469,98 @@ Proof.
   cbn in h.
   rewrite ren_eargs_id_ext in h. 2: auto.
   assumption.
+Qed.
+
+(* TODO MOVE *)
+Lemma Forall2_diag A (R : A → A → Prop) l :
+  Forall (λ x, R x x) l →
+  Forall2 R l l.
+Proof.
+  intros h. induction h.
+  - constructor.
+  - constructor. all: assumption.
+Qed.
+
+Lemma Forall2_nth_error_l A B (R : A → B → Prop) l1 l2 n a :
+  Forall2 R l1 l2 →
+  nth_error l1 n = Some a →
+  ∃ b, nth_error l2 n = Some b ∧ R a b.
+Proof.
+  intros h e.
+  induction h as [| x y l1 l2 hab h ih] in n, a, e |- *.
+  - destruct n. all: discriminate.
+  - destruct n as [| n].
+    + cbn in e. inversion e. subst. clear e.
+      cbn. eexists. intuition eauto.
+    + cbn in e. eapply ih in e as (b & e1 & e2).
+      eexists. intuition eauto.
+Qed.
+
+Lemma conv_einsts Σ Ξ Γ t ξ ξ' :
+  Forall2 (Forall2 (conversion Σ Ξ Γ)) ξ ξ' →
+  Σ ;; Ξ | Γ ⊢ einst ξ t ≡ einst ξ' t.
+Proof.
+  intros hξ.
+  induction t using term_rect in Γ, ξ, ξ', hξ |- *.
+  all: try solve [ cbn ; ttconv ].
+  - cbn. eapply cong_Pi. 1: eauto.
+    eapply IHt2. eapply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    intros.
+    eapply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    intros. eapply conv_ren. eassumption.
+  - cbn. eapply cong_lam. 1: eauto.
+    eapply IHt2. eapply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    intros.
+    eapply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    intros. eapply conv_ren. eassumption.
+  - cbn. eapply cong_const.
+    eapply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_diag. eapply All_Forall.
+    eapply All_impl. 2: eassumption.
+    intros.
+    eapply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_diag. eapply All_Forall.
+    eapply All_impl. 2: eassumption.
+    cbn. intros. eauto.
+  - cbn. unfold eget. destruct (nth_error ξ _) as [σ1 |] eqn:e1.
+    2:{
+      destruct (nth_error ξ' _) eqn:e2.
+      1:{
+        eapply nth_error_None in e1. eapply Forall2_length in hξ.
+        rewrite hξ in e1. rewrite <- nth_error_None in e1. congruence.
+      }
+      ttconv.
+    }
+    eapply Forall2_nth_error_l in e1 as e2. 2: eassumption.
+    destruct e2 as (σ2 & e2 & h). rewrite e2.
+    destruct (nth_error σ1 _) as [u1 |] eqn:e3.
+    2:{
+      destruct (nth_error σ2 _) eqn:e4.
+      1:{
+        eapply nth_error_None in e3. eapply Forall2_length in h.
+        rewrite h in e3. rewrite <- nth_error_None in e3. congruence.
+      }
+      ttconv.
+    }
+    eapply Forall2_nth_error_l in e3 as e4. 2: eassumption.
+    destruct e4 as (u2 & e4 & h'). rewrite e4.
+    assumption.
+Qed.
+
+Lemma cong_einst Σ Ξ Γ u v ξ ξ' Ξ' :
+  inst_equations Σ Ξ Γ ξ Ξ' →
+  Σ ;; Ξ' | ∙ ⊢ u ≡ v →
+  Forall2 (Forall2 (conversion Σ Ξ Γ)) ξ ξ' →
+  Σ ;; Ξ | Γ ⊢ einst ξ u ≡ einst ξ' v.
+Proof.
+  intros hξ h hh.
+  eapply conv_trans.
+  - eapply conv_einst_closed. all: eassumption.
+  - eapply conv_einsts. assumption.
 Qed.
 
 (** Extension environement weakening **)
