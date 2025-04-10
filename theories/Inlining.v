@@ -231,25 +231,107 @@ Section Inline.
 
   Context (hκ : g_unfold).
 
-  (* We're missing a lot of info to do this
-    It seems we actually need full typing for this.
-    Maybe it's all right.
-  *)
-  Lemma conv_inline_self Ξ Γ t :
-    Σ ;; Ξ | Γ ⊢ ⟦ t ⟧ ≡ t.
+  Definition g_conv_unfold :=
+    ∀ c Ξ' A t,
+      Σ c = Some (Def Ξ' A t) →
+      Σ ;; Ξ' | ∙ ⊢ κ c ≡ t.
+
+  Context (h_conv_unfold : g_conv_unfold).
+
+  Lemma conv_ren_einst Ξ Γ Δ ρ ξ ξ' :
+    Forall2 (Forall2 (conversion Σ Ξ Δ)) ξ ξ' →
+    Forall2 (Forall2 (conversion Σ Ξ Γ)) (ren_eargs ρ ξ) (ren_eargs ρ ξ').
   Proof.
-    induction t using term_rect in Γ |- *.
+    intros h.
+    apply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    intros. apply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    intros. eapply conv_ren. eassumption.
+  Qed.
+
+  (* TODO *)
+  Lemma conv_ctx_irr Ξ Γ Δ u v :
+    Σ ;; Ξ | Γ ⊢ u ≡ v →
+    Σ ;; Ξ | Δ ⊢ u ≡ v.
+  Proof.
+  Admitted.
+
+  Lemma conv_eargs_inline_self Ξ Ξ' Γ ξ :
+    inst_typing_ Σ Ξ (λ Γ t _, Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ ≡ t) Γ ξ Ξ' →
+    Forall2 (Forall2 (conversion Σ Ξ ⟦ Γ ⟧*)) ⟦ ξ ⟧× ξ.
+  Proof.
+    intros (h1 & h2 & e).
+    apply Forall2_map_l. apply Forall2_diag.
+    rewrite Forall_forall. intros σ hσ.
+    apply Forall2_map_l. apply Forall2_diag.
+    rewrite Forall_forall. intros u hu.
+    eapply In_nth_error in hσ as [M hM].
+    eapply In_nth_error in hu as [x hx].
+    specialize (h2 M).
+    destruct (ectx_get Ξ' M) as [[E ξ'] |] eqn:e'.
+    2:{
+      unfold ectx_get in e'. destruct (_ <=? _) eqn: e1.
+      - rewrite Nat.leb_le in e1. rewrite <- e in e1.
+        rewrite <- nth_error_None in e1. congruence.
+      - rewrite nth_error_None in e'.
+        rewrite Nat.leb_gt in e1. lia.
+    }
+    specialize h2 with (1 := eq_refl).
+    destruct h2 as (hξ' & Ξ'' & Δ & R & hE & eM & ih).
+    rewrite hM in eM. cbn in eM.
+    destruct (nth_error Δ x) eqn: eΔ.
+    2:{
+      rewrite nth_error_None in eΔ. rewrite <- eM in eΔ.
+      rewrite <- nth_error_None in eΔ. congruence.
+    }
+    specialize ih with (1 := eΔ).
+    unfold eget in ih. rewrite hM, hx in ih.
+    assumption.
+  Qed.
+
+  Lemma inst_equations_inline Ξ Ξ' Γ ξ :
+    inst_typing_ Σ Ξ (λ Γ t _, Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ ≡ t) Γ ξ Ξ' →
+    inst_equations Σ Ξ ⟦ Γ ⟧* ⟦ ξ ⟧× Ξ'.
+  Proof.
+    intros h.
+    eapply conv_eargs_inline_self in h as hξ.
+    destruct h as (h1 & h2 & e).
+    intros E M ξ' eM.
+    specialize (h1 _ _ _ eM) as (Ξ'' & Δ & R & eE & h1).
+    eexists _,_,_. split. 1: eassumption.
+    intros n rule hr m δ Θ lhs0 rhs0 hlhs hrhs lhs rhs.
+    subst lhs rhs.
+    eapply conv_trans.
+    1:{ eapply conv_einsts. eapply conv_ren_einst. eassumption. }
+    eapply conv_trans.
+    2:{
+      apply conv_sym.
+      eapply conv_einsts. eapply conv_ren_einst. eassumption.
+    }
+    eapply conv_ctx_irr.
+    eapply h1. all: eauto.
+  Qed.
+
+  Lemma conv_inline_self Ξ Γ t A :
+    gwf Σ →
+    Σ ;; Ξ | Γ ⊢ t : A →
+    Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ ≡ t.
+  Proof.
+    intros hΣ h.
+    induction h using typing_ind.
     all: try solve [ cbn ; ttconv ].
     cbn. apply conv_sym.
     eapply conv_trans.
-    - eapply conv_unfold. all: admit.
-    - apply conv_sym. eapply conv_einsts.
-      apply Forall2_map_l. apply Forall2_diag. apply All_Forall.
-      eapply All_impl. 2: eassumption.
-      intros. apply Forall2_map_l. apply Forall2_diag. apply All_Forall.
-      eapply All_impl. 2: eassumption.
-      cbn. auto.
-  Abort.
+    - eapply conv_unfold. 1: eassumption.
+      eapply valid_def in hΣ as h. 2: eassumption.
+      destruct h as (_ & _ & h).
+      eapply typing_closed. eassumption.
+    - apply conv_sym. eapply cong_einst.
+      + eapply inst_equations_inline. eassumption.
+      + eapply h_conv_unfold. eassumption.
+      + eapply conv_eargs_inline_self. eassumption.
+  Qed.
 
   (* Lemma conv_inline Γ u v :
     Σ ;; [] | Γ ⊢ u ≡ v →
@@ -413,7 +495,7 @@ Proof.
   - cbn. unfold gcons. destruct (_ =? _)%string eqn:e.
     + rewrite <- inline_ren. 2: eauto.
       rewrite ren_inst. rewrite closed_ren.
-      2:{ eapply typing_scoped with (Γ := []). eassumption. }
+      2:{ eapply typing_closed. eassumption. }
       reflexivity.
     + eauto.
 Qed.
@@ -429,7 +511,7 @@ Proof.
   - cbn. destruct (c =? c')%string eqn:e.
     + rewrite gcons_eq. 2: assumption.
       erewrite <- subst_inst_closed.
-      2:{ eapply typing_scoped with (Γ := []). eassumption. }
+      2:{ eapply typing_closed. eassumption. }
       rewrite inline_subst. 3: eauto.
       2:{ eapply gwf_gren. eassumption. }
       apply ext_term. intro n.

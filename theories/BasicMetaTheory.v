@@ -226,6 +226,15 @@ Proof.
     assumption.
 Qed.
 
+Lemma typing_closed Σ Ξ t A :
+  Σ ;; Ξ | ∙ ⊢ t : A →
+  closed t = true.
+Proof.
+  intros h.
+  eapply typing_scoped with (Γ := ∙).
+  eassumption.
+Qed.
+
 (** Renaming preserves typing **)
 
 Definition rtyping (Γ : ctx) (ρ : nat → nat) (Δ : ctx) : Prop :=
