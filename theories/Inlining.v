@@ -250,13 +250,6 @@ Section Inline.
     intros. eapply conv_ren. eassumption.
   Qed.
 
-  (* TODO *)
-  Lemma conv_ctx_irr Ξ Γ Δ u v :
-    Σ ;; Ξ | Γ ⊢ u ≡ v →
-    Σ ;; Ξ | Δ ⊢ u ≡ v.
-  Proof.
-  Admitted.
-
   Lemma conv_eargs_inline_self Ξ Ξ' Γ ξ :
     inst_typing_ Σ Ξ (λ Γ t _, Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ ≡ t) Γ ξ Ξ' →
     Forall2 (Forall2 (conversion Σ Ξ ⟦ Γ ⟧*)) ⟦ ξ ⟧× ξ.

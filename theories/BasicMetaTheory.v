@@ -235,6 +235,25 @@ Proof.
   eassumption.
 Qed.
 
+(** Context is irrelevant for conversion
+
+  A bit silly, but it might be better to stick to it in case we want to add more
+  data.
+
+**)
+
+Lemma conv_ctx_irr Σ Ξ Γ Δ u v :
+  Σ ;; Ξ | Γ ⊢ u ≡ v →
+  Σ ;; Ξ | Δ ⊢ u ≡ v.
+Proof.
+  induction 1 using conversion_ind in Δ |- *.
+  all: try solve [ ttconv ].
+  all: try solve [ econstructor ; eauto ].
+  econstructor. eapply Forall2_impl. 2: eassumption.
+  intros. eapply Forall2_impl. 2: eassumption.
+  auto.
+Qed.
+
 (** Renaming preserves typing **)
 
 Definition rtyping (Γ : ctx) (ρ : nat → nat) (Δ : ctx) : Prop :=
