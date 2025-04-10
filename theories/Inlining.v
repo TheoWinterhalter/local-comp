@@ -333,6 +333,22 @@ Section Inline.
       + eapply conv_eargs_inline_self. eassumption.
   Qed.
 
+  Lemma conv_inline Ξ Γ u v A B :
+    gwf Σ →
+    Σ ;; Ξ | Γ ⊢ u : A →
+    Σ ;; Ξ | Γ ⊢ v : B →
+    Σ ;; Ξ | Γ ⊢ u ≡ v →
+    Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
+  Proof.
+    intros hΣ hu hv h.
+    eapply conv_trans.
+    1:{ eapply conv_inline_self. all: eassumption. }
+    eapply conv_trans.
+    2:{ apply conv_sym. eapply conv_inline_self. all: eassumption. }
+    eapply conv_ctx_irr.
+    eassumption.
+  Qed.
+
   (* Lemma conv_inline Γ u v :
     Σ ;; [] | Γ ⊢ u ≡ v →
     [] ;; [] | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
