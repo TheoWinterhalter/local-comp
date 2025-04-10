@@ -372,11 +372,15 @@ Section Inline.
 
   Context (hκ : gcond'). *)
 
-  (* Lemma inst_typing_inline Γ ξ Ξ :
-    inst_typing_ Σ [] (λ Γ t A, [] ;; [] | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧) Γ ξ Ξ →
-    inst_typing [] [] Γ ⟦ ξ ⟧× Ξ.
+  Lemma inst_typing_inline Γ ξ Ξ Ξ' :
+    gwf Σ →
+    wf Σ Ξ Γ →
+    inst_typing Σ Ξ Γ ξ Ξ' →
+    inst_typing_ Σ Ξ (λ Γ t A, wf Σ Ξ Γ → Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧) Γ ξ Ξ' →
+    inst_typing Σ Ξ ⟦ Γ ⟧* ⟦ ξ ⟧× Ξ'.
   Proof.
-    intros (he & hg & e). *)
+    intros hΣ hΓ hξ (he & hg & e).
+    split. 2: split.
     (* inst_equations says nothing about inlining,
       but we can probably get what we need from conv_inline.
       Still I wonder if this inst_typing_ isn't what we want to use for some
@@ -420,13 +424,34 @@ Section Inline.
       For congruence, we only need the part with ξ moving, because we should
       have the one with t moving already and then combine them.
     *)
-    (* split. 2: split.
-    - intros E M Ξ' hM.
-      specialize (he _ _ _ hM). destruct he as (Ξ'' & Δ & R & hE & h).
-      eexists _,_,_.
-      (* Nothing like that is going to work of course. *)
-      give_up.
-  Abort. *)
+    - eapply inst_equations_inline.
+      split. 2: split. 1,3: eassumption.
+      intros E M ξ' hE.
+      specialize (hg _ _ _ hE).
+      destruct hg as (hξ' & Ξ'' & Δ & R & hM & ho & h).
+      split. 1: assumption.
+      eexists _,_,_. split. 1: eassumption.
+      split. 1: eassumption.
+      intros x A hx.
+      eapply conv_inline_self. 1: assumption.
+      eapply type_eget. 2-4: eassumption.
+      apply hξ.
+    - intros M E ξ' hE.
+      specialize (hg _ _ _ hE).
+      destruct hg as (hξ' & Ξ'' & Δ & R & hM & ho & h).
+      split. 1: assumption.
+      eexists _,_,_. split. 1: eassumption.
+      split.
+      + rewrite nth_error_map. destruct (nth_error ξ M) eqn:eξ. 2: auto.
+        cbn in ho |- *. rewrite length_map. assumption.
+      + intros x A hx.
+        rewrite <- inline_eget.
+        eapply meta_conv.
+        * eapply h. all: eassumption.
+        * rewrite inline_einst. (* I need conversion *)
+          admit.
+    - rewrite length_map. assumption.
+  Admitted.
 
   Lemma typing_inline Ξ Γ t A :
     gwf Σ →
@@ -449,7 +474,7 @@ Section Inline.
       + rewrite inline_subst. apply ext_term. intros []. all: reflexivity.
     - intros Γ c ξ Ξ' A t hΓ hc hξ ihξ hA.
       cbn. rewrite inline_einst. eapply typing_einst_closed.
-      + admit.
+      + eapply inst_typing_inline. all: eassumption.
       + (* erewrite hκ. 2: eassumption. *)
         (* Instead I need an assumption about κ c : ⟦ A ⟧ *)
         admit.
