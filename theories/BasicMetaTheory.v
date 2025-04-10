@@ -1471,31 +1471,6 @@ Proof.
   assumption.
 Qed.
 
-(* TODO MOVE *)
-Lemma Forall2_diag A (R : A → A → Prop) l :
-  Forall (λ x, R x x) l →
-  Forall2 R l l.
-Proof.
-  intros h. induction h.
-  - constructor.
-  - constructor. all: assumption.
-Qed.
-
-Lemma Forall2_nth_error_l A B (R : A → B → Prop) l1 l2 n a :
-  Forall2 R l1 l2 →
-  nth_error l1 n = Some a →
-  ∃ b, nth_error l2 n = Some b ∧ R a b.
-Proof.
-  intros h e.
-  induction h as [| x y l1 l2 hab h ih] in n, a, e |- *.
-  - destruct n. all: discriminate.
-  - destruct n as [| n].
-    + cbn in e. inversion e. subst. clear e.
-      cbn. eexists. intuition eauto.
-    + cbn in e. eapply ih in e as (b & e1 & e2).
-      eexists. intuition eauto.
-Qed.
-
 Lemma conv_einsts Σ Ξ Γ t ξ ξ' :
   Forall2 (Forall2 (conversion Σ Ξ Γ)) ξ ξ' →
   Σ ;; Ξ | Γ ⊢ einst ξ t ≡ einst ξ' t.
