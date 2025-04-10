@@ -435,22 +435,29 @@ Section Inline.
     Σ ;; Ξ | Γ ⊢ t : A →
     Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
   Proof.
-    intros hΣ hΞ hΓ h. clear hΓ. (* For now *)
-    induction h using typing_ind. (* Maybe a new one to thread hΓ *)
-    all: try solve [ cbn ; tttype ].
-    - cbn. rewrite inline_ren. econstructor.
-      rewrite nth_error_map. rewrite H. reflexivity.
-    - cbn in *. eapply meta_conv.
+    intros hΣ hΞ hΓ h.
+    revert Γ t A hΓ h.
+    refine (typing_ind_wf _ _ _ _ _ _ _ _ _ _ _).
+    (* induction h using typing_ind_wf. *)
+    all: try solve [ intros ; cbn ; tttype ].
+    - intros Γ x A hΓ e.
+      cbn. rewrite inline_ren. econstructor.
+      rewrite nth_error_map. rewrite e. reflexivity.
+    - intros Γ i j A B t u hΓ ht iht hu ihu hA ihA hB ihB.
+      cbn in *. eapply meta_conv.
       + tttype.
       + rewrite inline_subst. apply ext_term. intros []. all: reflexivity.
-    - cbn. rewrite inline_einst. eapply typing_einst_closed.
+    - intros Γ c ξ Ξ' A t hΓ hc hξ ihξ hA.
+      cbn. rewrite inline_einst. eapply typing_einst_closed.
       + admit.
       + (* erewrite hκ. 2: eassumption. *)
         (* Instead I need an assumption about κ c : ⟦ A ⟧ *)
         admit.
-    - cbn. admit.
-    - econstructor. 1,3: eassumption.
-      eapply validity in h1 as hA. 2,3: assumption. 2: admit.
+    - intros Γ M x E ξ Ξ' Δ R A hΓ hM hE hx hcξ.
+      cbn. admit.
+    - intros Γ i A B t hΓ ht iht hconv hB ihB.
+      econstructor. 1,3: eassumption.
+      eapply validity in ht as hA. 2-4: assumption.
       destruct hA.
       eapply conv_inline. all: eassumption.
   Admitted.
