@@ -1995,3 +1995,82 @@ Proof.
     + reflexivity.
   - eexists. eassumption.
 Qed.
+
+(** Induction principle for [typing], threading [wf] **)
+
+Lemma typing_ind_wf :
+  ∀ Σ Ξ (P : ctx → term → term → Prop),
+    (∀ Γ x A,
+      wf Σ Ξ Γ →
+      nth_error Γ x = Some A →
+      P Γ (var x) (Nat.add (S x) ⋅ A)
+    ) →
+    (∀ Γ i, wf Σ Ξ Γ → P Γ (Sort i) (Sort (S i))) →
+    (∀ Γ i j A B,
+      wf Σ Ξ Γ →
+      Σ ;; Ξ | Γ ⊢ A : Sort i →
+      P Γ A (Sort i) →
+      Σ ;; Ξ | Γ,, A ⊢ B : Sort j →
+      P (Γ,, A) B (Sort j) →
+      P Γ (Pi A B) (Sort (Nat.max i j))
+    ) →
+    (∀ Γ i j A B t,
+      wf Σ Ξ Γ →
+      Σ ;; Ξ | Γ ⊢ A : Sort i →
+      P Γ A (Sort i) →
+      Σ ;; Ξ | Γ,, A ⊢ B : Sort j →
+      P (Γ,, A) B (Sort j) →
+      Σ ;; Ξ | Γ,, A ⊢ t : B →
+      P (Γ,, A) t B → P Γ (lam A t) (Pi A B)
+    ) →
+    (∀ Γ i j A B t u,
+      wf Σ Ξ Γ →
+      Σ ;; Ξ | Γ ⊢ t : Pi A B →
+      P Γ t (Pi A B) →
+      Σ ;; Ξ | Γ ⊢ u : A →
+      P Γ u A → Σ ;; Ξ | Γ ⊢ A : Sort i →
+      P Γ A (Sort i) → Σ ;; Ξ | Γ,, A ⊢ B : Sort j →
+      P (Γ,, A) B (Sort j) →
+      P Γ (app t u) (B <[ u..])
+    ) →
+    (∀ Γ c ξ Ξ' A t,
+      wf Σ Ξ Γ →
+      Σ c = Some (Def Ξ' A t) →
+      inst_typing Σ Ξ Γ ξ Ξ' →
+      inst_typing_ Σ Ξ (λ Γ t A, wf Σ Ξ Γ → P Γ t A) Γ ξ Ξ' →
+      closed A = true →
+      P Γ (const c ξ) (einst ξ A)
+    ) →
+    (∀ Γ M x E ξ Ξ' Δ R A,
+      wf Σ Ξ Γ →
+      ectx_get Ξ M = Some (E, ξ) →
+      Σ E = Some (Ext Ξ' Δ R) →
+      nth_error Δ x = Some A →
+      closed_eargs ξ = true →
+      P Γ (assm M x) (delocal M (einst ξ ((plus (S x)) ⋅ A)))
+    ) →
+    (∀ Γ i A B t,
+      wf Σ Ξ Γ →
+      Σ ;; Ξ | Γ ⊢ t : A →
+      P Γ t A →
+      Σ ;; Ξ | Γ ⊢ A ≡ B →
+      Σ ;; Ξ | Γ ⊢ B : Sort i →
+      P Γ B (Sort i) →
+      P Γ t B
+    ) →
+    ∀ Γ t A, wf Σ Ξ Γ → Σ ;; Ξ | Γ ⊢ t : A → P Γ t A.
+Proof.
+  intros Σ Ξ P hvar hsort hpi hlam happ hconst hassm hconv.
+  intros Γ t A hΓ h.
+  induction h using typing_ind.
+  all: try solve [ eauto ].
+  - assert (hΓA : wf Σ Ξ (Γ ,, A)).
+    { econstructor. all: eassumption. }
+    eauto.
+  - assert (hΓA : wf Σ Ξ (Γ ,, A)).
+    { econstructor. all: eassumption. }
+    eauto.
+  - assert (hΓA : wf Σ Ξ (Γ ,, A)).
+    { econstructor. all: eassumption. }
+    eapply happ. all: eauto.
+Qed.
