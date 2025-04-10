@@ -243,7 +243,12 @@ Section Inline.
     cbn. apply conv_sym.
     eapply conv_trans.
     - eapply conv_unfold. all: admit.
-    - admit.
+    - apply conv_sym. eapply conv_einsts.
+      apply Forall2_map_l. apply Forall2_diag. apply All_Forall.
+      eapply All_impl. 2: eassumption.
+      intros. apply Forall2_map_l. apply Forall2_diag. apply All_Forall.
+      eapply All_impl. 2: eassumption.
+      cbn. auto.
   Abort.
 
   (* Lemma conv_inline Γ u v :
