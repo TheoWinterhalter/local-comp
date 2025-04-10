@@ -436,11 +436,14 @@ Section Inline.
   Abort. *)
 
   Lemma typing_inline Ξ Γ t A :
+    gwf Σ →
+    ewf Σ Ξ →
+    wf Σ Ξ Γ →
     Σ ;; Ξ | Γ ⊢ t : A →
     Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
   Proof.
-    intros h.
-    induction h using typing_ind.
+    intros hΣ hΞ hΓ h. clear hΓ. (* For now *)
+    induction h using typing_ind. (* Maybe a new one to thread hΓ *)
     all: try solve [ cbn ; tttype ].
     - cbn. rewrite inline_ren. econstructor.
       rewrite nth_error_map. rewrite H. reflexivity.
@@ -454,8 +457,9 @@ Section Inline.
         admit.
     - cbn. admit.
     - econstructor. 1,3: eassumption.
-      (* eapply conv_inline. assumption. *)
-      admit.
+      eapply validity in h1 as hA. 2,3: assumption. 2: admit.
+      destruct hA.
+      eapply conv_inline. all: eassumption.
   Admitted.
 
 End Inline.
