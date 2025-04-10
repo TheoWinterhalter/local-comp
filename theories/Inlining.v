@@ -113,7 +113,7 @@ Qed.
 
 (** Inlining **)
 
-#[local] Notation ginst := (gref → eargs → term).
+#[local] Notation ginst := (gref → term).
 
 Section Inline.
 
@@ -130,7 +130,7 @@ Section Inline.
     | Pi A B => Pi ⟦ A ⟧ ⟦ B ⟧
     | lam A t => lam ⟦ A ⟧ ⟦ t ⟧
     | app u v => app ⟦ u ⟧ ⟦ v ⟧
-    | const c ξ => κ c ⟦ ξ ⟧×
+    | const c ξ => einst ⟦ ξ ⟧× (κ c)
     | assm M x => assm M x
     end
 
@@ -139,17 +139,18 @@ Section Inline.
 
   Notation "⟦ l ⟧*" := (map inline l).
 
-  Definition gren :=
-    ∀ ρ c ξ, ρ ⋅ κ c ξ = κ c (ren_eargs ρ ξ).
+  Definition gclosed :=
+    ∀ c, closed (κ c) = true.
 
-  Context (hren : gren).
+  Context (hclosed : gclosed).
 
   Lemma inline_ren ρ t :
     ⟦ ρ ⋅ t ⟧ = ρ ⋅ ⟦ t ⟧.
   Proof.
     induction t in ρ |- * using term_rect.
     all: try solve [ cbn ; f_equal ; eauto ].
-    cbn. rewrite hren. f_equal.
+    cbn. rewrite ren_inst. rewrite closed_ren. 2: auto.
+    f_equal.
     rewrite !map_map. apply map_ext_All.
     eapply All_impl. 2: eassumption.
     intros σ h.
@@ -166,11 +167,6 @@ Section Inline.
     - cbn. unfold core.funcomp. rewrite inline_ren. reflexivity.
   Qed.
 
-  Definition gsubst :=
-    ∀ σ c ξ, (κ c ξ) <[ σ ] = κ c (subst_eargs σ ξ).
-
-  Context (hsubst : gsubst).
-
   Lemma inline_subst σ t :
     ⟦ t <[ σ ] ⟧ = ⟦ t ⟧ <[ σ >> inline ].
   Proof.
@@ -182,7 +178,8 @@ Section Inline.
     - cbn. f_equal. 1: eauto.
       rewrite IHt2. eapply ext_term. intro.
       rewrite up_term_inline. reflexivity.
-    - cbn. rewrite hsubst. f_equal.
+    - cbn. rewrite subst_inst_closed. 2: auto.
+      f_equal.
       rewrite !map_map. apply map_ext_All.
       eapply All_impl. 2: eassumption.
       intros ? h.
@@ -191,32 +188,68 @@ Section Inline.
       cbn. auto.
   Qed.
 
-  (* Lemma inline_einst ξ t :
+  (* TODO MOVE *)
+  Notation einst_eargs ξ ξ' := (map (map (einst ξ)) ξ').
+
+  Lemma inline_eget ξ M x :
+    ⟦ eget ξ M x ⟧ = eget ⟦ ξ ⟧× M x.
+  Proof.
+    unfold eget. rewrite nth_error_map.
+    destruct nth_error as [σ |] eqn: e1. 2: reflexivity.
+    cbn. rewrite nth_error_map.
+    destruct (nth_error σ _) as [t|] eqn:e2. 2: reflexivity.
+    cbn. reflexivity.
+  Qed.
+
+  Lemma inline_ren_eargs ρ ξ :
+    ⟦ ren_eargs ρ ξ ⟧× = ren_eargs ρ ⟦ ξ ⟧×.
+  Proof.
+    rewrite !map_map. apply map_ext. intro.
+    rewrite !map_map. apply map_ext. intro.
+    apply inline_ren.
+  Qed.
+
+  Lemma inline_einst ξ t :
     ⟦ einst ξ t ⟧ = einst ⟦ ξ ⟧× ⟦ t ⟧.
   Proof.
     induction t in ξ |- * using term_rect.
     all: try solve [ cbn ; f_equal ; eauto ].
     - cbn. f_equal. 1: eauto.
-      rewrite IHt2. admit.
-    - admit.
-    - cbn. (* Would this be true? *)
-  Abort. *)
+      rewrite IHt2. rewrite inline_ren_eargs. reflexivity.
+    - cbn. f_equal. 1: eauto.
+      rewrite IHt2. rewrite inline_ren_eargs. reflexivity.
+    - cbn. rewrite einst_einst. f_equal.
+      rewrite !map_map. apply map_ext_All.
+      eapply All_impl. 2: eassumption.
+      intros σ hσ. rewrite !map_map. apply map_ext_All.
+      eapply All_impl. 2: eassumption.
+      auto.
+    - cbn. apply inline_eget.
+  Qed.
 
   Definition g_unfold :=
-    ∀ Γ c ξ Ξ' A t,
+    ∀ c Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
-      [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ⟦ ξ ⟧× ≡ ⟦ einst ξ t ⟧.
+      κ c = ⟦ t ⟧.
 
-  Context (hufd : g_unfold).
+  Context (hκ : g_unfold).
 
-  Definition g_cong :=
-    ∀ Γ c ξ ξ',
-      Forall2 (Forall2 (conversion [] [] Γ)) ξ ξ' →
-      [] ;; [] | Γ ⊢ κ c ξ ≡ κ c ξ'.
+  (* We're missing a lot of info to do this
+    It seems we actually need full typing for this.
+    Maybe it's all right.
+  *)
+  Lemma conv_inline_self Ξ Γ t :
+    Σ ;; Ξ | Γ ⊢ ⟦ t ⟧ ≡ t.
+  Proof.
+    induction t using term_rect in Γ |- *.
+    all: try solve [ cbn ; ttconv ].
+    cbn. apply conv_sym.
+    eapply conv_trans.
+    - eapply conv_unfold. all: admit.
+    - admit.
+  Abort.
 
-  Context (hcong : g_cong).
-
-  Lemma conv_inline Γ u v :
+  (* Lemma conv_inline Γ u v :
     Σ ;; [] | Γ ⊢ u ≡ v →
     [] ;; [] | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
   Proof.
@@ -235,22 +268,22 @@ Section Inline.
       cbn. auto.
     - econstructor. assumption.
     - eapply conv_trans. all: eassumption.
-  Qed.
+  Qed. *)
 
-  Definition gcond' :=
+  (* Definition gcond' :=
     ∀ c Ξ' A t Γ ξ,
       Σ c = Some (Def Ξ' A t) →
       inst_typing Σ [] Γ ξ Ξ' →
       (* inst_typing [] [] Γ ⟦ ξ ⟧× Ξ' → *)
       [] ;; [] | ⟦ Γ ⟧* ⊢ κ c ⟦ ξ ⟧× : ⟦ einst ξ A ⟧.
 
-  Context (hκ : gcond').
+  Context (hκ : gcond'). *)
 
-  Lemma inst_typing_inline Γ ξ Ξ :
+  (* Lemma inst_typing_inline Γ ξ Ξ :
     inst_typing_ Σ [] (λ Γ t A, [] ;; [] | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧) Γ ξ Ξ →
     inst_typing [] [] Γ ⟦ ξ ⟧× Ξ.
   Proof.
-    intros (he & hg & e).
+    intros (he & hg & e). *)
     (* inst_equations says nothing about inlining,
       but we can probably get what we need from conv_inline.
       Still I wonder if this inst_typing_ isn't what we want to use for some
@@ -291,18 +324,20 @@ Section Inline.
       We can probably avoid ⟦ Σ ⟧ by showing ⟦ t ⟧ ≡ t instead of conv_inline,
       which is then proven by transitivity. This should only require some
       assumption that κ c = ⟦ t ⟧⟨ κ ⟩ and a congruence lemma for einst.
+      For congruence, we only need the part with ξ moving, because we should
+      have the one with t moving already and then combine them.
     *)
-    split. 2: split.
+    (* split. 2: split.
     - intros E M Ξ' hM.
       specialize (he _ _ _ hM). destruct he as (Ξ'' & Δ & R & hE & h).
       eexists _,_,_.
       (* Nothing like that is going to work of course. *)
       give_up.
-  Abort.
+  Abort. *)
 
-  Lemma typing_inline Γ t A :
-    Σ ;; [] | Γ ⊢ t : A →
-    [] ;; [] | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
+  Lemma typing_inline Ξ Γ t A :
+    Σ ;; Ξ | Γ ⊢ t : A →
+    Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
   Proof.
     intros h.
     induction h using typing_ind.
@@ -312,11 +347,16 @@ Section Inline.
     - cbn in *. eapply meta_conv.
       + tttype.
       + rewrite inline_subst. apply ext_term. intros []. all: reflexivity.
-    - cbn. eapply hκ. 1,2: eassumption.
-    - cbn. discriminate.
+    - cbn. rewrite inline_einst. eapply typing_einst_closed.
+      + admit.
+      + (* erewrite hκ. 2: eassumption. *)
+        (* Instead I need an assumption about κ c : ⟦ A ⟧ *)
+        admit.
+    - cbn. admit.
     - econstructor. 1,3: eassumption.
-      eapply conv_inline. assumption.
-  Qed.
+      (* eapply conv_inline. assumption. *)
+      admit.
+  Admitted.
 
 End Inline.
 
@@ -332,7 +372,7 @@ Definition gnil (c : gref) (χ : eargs) :=
 Definition gcons r f κ (c : gref) (χ : eargs) : term :=
   if (c =? r)%string then f χ else κ c χ.
 
-Fixpoint inline_gctx Σ :=
+(* Fixpoint inline_gctx Σ :=
   match Σ with
   | (c, d) :: Σ =>
     let κ := ⟦ Σ ⟧κ in
@@ -606,3 +646,4 @@ Proof.
   (* TODO: Show that inline is the identity on MLTT. *)
   (* Do we use a typing judgment or a global scoping one? *)
 Admitted.
+ *)
