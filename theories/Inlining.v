@@ -446,10 +446,13 @@ Section Inline.
         cbn in ho |- *. rewrite length_map. assumption.
       + intros x A hx.
         rewrite <- inline_eget.
-        eapply meta_conv.
+        eapply type_conv.
         * eapply h. all: eassumption.
-        * rewrite inline_einst. (* I need conversion *)
-          admit.
+        * rewrite inline_einst. eapply conv_einst_closed.
+          (* I need to prove this again? *)
+          (* Is there hope of proving things differently? *)
+          all: admit.
+        * admit.
     - rewrite length_map. assumption.
   Admitted.
 
