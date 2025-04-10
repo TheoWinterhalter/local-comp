@@ -380,51 +380,8 @@ Section Inline.
     inst_typing Σ Ξ ⟦ Γ ⟧* ⟦ ξ ⟧× Ξ'.
   Proof.
     intros hΣ hΓ hξ (he & hg & e).
-    split. 2: split.
-    (* inst_equations says nothing about inlining,
-      but we can probably get what we need from conv_inline.
-      Still I wonder if this inst_typing_ isn't what we want to use for some
-      other notion of einst.
-
-      Actually no, because we really want Σ to be gone I guess.
-      But there is no way not to mention Σ to show that equations are indeed
-      preserved.
-      Although, we only need to the prefix of Σ in which t lives, not ξ.
-
-      Does this mean that we need to have inlining take some χ as I intially
-      thought?
-
-      Well the unfold rule says it has to be ⟦ einst ξ t ⟧ no? So how would we
-      go around that anyway? This means we somehow have to account for the bit
-      of κ that we get when we instantiate.
-
-      True, but there is probably no way to see einst ξ t as smaller than
-      anything.
-
-      What can we know about ⟦ ξ ⟧×?
-
-
-      OK. So probably we need to go back to what I did in the other branch.
-      We will have κ : gref → term such that κ c is morally ⟦ t ⟧ when c points
-      to t. This should simplify things quite a lot on the outside.
-
-      We will have to also produce some ⟦ Σ ⟧σ (and maybe even translate Ξ)
-      to make the computation rule still work. In a sense, it's normal we have
-      to deal with equations somewhere.
-
-      Then ⟦ const c ξ ⟧ should just be einst ⟦ ξ ⟧× (κ c).
-      Hopefully this solves all termination problems.
-
-      And for the unfolding rule, we'll rely on a proof that ⟦ einst ξ t ⟧ is
-      equal to einst ⟦ t ⟧ ⟦ ξ ⟧×.
-
-      We can probably avoid ⟦ Σ ⟧ by showing ⟦ t ⟧ ≡ t instead of conv_inline,
-      which is then proven by transitivity. This should only require some
-      assumption that κ c = ⟦ t ⟧⟨ κ ⟩ and a congruence lemma for einst.
-      For congruence, we only need the part with ξ moving, because we should
-      have the one with t moving already and then combine them.
-    *)
-    - eapply inst_equations_inline.
+    assert (he' : inst_equations Σ Ξ ⟦ Γ ⟧* ⟦ ξ ⟧× Ξ').
+    { eapply inst_equations_inline.
       split. 2: split. 1,3: eassumption.
       intros E M ξ' hE.
       specialize (hg _ _ _ hE).
@@ -436,6 +393,9 @@ Section Inline.
       eapply conv_inline_self. 1: assumption.
       eapply type_eget. 2-4: eassumption.
       apply hξ.
+    }
+    split. 2: split.
+    - assumption.
     - intros M E ξ' hE.
       specialize (hg _ _ _ hE).
       destruct hg as (hξ' & Ξ'' & Δ & R & hM & ho & h).
@@ -448,11 +408,10 @@ Section Inline.
         rewrite <- inline_eget.
         eapply type_conv.
         * eapply h. all: eassumption.
-        * rewrite inline_einst. eapply conv_einst_closed.
-          (* I need to prove this again? *)
-          (* Is there hope of proving things differently? *)
-          all: admit.
-        * admit.
+        * rewrite inline_einst. eapply conv_einst_closed. 1: eassumption.
+          eapply conv_inline_self with (Γ := ∙). 1: assumption.
+          admit.
+        * admit. (* Would be better if it could be avoided *)
     - rewrite length_map. assumption.
   Admitted.
 
