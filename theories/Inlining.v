@@ -506,7 +506,7 @@ Section Inline.
       cbn in * ; rewrite Bool.andb_true_iff in * ;
       intuition eauto
     ].
-    cbn in h |- *. eapply scoped_einst.
+    cbn in h |- *. eapply scoped_einst_closed.
     (* Alright, so this is not true if we don't know t is typed already. *)
     (* This is very annoying! *)
   Abort.

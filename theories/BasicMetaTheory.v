@@ -1172,18 +1172,97 @@ Proof.
     cbn. intros ? []. eauto.
 Qed.
 
-Lemma scoped_einst k ξ t :
-  closed_eargs ξ = true →
-  scoped k t = true →
-  scoped k (einst ξ t) = true.
+Lemma uprens_below k ρ n :
+  n < k →
+  uprens k ρ n = n.
 Proof.
-  intros hξ ht.
-  induction t using term_rect in k, ξ, ht, hξ |- *.
+  intro h.
+  induction k as [| k ih] in n, ρ, h |- *. 1: lia.
+  cbn. destruct n as [| ].
+  - reflexivity.
+  - cbn. core.unfold_funcomp. rewrite ih. 2: lia.
+    reflexivity.
+Qed.
+
+Lemma uprens_above k ρ n :
+  uprens k ρ (k + n) = k + ρ n.
+Proof.
+  induction k as [| k ih] in n |- *.
+  - cbn. rasimpl. reflexivity.
+  - cbn. core.unfold_funcomp. rewrite ih.
+    rasimpl. reflexivity.
+Qed.
+
+Lemma scoped_lift_gen k l t m :
+  scoped (m + l) t = true →
+  scoped (m + k + l) (uprens m (plus k) ⋅ t) = true.
+Proof.
+  intros h.
+  induction t using term_rect in m, k, l, h |- *.
   all: try solve [ cbn ; eauto ].
   all: try solve [
-    cbn in * ; apply andb_prop in ht as [] ;
-    apply andb_true_intro ; eauto using closed_lift_eargs
+    cbn in * ; rewrite Bool.andb_true_iff in * ;
+    (* rewrite Nat.ltb_lt in * ; *)
+    intuition eauto with arith
   ].
+  - cbn - ["<=?"] in *. rewrite Nat.ltb_lt in *.
+    destruct (lt_dec n m).
+    + rewrite uprens_below. 2: assumption.
+      lia.
+    + pose (p := n - m). replace n with (m + p) by lia.
+      rewrite uprens_above. lia.
+  - cbn in *. rewrite Bool.andb_true_iff in *.
+    intuition eauto.
+    change (upRen_term_term (uprens m ?ρ)) with (uprens (S m) ρ).
+    change (S (m + k + l)) with (S m + k + l).
+    eauto.
+  - cbn in *. rewrite Bool.andb_true_iff in *.
+    intuition eauto.
+    change (upRen_term_term (uprens m ?ρ)) with (uprens (S m) ρ).
+    change (S (m + k + l)) with (S m + k + l).
+    eauto.
+  - cbn in *. apply forallb_All in h. move h at top.
+    eapply All_prod in h. 2: eassumption.
+    apply All_forallb. apply All_map. eapply All_impl. 2: eassumption.
+    clear.
+    cbn. intros σ [h1 h2].
+    apply All_forallb. apply All_map.
+    apply forallb_All in h2.
+    eapply All_prod in h1. 2: eassumption.
+    eapply All_impl. 2: eassumption. clear.
+    cbn. intros t [h1 h2]. eauto.
+Qed.
+
+Lemma scoped_lift k l t :
+  scoped l t = true →
+  scoped (k + l) (plus k ⋅ t) = true.
+Proof.
+  intros h.
+  eapply scoped_lift_gen with (m := 0).
+  assumption.
+Qed.
+
+Lemma scoped_einst k l ξ t :
+  scoped_eargs l ξ = true →
+  scoped k t = true →
+  scoped (k + l) (einst (liftn k ξ) t) = true.
+Proof.
+  intros hξ ht.
+  induction t using term_rect in k, l, ξ, ht, hξ |- *.
+  all: try solve [ cbn ; eauto ].
+  all: try solve [
+    cbn in * ; rewrite Bool.andb_true_iff in * ;
+    (* rewrite Nat.ltb_lt in * ; *)
+    intuition eauto with arith
+  ].
+  - cbn - ["<=?"] in *.
+    rewrite Nat.ltb_lt in *. eauto with arith.
+  - cbn in *. rewrite Bool.andb_true_iff in *.
+    intuition eauto.
+    rewrite lift_liftn. change (S (k + l)) with (S k + l). eauto.
+  - cbn in *. rewrite Bool.andb_true_iff in *.
+    intuition eauto.
+    rewrite lift_liftn. change (S (k + l)) with (S k + l). eauto.
   - cbn in *. apply forallb_All in ht. move ht at top.
     eapply All_prod in ht. 2: eassumption.
     apply All_forallb. apply All_map. eapply All_impl. 2: eassumption.
@@ -1194,14 +1273,23 @@ Proof.
     eapply All_prod in h1. 2: eassumption.
     eapply All_impl. 2: eassumption. clear - hξ.
     cbn. intros t [h1 h2]. eauto.
-  - cbn. unfold closed_eargs in hξ. unfold eget.
-    destruct nth_error as [l |] eqn: eM. 2: reflexivity.
-    destruct (nth_error l _) eqn: ex. 2: reflexivity.
+  - cbn. rewrite eget_ren. unfold eget.
+    destruct nth_error as [σ |] eqn: eM. 2: reflexivity.
+    destruct (nth_error σ _) eqn: ex. 2: reflexivity.
     apply nth_error_In in eM, ex.
     rewrite forallb_forall in hξ. specialize hξ with (1 := eM).
     rewrite forallb_forall in hξ. specialize hξ with (1 := ex).
-    eapply scoped_upwards. 1: eassumption.
-    lia.
+    eapply scoped_lift. assumption.
+Qed.
+
+Corollary scoped_einst_closed k ξ t :
+  scoped_eargs k ξ = true →
+  closed t = true →
+  scoped k (einst ξ t) = true.
+Proof.
+  intros hξ ht.
+  eapply scoped_einst in hξ. 2: eassumption.
+  cbn in hξ. rewrite ren_eargs_id in hξ. assumption.
 Qed.
 
 Corollary closed_einst ξ t :
@@ -1210,7 +1298,7 @@ Corollary closed_einst ξ t :
   closed (einst ξ t) = true.
 Proof.
   intros hξ ht.
-  apply scoped_einst. all: assumption.
+  apply scoped_einst_closed. all: assumption.
 Qed.
 
 Lemma inst_typing_subst Σ Ξ Δ Γ σ ξ Ξ' :

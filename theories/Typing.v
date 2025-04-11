@@ -28,8 +28,11 @@ Fixpoint scoped n t :=
 
 Notation closed t := (scoped 0 t).
 
-Definition closed_eargs (ξ : eargs) :=
-  forallb (forallb (λ t, closed t)) ξ.
+Notation scoped_eargs k ξ :=
+  (forallb (forallb (λ t, scoped k t)) ξ).
+
+Notation closed_eargs ξ :=
+  (scoped_eargs 0 ξ).
 
 Section Typing.
 
