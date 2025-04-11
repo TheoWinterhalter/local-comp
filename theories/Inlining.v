@@ -227,13 +227,6 @@ Section Inline.
     - cbn. apply inline_eget.
   Qed.
 
-  Definition g_unfold :=
-    ∀ c Ξ' A t,
-      Σ c = Some (Def Ξ' A t) →
-      κ c = ⟦ t ⟧.
-
-  Context (hκ : g_unfold).
-
   Definition g_conv_unfold :=
     ∀ c Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
@@ -461,11 +454,6 @@ Section Inline.
     rewrite length_map. reflexivity.
   Qed.
 
-  Definition g_closed :=
-    ∀ c, closed (κ c) = true.
-
-  Context (h_closed : g_closed).
-
   Lemma scoped_eargs_inline_ih k ξ :
     All (All (λ t, ∀ k, scoped k t = true → scoped k ⟦ t ⟧ = true)) ξ →
     scoped_eargs k ξ = true →
@@ -496,7 +484,7 @@ Section Inline.
     ].
     cbn in h |- *. eapply scoped_einst_closed.
     - eapply scoped_eargs_inline_ih. all: assumption.
-    - apply h_closed.
+    - apply hclosed.
   Qed.
 
   (* TODO MOVE *)
@@ -611,7 +599,6 @@ Section Inline.
 
   Definition g_type :=
     ∀ c Ξ' A t,
-      gwf Σ →
       Σ c = Some (Def Ξ' A t) →
       Σᵗ ;; ⟦ Ξ' ⟧e | ∙ ⊢ κ c : ⟦ A ⟧.
 
@@ -926,6 +913,34 @@ Fixpoint inline_gctx (Σ : gctx) : gctx :=
 
 where "⟦ s ⟧g" := (inline_gctx s).
 
+Lemma gwf_gclosed Σ :
+  gwf Σ →
+  gclosed ⟦ Σ ⟧κ.
+Proof.
+  intros h c.
+Admitted.
+
+Lemma gwf_conv_unfold Σ :
+  gwf Σ →
+  g_conv_unfold Σ ⟦ Σ ⟧κ ⟦ Σ ⟧g.
+Proof.
+  intros h c Ξ' A t ec.
+Admitted.
+
+Lemma gwf_trans_gctx_ext Σ :
+  gwf Σ →
+  trans_gctx_ext Σ ⟦ Σ ⟧κ ⟦ Σ ⟧g.
+Proof.
+  intros h E Ξ' Δ R eE.
+Admitted.
+
+Lemma gwf_type Σ :
+  gwf Σ →
+  g_type Σ ⟦ Σ ⟧κ ⟦ Σ ⟧g.
+Proof.
+  intros h c Ξ' A t ec.
+Admitted.
+
 Theorem inlining Ξ Σ Γ t A :
   gwf Σ →
   let κ := ⟦ Σ ⟧κ in
@@ -934,15 +949,13 @@ Theorem inlining Ξ Σ Γ t A :
 Proof.
   intros hΣ κ h.
   eapply typing_inline.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
+  - eapply gwf_gclosed. assumption.
+  - eapply gwf_conv_unfold. assumption.
+  - eapply gwf_trans_gctx_ext. assumption.
+  - eapply gwf_type. assumption.
   - eassumption.
   - assumption.
-Admitted.
+Qed.
 
 Theorem conservativity Σ t A i :
   gwf Σ →
