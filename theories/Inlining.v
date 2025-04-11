@@ -626,36 +626,27 @@ Section Inline.
 
   Lemma typing_inline Ξ Γ t A :
     gwf Σ →
-    ewf Σ Ξ →
-    wf Σ Ξ Γ →
     Σ ;; Ξ | Γ ⊢ t : A →
     Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
   Proof.
-    intros hΣ hΞ hΓ h.
-    revert Γ t A hΓ h.
-    refine (typing_ind_wf _ _ _ _ _ _ _ _ _ _ _).
-    (* induction h using typing_ind_wf. *)
+    intros hΣ h.
+    induction h using typing_ind.
     all: try solve [ intros ; cbn ; tttype ].
-    - intros Γ x A hΓ e.
-      cbn. rewrite inline_ren. econstructor.
-      rewrite nth_error_map. rewrite e. reflexivity.
-    - intros Γ i j A B t u hΓ ht iht hu ihu hA ihA hB ihB.
-      cbn in *. eapply meta_conv.
+    - cbn. rewrite inline_ren. econstructor.
+      rewrite nth_error_map. rewrite H. reflexivity.
+    - cbn in *. eapply meta_conv.
       + tttype.
       + rewrite inline_subst. apply ext_term. intros []. all: reflexivity.
-    - intros Γ c ξ Ξ' A t hΓ hc hξ ihξ hA.
-      cbn. rewrite inline_einst. eapply typing_einst_closed.
+    - cbn. rewrite inline_einst. eapply typing_einst_closed.
       + (* eapply inst_typing_inline. all: eassumption. *) admit.
       + eapply h_type. all: eassumption.
-    - intros Γ M x E ξ Ξ' Δ R A hΓ hM hE hx hcξ.
-      cbn. rewrite inline_delocal. rewrite inline_einst. rewrite inline_ren.
+    - cbn. rewrite inline_delocal. rewrite inline_einst. rewrite inline_ren.
       econstructor.
       + eapply ectx_get_inline. eassumption.
       + eapply hext. eassumption.
-      + rewrite nth_error_map. rewrite hx. reflexivity.
+      + rewrite nth_error_map. rewrite H1. reflexivity.
       + eapply scoped_eargs_inline. assumption.
-    - intros Γ i A B t hΓ ht iht hconv hB ihB.
-      econstructor. 1,3: eassumption.
+    - econstructor. 1,3: eassumption.
       apply conv_inline. assumption.
   Admitted.
 
