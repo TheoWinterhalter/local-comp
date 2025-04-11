@@ -198,3 +198,34 @@ Proof.
   - cbn. apply hPQ.
   - cbn. reflexivity.
 Qed.
+
+(** [fold_left] util **)
+
+Lemma fold_left_map A B C (f : A → B → A) l a g :
+  fold_left f (map g l) a = fold_left (λ a (c : C), f a (g c)) l a.
+Proof.
+  induction l as [| x l ih] in a |- *.
+  - cbn. reflexivity.
+  - cbn. apply ih.
+Qed.
+
+Lemma fold_left_ind A B (f : A → B → A) l a P :
+  P a →
+  (∀ a b, P a → P (f a b)) →
+  P (fold_left f l a).
+Proof.
+  intros ha h.
+  induction l as [| x l ih] in a, ha |- *.
+  - cbn. assumption.
+  - cbn. eapply ih. eapply h. assumption.
+Qed.
+
+Lemma fold_left_ext A B (f g : A → B → A) l a :
+  (∀ x, f x = g x) →
+  fold_left f l a = fold_left g l a.
+Proof.
+  intros h.
+  induction l as [| x l ih] in a |- *.
+  - reflexivity.
+  - cbn. rewrite ih. rewrite h. reflexivity.
+Qed.

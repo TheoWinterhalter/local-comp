@@ -309,56 +309,6 @@ Section Inline.
     eapply h1. all: eauto.
   Qed. *)
 
- (*  Lemma conv_inline_self Ξ Γ t A :
-    gwf Σ →
-    Σ ;; Ξ | Γ ⊢ t : A →
-    Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ ≡ t.
-  Proof.
-    intros hΣ h.
-    induction h using typing_ind.
-    all: try solve [ cbn ; ttconv ].
-    cbn. apply conv_sym.
-    eapply conv_trans.
-    - eapply conv_unfold. 1: eassumption.
-      eapply valid_def in hΣ as h. 2: eassumption.
-      destruct h as (_ & _ & h).
-      eapply typing_closed. eassumption.
-    - apply conv_sym. eapply cong_einst.
-      + eapply inst_equations_inline. eassumption.
-      + eapply h_conv_unfold. eassumption.
-      + eapply conv_eargs_inline_self. eassumption.
-  Qed. *)
-
-  (* Lemma conv_inline Ξ Γ u v A B :
-    gwf Σ →
-    Σ ;; Ξ | Γ ⊢ u : A →
-    Σ ;; Ξ | Γ ⊢ v : B →
-    Σ ;; Ξ | Γ ⊢ u ≡ v →
-    Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
-  Proof.
-    intros hΣ hu hv h.
-    eapply conv_trans.
-    1:{ eapply conv_inline_self. all: eassumption. }
-    eapply conv_trans.
-    2:{ apply conv_sym. eapply conv_inline_self. all: eassumption. }
-    eapply conv_ctx_irr.
-    eassumption.
-  Qed. *)
-
-  Lemma inline_rule_tm M ξ δ k t :
-    ⟦ rule_tm M ξ δ k t ⟧ = rule_tm M ⟦ ξ ⟧× δ k ⟦ t ⟧.
-  Proof.
-    unfold rule_tm. unfold delocal_lift.
-    rewrite inline_subst. rewrite inline_einst.
-    rewrite inline_ren_eargs. apply ext_term.
-    intros n. unfold core.funcomp.
-    destruct (lt_dec n k).
-    - rewrite ups_below. 2: assumption.
-      reflexivity.
-    - pose (m := n - k). replace n with (k + m) by lia.
-      rewrite ups_above. reflexivity.
-  Qed.
-
   Fixpoint inline_parg p :=
     match p with
     | pvar => pvar
@@ -382,38 +332,75 @@ Section Inline.
 
   Notation "⟦ r ⟧r" := (inline_crule r).
 
-  (* TODO MOVE *)
-  Lemma fold_left_map A B C (f : A → B → A) l a g :
-    fold_left f (map g l) a = fold_left (λ a (c : C), f a (g c)) l a.
-  Proof.
-    induction l as [| x l ih] in a |- *.
-    - cbn. reflexivity.
-    - cbn. apply ih.
-  Qed.
-
-  Lemma fold_left_ind A B (f : A → B → A) l a P :
-    P a →
-    (∀ a b, P a → P (f a b)) →
-    P (fold_left f l a).
-  Proof.
-    intros ha h.
-    induction l as [| x l ih] in a, ha |- *.
-    - cbn. assumption.
-    - cbn. eapply ih. eapply h. assumption.
-  Qed.
-
-  Lemma fold_left_ext A B (f g : A → B → A) l a :
-    (∀ x, f x = g x) →
-    fold_left f l a = fold_left g l a.
-  Proof.
-    intros h.
-    induction l as [| x l ih] in a |- *.
-    - reflexivity.
-    - cbn. rewrite ih. rewrite h. reflexivity.
-  Qed.
-
   Definition map_fst [A B C] (f : A → C) (p : A * B) :=
     let '(a,b) := p in (f a, b).
+
+  Notation "⟦ R ⟧R" := (map inline_crule R).
+
+  Definition trans_gctx_ext :=
+    ∀ E Ξ' Δ R,
+      Σ E = Some (Ext Ξ' Δ R) →
+      Σᵗ E = Some (Ext ⟦ Ξ' ⟧e ⟦ Δ ⟧* ⟦ R ⟧R).
+
+  Context (hext : trans_gctx_ext).
+
+  Lemma ectx_get_inline Ξ M E ξ' :
+    ectx_get Ξ M = Some (E, ξ') →
+    ectx_get ⟦ Ξ ⟧e M = Some (E, ⟦ ξ' ⟧×).
+  Proof.
+    unfold ectx_get. intro h.
+    rewrite length_map. destruct (_ <=? _) eqn:e. 1: discriminate.
+    rewrite nth_error_map.
+    destruct nth_error eqn:e'. 2: discriminate.
+    inversion h. subst.
+    cbn. reflexivity.
+  Qed.
+
+  Lemma ectx_get_map Ξ M f :
+    ectx_get (map (λ '(E, ξ), (E, f ξ)) Ξ) M =
+    option_map (λ '(E, ξ), (E, f ξ)) (ectx_get Ξ M).
+  Proof.
+    unfold ectx_get. rewrite length_map.
+    rewrite nth_error_map.
+    destruct (_ <=? _). all: reflexivity.
+  Qed.
+
+  Lemma inst_equations_inline Ξ Ξ' Γ ξ :
+    inst_equations Σ Ξ Γ ξ Ξ' →
+    inst_equations Σᵗ ⟦ Ξ ⟧e ⟦ Γ ⟧* ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
+  Proof.
+    intros h.
+    intros E M ξ' eM.
+    rewrite ectx_get_map in eM.
+    destruct ectx_get as [[E' ξ'']|] eqn:eM'. 2: discriminate.
+    cbn in eM. inversion eM. subst. clear eM.
+    specialize (h _ _ _ eM') as (Ξ'' & Δ & R & eE & h1).
+    eapply hext in eE as eE'.
+    eexists _,_,_. split. 1: eassumption.
+    intros n rule hr m δ Θ lhs0 rhs0 hlhs hrhs lhs rhs.
+    rewrite nth_error_map in hr.
+    destruct (nth_error R n) as [rule'|] eqn: hrn. 2: discriminate.
+    cbn in hr. inversion hr. subst. clear hr.
+    specialize h1 with (1 := hrn).
+    (* subst lhs rhs. *)
+    (* This is currently not enough, but might work with a proper ih. *)
+    (* This will probably mean adding this to conversion, but all typed
+      instances will verify this so maybe it's ok. *)
+  Abort.
+
+  Lemma inline_rule_tm M ξ δ k t :
+    ⟦ rule_tm M ξ δ k t ⟧ = rule_tm M ⟦ ξ ⟧× δ k ⟦ t ⟧.
+  Proof.
+    unfold rule_tm. unfold delocal_lift.
+    rewrite inline_subst. rewrite inline_einst.
+    rewrite inline_ren_eargs. apply ext_term.
+    intros n. unfold core.funcomp.
+    destruct (lt_dec n k).
+    - rewrite ups_below. 2: assumption.
+      reflexivity.
+    - pose (m := n - k). replace n with (k + m) by lia.
+      rewrite ups_above. reflexivity.
+  Qed.
 
   Lemma inline_plinst_args f l n :
     Forall (λ p, ∀ k, f (inline_parg p) k = map_fst inline (f p k)) l →
@@ -472,27 +459,6 @@ Section Inline.
   Proof.
     unfold rule_rhs. rewrite inline_rule_tm. cbn - [rule_tm].
     rewrite length_map. reflexivity.
-  Qed.
-
-  Notation "⟦ R ⟧R" := (map inline_crule R).
-
-  Definition trans_gctx_ext :=
-    ∀ E Ξ' Δ R,
-      Σ E = Some (Ext Ξ' Δ R) →
-      Σᵗ E = Some (Ext ⟦ Ξ' ⟧e ⟦ Δ ⟧* ⟦ R ⟧R).
-
-  Context (hext : trans_gctx_ext).
-
-  Lemma ectx_get_inline Ξ M E ξ' :
-    ectx_get Ξ M = Some (E, ξ') →
-    ectx_get ⟦ Ξ ⟧e M = Some (E, ⟦ ξ' ⟧×).
-  Proof.
-    unfold ectx_get. intro h.
-    rewrite length_map. destruct (_ <=? _) eqn:e. 1: discriminate.
-    rewrite nth_error_map.
-    destruct nth_error eqn:e'. 2: discriminate.
-    inversion h. subst.
-    cbn. reflexivity.
   Qed.
 
   Definition g_closed :=
