@@ -466,6 +466,23 @@ Section Inline.
 
   Context (h_closed : g_closed).
 
+  Lemma scoped_eargs_inline_ih k ξ :
+    All (All (λ t, ∀ k, scoped k t = true → scoped k ⟦ t ⟧ = true)) ξ →
+    scoped_eargs k ξ = true →
+    scoped_eargs k ⟦ ξ ⟧× = true.
+  Proof.
+    intros ih h.
+    apply forallb_All in h. move h at top.
+    eapply All_prod in h. 2: eassumption.
+    apply All_forallb. apply All_map. eapply All_impl. 2: eassumption.
+    cbn. intros σ [h1 h2].
+    apply All_forallb. apply All_map.
+    apply forallb_All in h2.
+    eapply All_prod in h1. 2: eassumption.
+    eapply All_impl. 2: eassumption.
+    cbn. intros t []. eauto.
+  Qed.
+
   Lemma scoped_inline k t :
     scoped k t = true →
     scoped k ⟦ t ⟧ = true.
@@ -478,16 +495,33 @@ Section Inline.
       intuition eauto
     ].
     cbn in h |- *. eapply scoped_einst_closed.
-    - apply forallb_All in h. move h at top.
-      eapply All_prod in h. 2: eassumption.
-      apply All_forallb. apply All_map. eapply All_impl. 2: eassumption.
-      cbn. intros σ [h1 h2].
-      apply All_forallb. apply All_map.
-      apply forallb_All in h2.
-      eapply All_prod in h1. 2: eassumption.
-      eapply All_impl. 2: eassumption.
-      cbn. intros t []. eauto.
+    - eapply scoped_eargs_inline_ih. all: assumption.
     - apply h_closed.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma forall_All A (P : A → Type) l :
+    (forall x, In x l → P x) →
+    All P l.
+  Proof.
+    intros h.
+    induction l as [| x l ih].
+    - constructor.
+    - econstructor.
+      + eapply h. cbn. auto.
+      + eapply ih. intros y hy.
+        eapply h. cbn. auto.
+  Qed.
+
+  Lemma scoped_eargs_inline k ξ :
+    scoped_eargs k ξ = true →
+    scoped_eargs k ⟦ ξ ⟧× = true.
+  Proof.
+    intros h.
+    eapply scoped_eargs_inline_ih. 2: assumption.
+    eapply forall_All. intros.
+    eapply forall_All. intros.
+    eapply scoped_inline. assumption.
   Qed.
 
   Lemma conv_inline Ξ Γ u v :
@@ -513,7 +547,7 @@ Section Inline.
         cbn. rewrite 2!length_map. assumption.
       + rewrite <- inline_rule_rhs. eapply scoped_inline.
         cbn. rewrite 2!length_map. assumption.
-    - cbn. apply hcong.
+    - cbn. eapply conv_einsts.
       apply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
       intros. apply Forall2_map_l, Forall2_map_r.
@@ -521,7 +555,7 @@ Section Inline.
       cbn. auto.
     - econstructor. assumption.
     - eapply conv_trans. all: eassumption.
-  Qed.
+  Admitted.
 
   (* Definition gcond' :=
     ∀ c Ξ' A t Γ ξ,
@@ -532,7 +566,7 @@ Section Inline.
 
   Context (hκ : gcond'). *)
 
-  Lemma inst_typing_inline Γ ξ Ξ Ξ' :
+  (* Lemma inst_typing_inline Γ ξ Ξ Ξ' :
     gwf Σ →
     wf Σ Ξ Γ →
     inst_typing Σ Ξ Γ ξ Ξ' →
@@ -573,13 +607,13 @@ Section Inline.
           admit.
         * admit. (* Would be better if it could be avoided *)
     - rewrite length_map. assumption.
-  Admitted.
+  Admitted. *)
 
   Definition g_type :=
     ∀ c Ξ' A t,
       gwf Σ →
       Σ c = Some (Def Ξ' A t) →
-      Σ ;; Ξ' | ∙ ⊢ κ c : ⟦ A ⟧.
+      Σᵗ ;; ⟦ Ξ' ⟧e | ∙ ⊢ κ c : ⟦ A ⟧.
 
   Context (h_type : g_type).
 
@@ -595,7 +629,7 @@ Section Inline.
     ewf Σ Ξ →
     wf Σ Ξ Γ →
     Σ ;; Ξ | Γ ⊢ t : A →
-    Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
+    Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
   Proof.
     intros hΣ hΞ hΓ h.
     revert Γ t A hΓ h.
@@ -611,33 +645,18 @@ Section Inline.
       + rewrite inline_subst. apply ext_term. intros []. all: reflexivity.
     - intros Γ c ξ Ξ' A t hΓ hc hξ ihξ hA.
       cbn. rewrite inline_einst. eapply typing_einst_closed.
-      + eapply inst_typing_inline. all: eassumption.
+      + (* eapply inst_typing_inline. all: eassumption. *) admit.
       + eapply h_type. all: eassumption.
     - intros Γ M x E ξ Ξ' Δ R A hΓ hM hE hx hcξ.
-      cbn. eapply type_conv.
-      + tttype.
-      + apply conv_sym. eapply conv_inline_self. 1: assumption.
-        (* This again *)
-        admit.
-      + (* This is more problematic isn't it? Maybe we do not translate
-          the type to get something simpler?
-
-          Here we would need to be able to apply the theorem on both ξ and A
-          from the env.
-
-          Not having the translation on the type might solve this one,
-          but then we have to use conversion for Pi and lam. Maybe that's ok?
-
-          That approach didn't work so maybe we go back and translate Σ and Ξ
-          as well to make things more natural / direct.
-        *)
-        rewrite inline_delocal. rewrite inline_einst.
-        admit.
+      cbn. rewrite inline_delocal. rewrite inline_einst. rewrite inline_ren.
+      econstructor.
+      + eapply ectx_get_inline. eassumption.
+      + eapply hext. eassumption.
+      + rewrite nth_error_map. rewrite hx. reflexivity.
+      + eapply scoped_eargs_inline. assumption.
     - intros Γ i A B t hΓ ht iht hconv hB ihB.
       econstructor. 1,3: eassumption.
-      eapply validity in ht as hA. 2-4: assumption.
-      destruct hA.
-      eapply conv_inline. all: eassumption.
+      apply conv_inline. assumption.
   Admitted.
 
 End Inline.
