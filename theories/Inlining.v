@@ -419,18 +419,18 @@ Section Inline.
     let '(a,b) := p in (f a, b).
 
   Lemma inline_plinst_args f l n :
-    (∀ p k, f (inline_parg p) k = map_fst inline (f p k)) →
+    Forall (λ p, ∀ k, f (inline_parg p) k = map_fst inline (f p k)) l →
     plinst_args f (map inline_parg l) n =
     map_fst (map inline) (plinst_args f l n).
   Proof.
     intros h.
     unfold plinst_args. change (∙, n) with (map_fst (map inline) (∙, n)) at 1.
     generalize (∙, n) as p. intros p.
-    induction l as [| x l ih] in p |- *.
+    induction h as [| x l hx hl ih] in p |- *.
     - reflexivity.
     - cbn. rewrite <- ih. f_equal.
       destruct p as [acc k]. cbn.
-      rewrite h.
+      rewrite hx.
       destruct (f x k). reflexivity.
   Qed.
 
@@ -445,14 +445,14 @@ Section Inline.
   Lemma inline_plinst_arg p k :
     plinst_arg (inline_parg p) k = map_fst inline (plinst_arg p k).
   Proof.
-    induction p in k |- *.
+    induction p using parg_ind in k |- *.
     - cbn. reflexivity.
     - cbn. reflexivity.
     - cbn. rewrite inline_plinst_args.
       + destruct plinst_args. cbn.
         rewrite inline_apps. rewrite map_rev. reflexivity.
-      + admit.
-  Admitted.
+      + assumption.
+  Qed.
 
   Lemma inline_plinst k p :
     ⟦ plinst k p ⟧ = plinst k ⟦ p ⟧p.
@@ -460,7 +460,7 @@ Section Inline.
     unfold plinst. cbn - [ plinst_args ].
     rewrite inline_plinst_args.
     - destruct plinst_args. rewrite inline_apps. rewrite map_rev. reflexivity.
-    - apply inline_plinst_arg.
+    - apply Forall_forall. intros. apply inline_plinst_arg.
   Qed.
 
   Lemma inline_rule_lhs M ξ δ rule :
