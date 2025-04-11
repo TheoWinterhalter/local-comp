@@ -495,6 +495,11 @@ Section Inline.
     cbn. reflexivity.
   Qed.
 
+  Definition g_closed :=
+    ∀ c, closed (κ c) = true.
+
+  Context (h_closed : g_closed).
+
   Lemma scoped_inline k t :
     scoped k t = true →
     scoped k ⟦ t ⟧ = true.
@@ -507,9 +512,17 @@ Section Inline.
       intuition eauto
     ].
     cbn in h |- *. eapply scoped_einst_closed.
-    (* Alright, so this is not true if we don't know t is typed already. *)
-    (* This is very annoying! *)
-  Abort.
+    - apply forallb_All in h. move h at top.
+      eapply All_prod in h. 2: eassumption.
+      apply All_forallb. apply All_map. eapply All_impl. 2: eassumption.
+      cbn. intros σ [h1 h2].
+      apply All_forallb. apply All_map.
+      apply forallb_All in h2.
+      eapply All_prod in h1. 2: eassumption.
+      eapply All_impl. 2: eassumption.
+      cbn. intros t []. eauto.
+    - apply h_closed.
+  Qed.
 
   Lemma conv_inline Ξ Γ u v :
     Σ ;; Ξ | Γ ⊢ u ≡ v →
@@ -530,11 +543,10 @@ Section Inline.
       + eapply hext. eassumption.
       + apply ectx_get_inline. assumption.
       + rewrite nth_error_map. rewrite H1. reflexivity.
-      + (* Without scoped_inline, this is going to be a problem!
-          Is this approach doomed as well?
-        *)
-        admit.
-      + admit.
+      + rewrite <- inline_rule_lhs. eapply scoped_inline.
+        cbn. rewrite 2!length_map. assumption.
+      + rewrite <- inline_rule_rhs. eapply scoped_inline.
+        cbn. rewrite 2!length_map. assumption.
     - cbn. apply hcong.
       apply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
