@@ -118,7 +118,8 @@ Qed.
 Section Inline.
 
   Context (Σ : gctx).
-  Context (κ : ginst).
+  Context (κ : ginst). (** A map from references to their translated def. **)
+  Context (Σᵗ : gctx). (** The translation of [Σ] **)
 
   Reserved Notation "⟦ t ⟧" (at level 0).
   Reserved Notation "⟦ k ⟧×" (at level 0).
@@ -138,6 +139,11 @@ Section Inline.
   and "⟦ k ⟧×" := (map (map inline) k).
 
   Notation "⟦ l ⟧*" := (map inline l).
+
+  Definition inline_ectx (Ξ : ectx) :=
+    map (λ '(E, ξ), (E, ⟦ ξ ⟧×)) Ξ.
+
+  Notation "⟦ X ⟧e" := (inline_ectx X).
 
   Definition gclosed :=
     ∀ c, closed (κ c) = true.
@@ -234,7 +240,7 @@ Section Inline.
   Definition g_conv_unfold :=
     ∀ c Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
-      Σ ;; Ξ' | ∙ ⊢ κ c ≡ t.
+      Σᵗ ;; Ξ' | ∙ ⊢ κ c ≡ ⟦ t ⟧.
 
   Context (h_conv_unfold : g_conv_unfold).
 
@@ -250,9 +256,9 @@ Section Inline.
     intros. eapply conv_ren. eassumption.
   Qed.
 
-  Lemma conv_eargs_inline_self Ξ Ξ' Γ ξ :
+  (* Lemma conv_eargs_inline_self Ξ Ξ' Γ ξ :
     inst_typing_ Σ Ξ (λ Γ t _, Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ ≡ t) Γ ξ Ξ' →
-    Forall2 (Forall2 (conversion Σ Ξ ⟦ Γ ⟧*)) ⟦ ξ ⟧× ξ.
+    Forall2 (Forall2 (conversion Σ Ξ ⟦ Γ ⟧) ⟦ ξ ⟧× ξ.
   Proof.
     intros (h1 & h2 & e).
     apply Forall2_map_l. apply Forall2_diag.
@@ -281,9 +287,9 @@ Section Inline.
     specialize ih with (1 := eΔ).
     unfold eget in ih. rewrite hM, hx in ih.
     assumption.
-  Qed.
+  Qed. *)
 
-  Lemma inst_equations_inline Ξ Ξ' Γ ξ :
+  (* Lemma inst_equations_inline Ξ Ξ' Γ ξ :
     inst_typing_ Σ Ξ (λ Γ t _, Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ ≡ t) Γ ξ Ξ' →
     inst_equations Σ Ξ ⟦ Γ ⟧* ⟦ ξ ⟧× Ξ'.
   Proof.
@@ -304,9 +310,9 @@ Section Inline.
     }
     eapply conv_ctx_irr.
     eapply h1. all: eauto.
-  Qed.
+  Qed. *)
 
-  Lemma conv_inline_self Ξ Γ t A :
+ (*  Lemma conv_inline_self Ξ Γ t A :
     gwf Σ →
     Σ ;; Ξ | Γ ⊢ t : A →
     Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ ≡ t.
@@ -324,9 +330,9 @@ Section Inline.
       + eapply inst_equations_inline. eassumption.
       + eapply h_conv_unfold. eassumption.
       + eapply conv_eargs_inline_self. eassumption.
-  Qed.
+  Qed. *)
 
-  Lemma conv_inline Ξ Γ u v A B :
+  (* Lemma conv_inline Ξ Γ u v A B :
     gwf Σ →
     Σ ;; Ξ | Γ ⊢ u : A →
     Σ ;; Ξ | Γ ⊢ v : B →
@@ -340,19 +346,152 @@ Section Inline.
     2:{ apply conv_sym. eapply conv_inline_self. all: eassumption. }
     eapply conv_ctx_irr.
     eassumption.
+  Qed. *)
+
+  Lemma inline_rule_tm M ξ δ k t :
+    ⟦ rule_tm M ξ δ k t ⟧ = rule_tm M ⟦ ξ ⟧× δ k ⟦ t ⟧.
+  Proof.
+    unfold rule_tm. unfold delocal_lift.
+    rewrite inline_subst. rewrite inline_einst.
+    rewrite inline_ren_eargs. apply ext_term.
+    intros n. unfold core.funcomp.
+    destruct (lt_dec n k).
+    - rewrite ups_below. 2: assumption.
+      reflexivity.
+    - pose (m := n - k). replace n with (k + m) by lia.
+      rewrite ups_above. reflexivity.
   Qed.
 
-  (* Lemma conv_inline Γ u v :
-    Σ ;; [] | Γ ⊢ u ≡ v →
-    [] ;; [] | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
+  Fixpoint inline_parg p :=
+    match p with
+    | pvar => pvar
+    | pforce t => pforce ⟦ t ⟧
+    | psymb x l => psymb x (map inline_parg l)
+    end.
+
+  Definition inline_pat p := {|
+    pat_head := p.(pat_head) ;
+    pat_args := map inline_parg p.(pat_args)
+  |}.
+
+  Notation "⟦ p ⟧p" := (inline_pat p).
+
+  Definition inline_crule rule := {|
+    cr_env := ⟦ rule.(cr_env) ⟧* ;
+    cr_pat := ⟦ rule.(cr_pat) ⟧p ;
+    cr_rep := ⟦ rule.(cr_rep) ⟧ ;
+    cr_typ := ⟦ rule.(cr_typ) ⟧
+  |}.
+
+  Notation "⟦ r ⟧r" := (inline_crule r).
+
+  (* TODO MOVE *)
+  Lemma fold_left_map A B C (f : A → B → A) l a g :
+    fold_left f (map g l) a = fold_left (λ a (c : C), f a (g c)) l a.
+  Proof.
+    induction l as [| x l ih] in a |- *.
+    - cbn. reflexivity.
+    - cbn. apply ih.
+  Qed.
+
+  Lemma fold_left_ind A B (f : A → B → A) l a P :
+    P a →
+    (∀ a b, P a → P (f a b)) →
+    P (fold_left f l a).
+  Proof.
+    intros ha h.
+    induction l as [| x l ih] in a, ha |- *.
+    - cbn. assumption.
+    - cbn. eapply ih. eapply h. assumption.
+  Qed.
+
+  Lemma fold_left_ext A B (f g : A → B → A) l a :
+    (∀ x, f x = g x) →
+    fold_left f l a = fold_left g l a.
+  Proof.
+    intros h.
+    induction l as [| x l ih] in a |- *.
+    - reflexivity.
+    - cbn. rewrite ih. rewrite h. reflexivity.
+  Qed.
+
+  Definition map_fst [A B C] (f : A → C) (p : A * B) :=
+    let '(a,b) := p in (f a, b).
+
+  Lemma inline_plinst_args f l n :
+    (∀ p k, f (inline_parg p) k = map_fst inline (f p k)) →
+    plinst_args f (map inline_parg l) n =
+    map_fst (map inline) (plinst_args f l n).
+  Proof.
+    intros h.
+    unfold plinst_args. change (∙, n) with (map_fst (map inline) (∙, n)) at 1.
+    generalize (∙, n) as p. intros p.
+    induction l as [| x l ih] in p |- *.
+    - reflexivity.
+    - cbn. rewrite <- ih. f_equal.
+      destruct p as [acc k]. cbn.
+      rewrite h.
+      destruct (f x k). reflexivity.
+  Qed.
+
+  Lemma inline_apps u l :
+    ⟦ apps u l ⟧ = apps ⟦ u ⟧ ⟦ l ⟧*.
+  Proof.
+    induction l in u |- *.
+    - reflexivity.
+    - eauto.
+  Qed.
+
+  Lemma inline_plinst_arg p k :
+    plinst_arg (inline_parg p) k = map_fst inline (plinst_arg p k).
+  Proof.
+    induction p in k |- *.
+    - cbn. reflexivity.
+    - cbn. reflexivity.
+    - cbn. rewrite inline_plinst_args.
+      + destruct plinst_args. cbn.
+        rewrite inline_apps. rewrite map_rev. reflexivity.
+      + admit.
+  Admitted.
+
+  Lemma inline_plinst k p :
+    ⟦ plinst k p ⟧ = plinst k ⟦ p ⟧p.
+  Proof.
+    unfold plinst. cbn - [ plinst_args ].
+    rewrite inline_plinst_args.
+    - destruct plinst_args. rewrite inline_apps. rewrite map_rev. reflexivity.
+    - apply inline_plinst_arg.
+  Qed.
+
+  Lemma inline_rule_lhs M ξ δ rule :
+    ⟦ rule_lhs M ξ δ rule ⟧ = rule_lhs M ⟦ ξ ⟧× δ ⟦ rule ⟧r.
+  Proof.
+    unfold rule_lhs. rewrite inline_rule_tm. cbn.
+    rewrite length_map. rewrite inline_plinst. reflexivity.
+  Qed.
+
+  Lemma inline_rule_rhs M ξ δ rule :
+    ⟦ rule_rhs M ξ δ rule ⟧ = rule_rhs M ⟦ ξ ⟧× δ ⟦ rule ⟧r.
+  Proof.
+    unfold rule_rhs. rewrite inline_rule_tm. cbn - [rule_tm].
+    rewrite length_map. reflexivity.
+  Qed.
+
+  Lemma conv_inline Ξ Γ u v :
+    Σ ;; Ξ | Γ ⊢ u ≡ v →
+    Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
   Proof.
     intros h.
     induction h using conversion_ind.
     all: try solve [ cbn ; ttconv ].
     - cbn. rewrite inline_subst. eapply meta_conv_trans_r. 1: econstructor.
       apply ext_term. intros []. all: reflexivity.
-    - cbn. eapply hufd. eassumption.
-    - discriminate.
+    - cbn. rewrite inline_einst. eapply conv_einst_closed.
+      + (* eapply inst_equations_inline. eassumption. *) admit.
+      + eapply h_conv_unfold. eassumption.
+    - rewrite !inline_subst. subst lhs rhs.
+      rewrite inline_rule_lhs, inline_rule_rhs.
+      eapply conv_red. all: admit.
     - cbn. apply hcong.
       apply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
@@ -361,7 +500,7 @@ Section Inline.
       cbn. auto.
     - econstructor. assumption.
     - eapply conv_trans. all: eassumption.
-  Qed. *)
+  Qed.
 
   (* Definition gcond' :=
     ∀ c Ξ' A t Γ ξ,
