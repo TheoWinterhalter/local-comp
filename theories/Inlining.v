@@ -428,7 +428,7 @@ Section Inline.
     ewf Σ Ξ →
     wf Σ Ξ Γ →
     Σ ;; Ξ | Γ ⊢ t : A →
-    Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
+    Σ ;; Ξ | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : A.
   Proof.
     intros hΣ hΞ hΓ h.
     revert Γ t A hΓ h.
@@ -436,12 +436,26 @@ Section Inline.
     (* induction h using typing_ind_wf. *)
     all: try solve [ intros ; cbn ; tttype ].
     - intros Γ x A hΓ e.
-      cbn. rewrite inline_ren. econstructor.
-      rewrite nth_error_map. rewrite e. reflexivity.
-    - intros Γ i j A B t u hΓ ht iht hu ihu hA ihA hB ihB.
-      cbn in *. eapply meta_conv.
-      + tttype.
-      + rewrite inline_subst. apply ext_term. intros []. all: reflexivity.
+      eapply valid_wf in hΓ as hA. 2: eassumption.
+      destruct hA as [i hA].
+      cbn. eapply type_conv.
+      + econstructor. rewrite nth_error_map. rewrite e. reflexivity.
+      + rewrite <- inline_ren. eapply conv_inline_self. all: eassumption.
+      + (* Damn *)
+        admit.
+    - intros Γ i j A B t hΓ hA ihA hB ihB ht iht.
+      cbn in *. eapply type_conv.
+      + tttype. eapply type_conv. 1,3: eassumption.
+        apply conv_sym.
+        eapply conv_inline_self with (Γ := Γ ,, A). all: eassumption.
+      + eapply conv_inline_self with (t := Pi A B). all: tttype.
+      + (* tttype. *)
+        (* Damn again *) admit.
+      - intros Γ i j A B t u hΓ ht iht hu ihu hA ihA hB ihB.
+        cbn in *. eapply meta_conv.
+        + tttype. all: admit.
+        + (* rewrite inline_subst. apply ext_term. intros []. all: reflexivity. *)
+          admit.
     - intros Γ c ξ Ξ' A t hΓ hc hξ ihξ hA.
       cbn. rewrite inline_einst. eapply typing_einst_closed.
       + eapply inst_typing_inline. all: eassumption.
