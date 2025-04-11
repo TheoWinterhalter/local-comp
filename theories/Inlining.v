@@ -140,10 +140,7 @@ Section Inline.
 
   Notation "⟦ l ⟧*" := (map inline l).
 
-  Definition inline_ectx (Ξ : ectx) :=
-    map (λ '(E, ξ), (E, ⟦ ξ ⟧×)) Ξ.
-
-  Notation "⟦ X ⟧e" := (inline_ectx X).
+  Notation "⟦ X ⟧e" := (map (λ '(E, ξ), (E, ⟦ ξ ⟧×)) X).
 
   Definition gclosed :=
     ∀ c, closed (κ c) = true.
@@ -477,6 +474,43 @@ Section Inline.
     rewrite length_map. reflexivity.
   Qed.
 
+  Notation "⟦ R ⟧R" := (map inline_crule R).
+
+  Definition trans_gctx_ext :=
+    ∀ E Ξ' Δ R,
+      Σ E = Some (Ext Ξ' Δ R) →
+      Σᵗ E = Some (Ext ⟦ Ξ' ⟧e ⟦ Δ ⟧* ⟦ R ⟧R).
+
+  Context (hext : trans_gctx_ext).
+
+  Lemma ectx_get_inline Ξ M E ξ' :
+    ectx_get Ξ M = Some (E, ξ') →
+    ectx_get ⟦ Ξ ⟧e M = Some (E, ⟦ ξ' ⟧×).
+  Proof.
+    unfold ectx_get. intro h.
+    rewrite length_map. destruct (_ <=? _) eqn:e. 1: discriminate.
+    rewrite nth_error_map.
+    destruct nth_error eqn:e'. 2: discriminate.
+    inversion h. subst.
+    cbn. reflexivity.
+  Qed.
+
+  Lemma scoped_inline k t :
+    scoped k t = true →
+    scoped k ⟦ t ⟧ = true.
+  Proof.
+    intros h.
+    induction t using term_rect in k, h |- *.
+    all: try solve [ cbn ; eauto ].
+    all: try solve [
+      cbn in * ; rewrite Bool.andb_true_iff in * ;
+      intuition eauto
+    ].
+    cbn in h |- *. eapply scoped_einst.
+    (* Alright, so this is not true if we don't know t is typed already. *)
+    (* This is very annoying! *)
+  Abort.
+
   Lemma conv_inline Ξ Γ u v :
     Σ ;; Ξ | Γ ⊢ u ≡ v →
     Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
@@ -491,7 +525,16 @@ Section Inline.
       + eapply h_conv_unfold. eassumption.
     - rewrite !inline_subst. subst lhs rhs.
       rewrite inline_rule_lhs, inline_rule_rhs.
-      eapply conv_red. all: admit.
+      replace δ with (length ⟦ Δ ⟧*). 2:{ apply length_map. }
+      eapply conv_red.
+      + eapply hext. eassumption.
+      + apply ectx_get_inline. assumption.
+      + rewrite nth_error_map. rewrite H1. reflexivity.
+      + (* Without scoped_inline, this is going to be a problem!
+          Is this approach doomed as well?
+        *)
+        admit.
+      + admit.
     - cbn. apply hcong.
       apply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
