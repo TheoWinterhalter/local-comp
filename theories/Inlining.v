@@ -415,6 +415,14 @@ Section Inline.
     - rewrite length_map. assumption.
   Admitted.
 
+  Definition g_type :=
+    ∀ c Ξ' A t,
+      gwf Σ →
+      Σ c = Some (Def Ξ' A t) →
+      Σ ;; Ξ' | ∙ ⊢ κ c : ⟦ A ⟧.
+
+  Context (h_type : g_type).
+
   Lemma typing_inline Ξ Γ t A :
     gwf Σ →
     ewf Σ Ξ →
@@ -437,11 +445,23 @@ Section Inline.
     - intros Γ c ξ Ξ' A t hΓ hc hξ ihξ hA.
       cbn. rewrite inline_einst. eapply typing_einst_closed.
       + eapply inst_typing_inline. all: eassumption.
-      + (* erewrite hκ. 2: eassumption. *)
-        (* Instead I need an assumption about κ c : ⟦ A ⟧ *)
-        admit.
+      + eapply h_type. all: eassumption.
     - intros Γ M x E ξ Ξ' Δ R A hΓ hM hE hx hcξ.
-      cbn. admit.
+      cbn. eapply type_conv.
+      + tttype.
+      + apply conv_sym. eapply conv_inline_self. 1: assumption.
+        (* This again *)
+        admit.
+      + (* This is more problematic isn't it? Maybe we do not translate
+          the type to get something simpler?
+
+          Here we would need to be able to apply the theorem on both ξ and A
+          from the env.
+
+          Not having the translation on the type might solve this one,
+          but then we have to use conversion for Pi and lam. Maybe that's ok?
+        *)
+        admit.
     - intros Γ i A B t hΓ ht iht hconv hB ihB.
       econstructor. 1,3: eassumption.
       eapply validity in ht as hA. 2-4: assumption.
