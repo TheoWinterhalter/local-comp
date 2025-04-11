@@ -655,44 +655,48 @@ End Inline.
 Notation "⟦ t ⟧⟨ k ⟩" := (inline k t) (at level 0).
 Notation "⟦ l ⟧*⟨ k ⟩" := (map (inline k) l).
 Notation "⟦ t ⟧×⟨ k ⟩" := (map (map (inline k)) t).
+Notation "⟦ X ⟧e⟨ k ⟩" := (map (λ '(E, ξ), (E, ⟦ ξ ⟧×⟨ k ⟩)) X).
+Notation "⟦ R ⟧R⟨ k ⟩" := (map (inline_crule k) R).
 
 Reserved Notation "⟦ s ⟧κ" (at level 0).
 
-Definition gnil (c : gref) (χ : eargs) :=
+(* TODO Probably can just use [list (greg * term)] *)
+
+Definition gnil (c : gref) :=
   dummy.
 
-Definition gcons r f κ (c : gref) (χ : eargs) : term :=
-  if (c =? r)%string then f χ else κ c χ.
+Definition gcons r t κ (c : gref) : term :=
+  if (c =? r)%string then t else κ c.
 
-(* Fixpoint inline_gctx Σ :=
+Fixpoint inline_gctx_ufd Σ :=
   match Σ with
   | (c, d) :: Σ =>
     let κ := ⟦ Σ ⟧κ in
     match d with
-    | Def Ξ A t => gcons c (λ ξ, ⟦ einst ξ t ⟧⟨ κ ⟩) κ
+    | Def Ξ A t => gcons c ⟦ t ⟧⟨ κ ⟩ κ
     | _ => κ
     end
   | [] => gnil
   end
-where "⟦ s ⟧κ" := (inline_gctx s).
+where "⟦ s ⟧κ" := (inline_gctx_ufd s).
 
-Lemma gcons_eq c c' f κ :
+Lemma gcons_eq c c' t κ :
   (c' =? c)%string = true →
-  gcons c f κ c' = f.
+  gcons c t κ c' = t.
 Proof.
   intro h.
   unfold gcons. rewrite h. reflexivity.
 Qed.
 
-Lemma gcons_neq c c' f κ :
+Lemma gcons_neq c c' t κ :
   (c' =? c)%string = false →
-  gcons c f κ c' = κ c'.
+  gcons c t κ c' = κ c'.
 Proof.
   intro h.
   unfold gcons. rewrite h. reflexivity.
 Qed.
 
-Lemma gwf_gren Σ :
+(* Lemma gwf_gren Σ :
   gwf Σ →
   gren ⟦ Σ ⟧κ.
 Proof.
@@ -706,9 +710,9 @@ Proof.
       2:{ eapply typing_closed. eassumption. }
       reflexivity.
     + eauto.
-Qed.
+Qed. *)
 
-Lemma gwf_gsubst Σ :
+(* Lemma gwf_gsubst Σ :
   gwf Σ →
   gsubst ⟦ Σ ⟧κ.
 Proof.
@@ -728,9 +732,9 @@ Proof.
       admit.
     + rewrite gcons_neq. 2: assumption.
       rewrite <- ih. reflexivity.
-Abort.
+Abort. *)
 
-Lemma gwf_unfold Σ :
+(* Lemma gwf_unfold Σ :
   gwf Σ →
   g_unfold Σ ⟦ Σ ⟧κ.
 Proof.
@@ -747,9 +751,9 @@ Proof.
       admit.
     + rewrite gcons_neq. 2: assumption.
       (* Why would this hold? *)
-Admitted.
+Admitted. *)
 
-Lemma gwf_cong Σ :
+(* Lemma gwf_cong Σ :
   gwf Σ →
   g_cong ⟦ Σ ⟧κ.
 Proof.
@@ -760,9 +764,9 @@ Proof.
     (* This is really problematic because this is strengthening we need! *)
     admit.
   - cbn. admit.
-Admitted.
+Admitted. *)
 
-Inductive gcond : gctx → ginst → Prop :=
+(* Inductive gcond : gctx → ginst → Prop :=
 | gcond_nil : gcond [] gnil
 
 | gcond_ext c Σ κ Ξ Δ R :
@@ -775,9 +779,9 @@ Inductive gcond : gctx → ginst → Prop :=
       inst_typing [] [] Γ ξ Ξ →
       [] ;; [] | ⟦ Γ ⟧*⟨ κ ⟩ ⊢ ⟦ einst ξ t ⟧⟨ κ ⟩ : ⟦ einst ξ A ⟧⟨ κ ⟩
     ) →
-    gcond ((c, Def Ξ A t) :: Σ) (gcons c (λ ξ, ⟦ einst ξ t ⟧⟨ κ ⟩) κ).
+    gcond ((c, Def Ξ A t) :: Σ) (gcons c (λ ξ, ⟦ einst ξ t ⟧⟨ κ ⟩) κ). *)
 
-Lemma gcond_gcond' Σ κ :
+(* Lemma gcond_gcond' Σ κ :
   gcond Σ κ →
   gcond' Σ κ.
 Proof.
@@ -798,9 +802,9 @@ Proof.
       * admit.
     + rewrite gcons_neq. 2: eassumption.
       admit.
-Admitted.
+Admitted. *)
 
-Lemma inline_ext_gscope Σ t κ κ' :
+(* Lemma inline_ext_gscope Σ t κ κ' :
   gscope Σ t →
   (∀ c Ξ' A t ξ,
     Σ c = Some (Def Ξ' A t) →
@@ -821,7 +825,7 @@ Proof.
   }
   rewrite <- e.
   eapply he. eassumption.
-Qed.
+Qed. *)
 
 (* TODO MOVE *)
 Lemma extends_nil Σ :
@@ -830,7 +834,7 @@ Proof.
   intros ?? e. discriminate.
 Qed.
 
-Lemma gwf_get Σ Γ c ξ Ξ' A t :
+(* Lemma gwf_get Σ Γ c ξ Ξ' A t :
   gwf Σ →
   Σ c = Some (Def Ξ' A t) →
   inst_typing [] [] Γ ξ Ξ' →
@@ -870,9 +874,9 @@ Proof.
       1:{ rewrite String.eqb_eq in e0. congruence. }
       rewrite gcons_neq. 2: assumption.
       reflexivity.
-Qed.
+Qed. *)
 
-Lemma gwf_gcond' Σ :
+(* Lemma gwf_gcond' Σ :
   gwf Σ →
   gcond' Σ ⟦ Σ ⟧κ.
 Proof.
@@ -886,9 +890,9 @@ Proof.
   - (* Not great, a loop *)
     admit.
   - (* Not true anyway *)
-Abort.
+Abort. *)
 
-Lemma gwf_gcond Σ :
+(* Lemma gwf_gcond Σ :
   gwf Σ →
   gcond Σ ⟦ Σ ⟧κ.
 Proof.
@@ -907,22 +911,37 @@ Proof.
     + eapply typing_einst_closed. 2: eassumption.
       eapply inst_typing_gweak. 1: eassumption.
       apply extends_nil.
-Abort.
+Abort. *)
 
-Theorem inlining Σ Γ t A :
+Reserved Notation "⟦ s ⟧g".
+
+Fixpoint inline_gctx (Σ : gctx) : gctx :=
+  match Σ with
+  | [] => []
+  | (c, Def Ξ A t) :: Σ => ⟦ Σ ⟧g
+  | (c, Ext Ξ Δ R) :: Σ =>
+    let κ := ⟦ Σ ⟧κ in
+    (c, Ext ⟦ Ξ ⟧e⟨ κ ⟩ ⟦ Δ ⟧*⟨ κ ⟩ ⟦ R ⟧R⟨ κ ⟩) :: ⟦ Σ ⟧g
+  end
+
+where "⟦ s ⟧g" := (inline_gctx s).
+
+Theorem inlining Ξ Σ Γ t A :
   gwf Σ →
   let κ := ⟦ Σ ⟧κ in
-  Σ ;; [] | Γ ⊢ t : A →
-  [] ;; [] | ⟦ Γ ⟧*⟨ κ ⟩ ⊢ ⟦ t ⟧⟨ κ ⟩ : ⟦ A ⟧⟨ κ ⟩.
+  Σ ;; Ξ | Γ ⊢ t : A →
+  ⟦ Σ ⟧g ;; ⟦ Ξ ⟧e⟨ κ ⟩ | ⟦ Γ ⟧*⟨ κ ⟩ ⊢ ⟦ t ⟧⟨ κ ⟩ : ⟦ A ⟧⟨ κ ⟩.
 Proof.
   intros hΣ κ h.
   eapply typing_inline.
-  - eapply gwf_gren. assumption.
   - admit.
-  - eapply gwf_unfold. assumption.
-  - eapply gwf_cong. assumption.
-  - eapply gcond_gcond'. admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
   - eassumption.
+  - assumption.
 Admitted.
 
 Theorem conservativity Σ t A i :
@@ -938,4 +957,3 @@ Proof.
   (* TODO: Show that inline is the identity on MLTT. *)
   (* Do we use a typing judgment or a global scoping one? *)
 Admitted.
- *)
