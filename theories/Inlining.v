@@ -423,6 +423,13 @@ Section Inline.
 
   Context (h_type : g_type).
 
+  Lemma inline_delocal M t :
+    ⟦ delocal M t ⟧ = delocal M ⟦ t ⟧.
+  Proof.
+    unfold delocal.
+    rewrite inline_subst. reflexivity.
+  Qed.
+
   Lemma typing_inline Ξ Γ t A :
     gwf Σ →
     ewf Σ Ξ →
@@ -460,7 +467,11 @@ Section Inline.
 
           Not having the translation on the type might solve this one,
           but then we have to use conversion for Pi and lam. Maybe that's ok?
+
+          That approach didn't work so maybe we go back and translate Σ and Ξ
+          as well to make things more natural / direct.
         *)
+        rewrite inline_delocal. rewrite inline_einst.
         admit.
     - intros Γ i A B t hΓ ht iht hconv hB ihB.
       econstructor. 1,3: eassumption.
