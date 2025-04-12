@@ -530,9 +530,15 @@ Section Inline.
     intros (henv & [i hty] & hl & hr).
     eapply typing_scoped in hl.
     rewrite length_app in hl.
-    unfold rule_lhs. *)
+    unfold rule_lhs.
+    unfold rule_tm. unfold delocal_lift. *)
 
-  (* Maybe let's just type things *)
+  (* Whatever we do, knowing this requires knowing scoping info about ξ
+    which we currently don't get.
+    Probably we should require that ξ is scoped in Γ in inst_equations.
+    Or even better, we change the polarity of these scoping assumptions.
+    It probably makes more sense any way.
+  *)
 
   Lemma inst_equations_inline_ih Ξ Ξ' Γ ξ :
     (* inst_equations Σ Ξ Γ ξ Ξ' → *)
