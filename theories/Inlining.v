@@ -146,17 +146,39 @@ Proof.
     + constructor. all: assumption.
 Qed.
 
-(* Lemma gscope_plinst_arg_inv Σ pl k l n :
-  plinst_args plinst_arg pl k = (l, n) →
+Lemma gscope_plinst_args_inv (f : parg → nat → term * nat) Σ pl l n r :
+  (∀ p k t m, f p k = (t, m) → gscope Σ t → gscope_parg Σ p) →
+  fold_left (λ '(acc, k) p, let '(t, m) := f p k in (t :: acc, m)) pl r = (l, n) →
   Forall (gscope Σ) l →
-  Forall (gscope_parg Σ) pl.
+  Forall (gscope Σ) (fst r) ∧ Forall (gscope_parg Σ) pl.
 Proof.
-  intros e h.
-  induction pl as [| p pl ih] in l, n, k, e, h |- *. 1: constructor.
-  cbn in e.
-  constructor.
-  -
-  - *)
+  intros hf e h.
+  induction pl as [| p pl ih] in r, l, n, e, h |- *.
+  - cbn in e. subst. cbn. intuition constructor.
+  - cbn in e. eapply ih in e as h'. 2: assumption.
+    destruct r as [acc k]. cbn.
+    destruct f as [t m] eqn:e'. cbn in h'.
+    rewrite Forall_cons_iff in h' |- *.
+    intuition eauto.
+Qed.
+
+Lemma gscope_plinst_arg_inv Σ p k t m :
+  plinst_arg p k = (t, m) →
+  gscope Σ t →
+  gscope_parg Σ p.
+Proof.
+  intros e ht.
+  induction p using parg_ind in k, t, m, ht, e |- *.
+  - constructor.
+  - constructor. cbn in e. inversion e. assumption.
+  - cbn in e. destruct plinst_args eqn: es.
+    inversion e. subst. clear e.
+    constructor.
+    apply gscope_apps_inv in ht as [_ ht].
+    eapply Forall_rev in ht. rewrite rev_involutive in ht.
+    eapply gscope_plinst_args_inv in es. 3: eassumption.
+    (* TODO Need to use Forall *)
+Admitted.
 
 Lemma gscope_plinst_inv Σ k p :
   gscope Σ (plinst k p) →
@@ -168,11 +190,7 @@ Proof.
   apply gscope_apps_inv in h as [_ h].
   eapply Forall_rev in h. rewrite rev_involutive in h.
   unfold gscope_pat.
-  unfold plinst_args in e. revert e.
-  generalize (∙, k). generalize p.(pat_args). intros pl r e.
-  clear p k.
-  induction pl as [| p pl ih] in r, l, n, e, h |- *. 1: constructor.
-  cbn in e. eapply ih in e as h'. 2: assumption.
+  eapply gscope_plinst_args_inv in e. 3: eassumption.
 Admitted.
 
 Lemma rule_typing_gscope Σ Ξ Δ r :
