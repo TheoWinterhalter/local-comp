@@ -1014,6 +1014,17 @@ Proof.
   intros h c Ξ' A t ec.
 Admitted.
 
+Lemma eq_gscope_gcons (Σ : gctx) κ c u :
+  Σ c = None →
+  eq_gscope Σ κ (gcons c u κ).
+Proof.
+  intros h c' Ξ A t e.
+  destruct (c' =? c)%string eqn:ec.
+  1:{ rewrite String.eqb_eq in ec. congruence. }
+  rewrite gcons_neq. 2: assumption.
+  reflexivity.
+Qed.
+
 Lemma gwf_trans_gctx_ext Σ :
   gwf Σ →
   trans_gctx_ext Σ ⟦ Σ ⟧κ ⟦ Σ ⟧g.
@@ -1027,12 +1038,7 @@ Proof.
   - cbn in *. destruct (E =? c)%string eqn:e. 1: discriminate.
     rewrite ih. 2: assumption.
     assert (eg : eq_gscope Σ ⟦ Σ ⟧κ (gcons c ⟦ t ⟧⟨ ⟦ Σ ⟧κ ⟩ ⟦ Σ ⟧κ)).
-    { intros c' Ξ'' B u e'.
-      destruct (c' =? c)%string eqn:ec.
-      1:{ rewrite String.eqb_eq in ec. congruence. }
-      rewrite gcons_neq. 2: assumption.
-      reflexivity.
-    }
+    { eapply eq_gscope_gcons. assumption. }
     eapply valid_ext in eE as h'. 2: assumption.
     destruct h' as [hΞ' hΔ].
     f_equal. f_equal.
