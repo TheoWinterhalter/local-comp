@@ -514,34 +514,16 @@ Section Inline.
     eapply scoped_inline. assumption.
   Qed.
 
-  (* TODO MOVE *)
-  (* Lemma scoped_rule_tm M ξ δ k t :
-    scoped k (rule_tm M ξ δ k t) = true.
+  Lemma inline_ctx_einst ξ Γ :
+    ⟦ ctx_einst ξ Γ ⟧* = ctx_einst ⟦ ξ ⟧× ⟦ Γ ⟧*.
   Proof.
-    unfold rule_tm.
-    unfold delocal_lift.
-    Search scoped subst_term. *)
-
-  (* TODO MOVE *)
-  (* Lemma rule_typing_scoped_lhs Ξ' Δ rule M ξ :
-    rule_typing Σ Ξ' Δ rule →
-    scoped (length rule.(cr_env)) (rule_lhs M ξ (length Δ) rule) = true.
-  Proof.
-    intros (henv & [i hty] & hl & hr).
-    eapply typing_scoped in hl.
-    rewrite length_app in hl.
-    unfold rule_lhs.
-    unfold rule_tm. unfold delocal_lift. *)
-
-  (* Whatever we do, knowing this requires knowing scoping info about ξ
-    which we currently don't get.
-    Probably we should require that ξ is scoped in Γ in inst_equations.
-    Or even better, we change the polarity of these scoping assumptions.
-    It probably makes more sense any way.
-  *)
+    induction Γ as [| A Γ ih] in ξ |- *.
+    - reflexivity.
+    - cbn. rewrite ih. rewrite inline_einst.
+      rewrite inline_ren_eargs. rewrite length_map. reflexivity.
+  Qed.
 
   Lemma inst_equations_inline_ih Ξ Ξ' Γ ξ :
-    (* inst_equations Σ Ξ Γ ξ Ξ' → *)
     inst_equations_ Σ (λ Γ u v, Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧) Γ ξ Ξ' →
     inst_equations Σᵗ ⟦ Ξ ⟧e ⟦ Γ ⟧* ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
   Proof.
@@ -552,23 +534,19 @@ Section Inline.
     cbn in hM. inversion hM. subst. clear hM.
     specialize (ih _ _ _ hM') as (Ξ'' & Δ' & R & e & ih).
     eexists _,_,_. split. 1: eauto.
-    intros n rule hn m δ Θ lhs0 rhs0 hl hr. cbn.
+    intros n rule hn m δ Θ lhs0 rhs0. cbn.
     rewrite nth_error_map in hn.
     destruct (nth_error R n) as [rule' |] eqn:hn'. 2: discriminate.
     cbn in hn. inversion hn. subst. clear hn.
-    eapply valid_ext in e as h. 2: admit.
-    destruct h as (? & ? & hR).
-    eapply nth_error_In in hn' as hrule.
-    rewrite Forall_forall in hR. specialize hR with (1 := hrule).
-    (* subst lhs0 rhs0. *)
-    (* rewrite <- inline_rule_lhs in hl. rewrite <- inline_rule_rhs in hr. *)
-    (* eapply scoped_inline in hl, hr. *)
-    (* We would need the reverse!
-      But this is not true because we can't invert scoping for einst.
-      Instead we could require gwf and then get the scoping conditions this way.
-    *)
-    (* specialize ih with (1 := hn') (2 := hl) (3 := hr). cbn in ih. *)
-  Admitted.
+    specialize ih with (1 := hn'). cbn in ih.
+    destruct ih as (hl & hr & ih).
+    subst m lhs0 rhs0 δ.
+    cbn - [ rule_lhs rule_rhs]. rewrite !length_map.
+    rewrite <- inline_rule_rhs, <- inline_rule_lhs.
+    rewrite map_app in ih. rewrite !inline_ctx_einst in ih.
+    rewrite !inline_einst in ih. rewrite !inline_ren_eargs in ih.
+    intuition eauto using scoped_inline.
+  Qed.
 
   Lemma conv_inline Ξ Γ u v :
     Σ ;; Ξ | Γ ⊢ u ≡ v →
