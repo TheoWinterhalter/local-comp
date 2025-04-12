@@ -26,8 +26,8 @@ Set Default Goal Selector "!".
 
 (** Notion of global scoping
 
-  We ignore the fact that [assm] because we consider the case where [Ξ] is
-  empty.
+  For [assm], we assume it is always globally scoped.
+  Indeed, we focus on whether [const] is properly pointing to [Σ].
 
 **)
 
@@ -40,13 +40,14 @@ Inductive gscope (Σ : gctx) : term → Prop :=
 | gscope_const c ξ Ξ' A t :
     Σ c = Some (Def Ξ' A t) →
     Forall (Forall (gscope Σ)) ξ →
-    gscope Σ (const c ξ).
+    gscope Σ (const c ξ)
+| gscope_assm M x : gscope Σ (assm M x).
 
 Notation gscope_eargs Σ ξ := (Forall (Forall (gscope Σ)) ξ).
 
-Lemma inst_typing_gscope_ih Σ (* Ξ *) Γ ξ Ξ' :
-  inst_typing Σ [] Γ ξ Ξ' →
-  inst_typing_ Σ [] (λ _ t _, gscope Σ t) Γ ξ Ξ' →
+Lemma inst_typing_gscope_ih Σ Ξ Γ ξ Ξ' :
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  inst_typing_ Σ Ξ (λ _ t _, gscope Σ t) Γ ξ Ξ' →
   gscope_eargs Σ ξ.
 Proof.
   intros h ih.
@@ -76,20 +77,19 @@ Proof.
   assumption.
 Qed.
 
-Lemma typing_gscope Σ Γ t A :
-  Σ ;; [] | Γ ⊢ t : A →
+Lemma typing_gscope Σ Ξ Γ t A :
+  Σ ;; Ξ | Γ ⊢ t : A →
   gscope Σ t.
 Proof.
   intro h. induction h using typing_ind.
   all: try solve [ econstructor ; eauto ].
   - econstructor. 1: eassumption.
     eapply inst_typing_gscope_ih. all: eassumption.
-  - discriminate.
   - assumption.
 Qed.
 
-Lemma inst_typing_gscope Σ (* Ξ *) Γ ξ Ξ' :
-  inst_typing Σ [] Γ ξ Ξ' →
+Lemma inst_typing_gscope Σ Ξ Γ ξ Ξ' :
+  inst_typing Σ Ξ Γ ξ Ξ' →
   gscope_eargs Σ ξ.
 Proof.
   intros h.
