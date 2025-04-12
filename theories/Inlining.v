@@ -418,29 +418,6 @@ Section Inline.
     destruct (_ <=? _). all: reflexivity.
   Qed.
 
-  Lemma inst_equations_inline Ξ Ξ' Γ ξ :
-    inst_equations Σ Ξ Γ ξ Ξ' →
-    inst_equations Σᵗ ⟦ Ξ ⟧e ⟦ Γ ⟧* ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
-  Proof.
-    intros h.
-    intros E M ξ' eM.
-    rewrite ectx_get_map in eM.
-    destruct ectx_get as [[E' ξ'']|] eqn:eM'. 2: discriminate.
-    cbn in eM. inversion eM. subst. clear eM.
-    specialize (h _ _ _ eM') as (Ξ'' & Δ & R & eE & h1).
-    eapply hext in eE as eE'.
-    eexists _,_,_. split. 1: eassumption.
-    intros n rule hr m δ Θ lhs0 rhs0 lhs rhs.
-    rewrite nth_error_map in hr.
-    destruct (nth_error R n) as [rule'|] eqn: hrn. 2: discriminate.
-    cbn in hr. inversion hr. subst. clear hr.
-    specialize h1 with (1 := hrn).
-    (* subst lhs rhs. *)
-    (* This is currently not enough, but might work with a proper ih. *)
-    (* This will probably mean adding this to conversion, but all typed
-      instances will verify this so maybe it's ok. *)
-  Abort.
-
   Lemma inline_rule_tm M ξ δ k t :
     ⟦ rule_tm M ξ δ k t ⟧ = rule_tm M ⟦ ξ ⟧× δ k ⟦ t ⟧.
   Proof.
