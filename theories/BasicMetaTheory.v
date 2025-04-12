@@ -143,7 +143,8 @@ Proof.
   2:{
     eapply hunfold. 1,2,4: eassumption.
     intros E M ξ' eM. specialize (H0 _ _ _ eM) as (Ξ'' & Δ & R & eE & h).
-    eexists _,_,_.
+    eexists _,_,_. split. 1: eassumption.
+    intros n rule hr. specialize h with (1 := hr). cbn in h.
     intuition eauto.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
@@ -284,8 +285,9 @@ Proof.
   all: try solve [ econstructor ; eauto ].
   - econstructor. 1,3: eassumption.
     intros E M ξ' eM. specialize (H1 _ _ _ eM) as (Ξ'' & Δ' & R & eE & h).
-    eexists _,_,_.
-    intuition eauto.
+    eexists _,_,_. split. 1: eassumption.
+    intros n rule hr. specialize h with (1 := hr).
+    cbn in h. intuition eauto.
   - econstructor. eapply Forall2_impl. 2: eassumption.
     intros. eapply Forall2_impl. 2: eassumption.
     auto.
@@ -540,10 +542,11 @@ Proof.
   intros E M ξ' hM.
   specialize (ih _ _ _ hM) as (Ξ'' & Δ' & R & e & ih).
   eexists _,_,_. split. 1: eauto.
-  intros n rule hn m δ Θ lhs0 rhs0 hl hr. cbn.
+  intros n rule hn m δ Θ lhs0 rhs0. cbn.
   (* forward *)
-  specialize ih with (1 := hn) (2 := hl) (3 := hr). cbn in ih.
+  specialize ih with (1 := hn). cbn in ih.
   fold m δ lhs0 rhs0 in ih.
+  destruct ih as (? & ? & ih).
   specialize ih with (ρ := uprens m ρ).
   (* 2:{
     eapply rtyping_uprens_eq. 1: eassumption.
@@ -701,7 +704,8 @@ Proof.
   intros E M ξ' hM.
   specialize (h _ _ _ hM) as (Ξ'' & Δ & R & hE & h).
   eexists _,_,_. split. 1: eassumption.
-  intuition eauto.
+  intros n rule hr. specialize h with (1 := hr).
+  cbn in h. intuition eauto.
 Qed.
 
 Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
@@ -1100,11 +1104,12 @@ Proof.
   intros E M ξ' hM.
   specialize (ih _ _ _ hM) as (Ξ'' & Δ' & R & e & ih).
   eexists _,_,_. split. 1: eauto.
-  intros n rule hn m δ Θ lhs0 rhs0 hl hr. cbn.
+  intros n rule hn m δ Θ lhs0 rhs0. cbn.
   rewrite liftn_subst_eargs.
   (* forward *)
-  specialize ih with (1 := hn) (2 := hl) (3 := hr). cbn in ih.
+  specialize ih with (1 := hn). cbn in ih.
   fold m δ lhs0 rhs0 in ih.
+  destruct ih as (? & ? & ih).
   specialize ih with (σ := ups m σ).
   erewrite 2!subst_inst_ups in ih. 2,3: eassumption.
   eauto.
@@ -1492,16 +1497,16 @@ Lemma conv_equations Σ Ξ Ξ' Γ ξ M E ξ' Ξ'' Δ R n rule :
   let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
   let lhs0 := rule_lhs M ξ' δ rule in
   let rhs0 := rule_rhs M ξ' δ rule in
-  scoped m lhs0 = true →
-  scoped m rhs0 = true →
+  (* scoped m lhs0 = true →
+  scoped m rhs0 = true → *)
   let lhs := einst (liftn m ξ) lhs0 in
   let rhs := einst (liftn m ξ) rhs0 in
   Σ ;; Ξ | Γ ,,, Θ ⊢ lhs ≡ rhs.
 Proof.
-  intros hξ hM hE hn m δ Θ lhs0 rhs0 hl hr.
+  intros hξ hM hE hn m δ Θ lhs0 rhs0 (* hl hr *).
   specialize (hξ _ _ _ hM) as [? [? [? [e h]]]].
   rewrite e in hE. inversion hE. subst.
-  eauto.
+  eapply h. eassumption.
 Qed.
 
 Lemma inst_equations_einst_ih Σ Ξ Ξ' Ξ'' Γ Δ ξ ξ' :
@@ -1518,9 +1523,10 @@ Proof.
   intros E M ξ'' hM.
   specialize (ih _ _ _ hM) as (Ξ3 & Δ3 & R & hE & ih).
   eexists _,_,_. split. 1: eassumption.
-  intros n rule hn m δ Θ lhs0 rhs0 hl hr. cbn.
-  specialize ih with (1 := hn) (2 := hl) (3 := hr). cbn in ih.
+  intros n rule hn m δ Θ lhs0 rhs0. cbn.
+  specialize ih with (1 := hn). cbn in ih.
   fold m δ Θ lhs0 rhs0 in ih.
+  destruct ih as (? & ? & ih).
   specialize ih with (1 := hξ).
   rewrite ctx_einst_app in ih. rewrite <- app_assoc in ih.
   rewrite ctx_einst_comp in ih.
@@ -1529,7 +1535,7 @@ Proof.
   rewrite !einst_einst in ih.
   rewrite liftn_map_map.
   rewrite liftn_liftn.
-  assumption.
+  eauto.
 Qed.
 
 Lemma conv_einst Σ Ξ Ξ' Γ Δ u v ξ :
@@ -1775,8 +1781,10 @@ Proof.
   intros E M ξ' hM.
   specialize (h _ _ _ hM) as (Ξ'' & Δ & R & e & h).
   eexists _,_,_. split. 1: eauto.
-  intros n rule hn m δ θ lhs0 rhs0 hl hr.
-  eapply conv_eweak. eauto.
+  intros n rule hn m δ θ lhs0 rhs0.
+  specialize h with (1 := hn).
+  destruct h as (? & ? & h).
+  eauto using conv_eweak.
 Qed.
 
 Lemma inst_eget_eweak Σ Ξ d Γ ξ Ξ' :

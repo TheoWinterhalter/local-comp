@@ -386,7 +386,7 @@ Section Inline.
     specialize (h _ _ _ eM') as (Ξ'' & Δ & R & eE & h1).
     eapply hext in eE as eE'.
     eexists _,_,_. split. 1: eassumption.
-    intros n rule hr m δ Θ lhs0 rhs0 hlhs hrhs lhs rhs.
+    intros n rule hr m δ Θ lhs0 rhs0 lhs rhs.
     rewrite nth_error_map in hr.
     destruct (nth_error R n) as [rule'|] eqn: hrn. 2: discriminate.
     cbn in hr. inversion hr. subst. clear hr.

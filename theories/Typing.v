@@ -63,10 +63,10 @@ Section Equations.
           let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
           let lhs0 := rule_lhs M ξ' δ rule in
           let rhs0 := rule_rhs M ξ' δ rule in
-          scoped m lhs0 = true →
-          scoped m rhs0 = true →
           let lhs := einst (liftn m ξ) lhs0 in
           let rhs := einst (liftn m ξ) rhs0 in
+          scoped m lhs0 = true ∧
+          scoped m rhs0 = true ∧
           Γ ,,, Θ ⊢ lhs ≡ rhs.
 
 End Equations.
