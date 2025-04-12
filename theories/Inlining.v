@@ -261,7 +261,7 @@ Section Inline.
   Definition g_conv_unfold :=
     ∀ c Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
-      Σᵗ ;; Ξ' | ∙ ⊢ κ c ≡ ⟦ t ⟧.
+      Σᵗ ;; ⟦ Ξ' ⟧e | ∙ ⊢ κ c ≡ ⟦ t ⟧.
 
   Context (h_conv_unfold : g_conv_unfold).
 
@@ -1000,6 +1000,30 @@ Fixpoint inline_gctx (Σ : gctx) : gctx :=
 
 where "⟦ s ⟧g" := (inline_gctx s).
 
+Lemma inline_gctx_None (Σ : gctx) c :
+  Σ c = None →
+  ⟦ Σ ⟧g c = None.
+Proof.
+  intros e.
+  induction Σ as [| [c' []] Σ ih].
+  - reflexivity.
+  - cbn in *. destruct (c =? c')%string eqn:ec. 1: discriminate.
+    eauto.
+  - cbn in *. destruct (c =? c')%string eqn:ec. 1: discriminate.
+    eauto.
+Qed.
+
+Lemma eq_gscope_gcons (Σ : gctx) κ c u :
+  Σ c = None →
+  eq_gscope Σ κ (gcons c u κ).
+Proof.
+  intros h c' Ξ A t e.
+  destruct (c' =? c)%string eqn:ec.
+  1:{ rewrite String.eqb_eq in ec. congruence. }
+  rewrite gcons_neq. 2: assumption.
+  reflexivity.
+Qed.
+
 Lemma gwf_gclosed Σ :
   gwf Σ →
   gclosed ⟦ Σ ⟧κ.
@@ -1012,17 +1036,26 @@ Lemma gwf_conv_unfold Σ :
   g_conv_unfold Σ ⟦ Σ ⟧κ ⟦ Σ ⟧g.
 Proof.
   intros h c Ξ' A t ec.
-Admitted.
-
-Lemma eq_gscope_gcons (Σ : gctx) κ c u :
-  Σ c = None →
-  eq_gscope Σ κ (gcons c u κ).
-Proof.
-  intros h c' Ξ A t e.
-  destruct (c' =? c)%string eqn:ec.
-  1:{ rewrite String.eqb_eq in ec. congruence. }
-  rewrite gcons_neq. 2: assumption.
-  reflexivity.
+  induction h as [ | c' ?????? ih | c' ??????? ih ].
+  - discriminate.
+  - cbn in *. destruct (c =? c')%string eqn:e. 1: discriminate.
+    eapply conv_gweak. 1: eauto.
+    eapply extends_gcons.
+    apply inline_gctx_None. assumption.
+  - cbn in *. destruct (c =? c')%string eqn:e.
+    + inversion ec. subst. clear ec.
+      rewrite gcons_eq. 2: assumption.
+      erewrite <- inline_ectx_ext. 2,3: eauto using eq_gscope_gcons.
+      apply meta_conv_refl.
+      eapply inline_ext.
+      all: eauto using eq_gscope_gcons, typing_gscope.
+    + rewrite gcons_neq. 2: assumption.
+      eapply valid_def in ec as h'. 2: assumption.
+      destruct h' as (hΞ' & [j hB] & ht).
+      erewrite <- inline_ectx_ext. 2,3: eauto using eq_gscope_gcons.
+      erewrite <- inline_ext with (t := t).
+      2,3: eauto using eq_gscope_gcons, typing_gscope.
+      eauto.
 Qed.
 
 Lemma gwf_trans_gctx_ext Σ :
@@ -1046,19 +1079,6 @@ Proof.
     + eapply inline_ctx_ext. all: eassumption.
     + admit. (* Missing some validity for R *)
 Admitted.
-
-Lemma inline_gctx_None (Σ : gctx) c :
-  Σ c = None →
-  ⟦ Σ ⟧g c = None.
-Proof.
-  intros e.
-  induction Σ as [| [c' []] Σ ih].
-  - reflexivity.
-  - cbn in *. destruct (c =? c')%string eqn:ec. 1: discriminate.
-    eauto.
-  - cbn in *. destruct (c =? c')%string eqn:ec. 1: discriminate.
-    eauto.
-Qed.
 
 Lemma gwf_type Σ :
   gwf Σ →
