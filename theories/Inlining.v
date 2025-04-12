@@ -514,7 +514,28 @@ Section Inline.
     eapply scoped_inline. assumption.
   Qed.
 
-  (* TODO get back inst_equations_inline from cleaning *)
+  Lemma inst_equations_inline_ih Ξ Ξ' Γ ξ :
+    (* inst_equations Σ Ξ Γ ξ Ξ' → *)
+    inst_equations_ Σ (λ Γ u v, Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧) Γ ξ Ξ' →
+    inst_equations Σᵗ ⟦ Ξ ⟧e ⟦ Γ ⟧* ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
+  Proof.
+    intros ih.
+    intros E M ξ' hM.
+    rewrite ectx_get_map in hM.
+    destruct ectx_get as [[E' ξ'']|] eqn:hM'. 2: discriminate.
+    cbn in hM. inversion hM. subst. clear hM.
+    specialize (ih _ _ _ hM') as (Ξ'' & Δ' & R & e & ih).
+    eexists _,_,_. split. 1: eauto.
+    intros n rule hn m δ Θ lhs0 rhs0 hl hr. cbn.
+    rewrite nth_error_map in hn.
+    destruct (nth_error R n) as [rule' |] eqn:hn'. 2: discriminate.
+    cbn in hn. inversion hn. subst. clear hn.
+    subst lhs0 rhs0.
+    rewrite <- inline_rule_lhs in hl. rewrite <- inline_rule_rhs in hr.
+    (* eapply scoped_inline in hl, hr. *)
+    (* We would need the reverse! *)
+    (* specialize ih with (1 := hn') (2 := hl) (3 := hr). cbn in ih. *)
+  Admitted.
 
   Lemma conv_inline Ξ Γ u v :
     Σ ;; Ξ | Γ ⊢ u ≡ v →
