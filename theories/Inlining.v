@@ -514,6 +514,26 @@ Section Inline.
     eapply scoped_inline. assumption.
   Qed.
 
+  (* TODO MOVE *)
+  (* Lemma scoped_rule_tm M ξ δ k t :
+    scoped k (rule_tm M ξ δ k t) = true.
+  Proof.
+    unfold rule_tm.
+    unfold delocal_lift.
+    Search scoped subst_term. *)
+
+  (* TODO MOVE *)
+  (* Lemma rule_typing_scoped_lhs Ξ' Δ rule M ξ :
+    rule_typing Σ Ξ' Δ rule →
+    scoped (length rule.(cr_env)) (rule_lhs M ξ (length Δ) rule) = true.
+  Proof.
+    intros (henv & [i hty] & hl & hr).
+    eapply typing_scoped in hl.
+    rewrite length_app in hl.
+    unfold rule_lhs. *)
+
+  (* Maybe let's just type things *)
+
   Lemma inst_equations_inline_ih Ξ Ξ' Γ ξ :
     (* inst_equations Σ Ξ Γ ξ Ξ' → *)
     inst_equations_ Σ (λ Γ u v, Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧) Γ ξ Ξ' →
@@ -530,6 +550,10 @@ Section Inline.
     rewrite nth_error_map in hn.
     destruct (nth_error R n) as [rule' |] eqn:hn'. 2: discriminate.
     cbn in hn. inversion hn. subst. clear hn.
+    eapply valid_ext in e as h. 2: admit.
+    destruct h as (? & ? & hR).
+    eapply nth_error_In in hn' as hrule.
+    rewrite Forall_forall in hR. specialize hR with (1 := hrule).
     (* subst lhs0 rhs0. *)
     (* rewrite <- inline_rule_lhs in hl. rewrite <- inline_rule_rhs in hr. *)
     (* eapply scoped_inline in hl, hr. *)
