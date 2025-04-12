@@ -44,6 +44,33 @@ Reserved Notation "Γ ⊢ u ≡ v"
 
 Context (Σ : gctx) (Ξ : ectx).
 
+(** Checking that an instance verifies the necessary equations **)
+Section Equations.
+
+  Context (conversion : ctx → term → term → Prop).
+
+  Notation "Γ ⊢ u ≡ v" := (conversion Γ u v).
+
+  Definition inst_equations_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
+    ∀ E M ξ',
+      ectx_get Ξ' M = Some (E, ξ') →
+      ∃ Ξ'' Δ R,
+        Σ E = Some (Ext Ξ'' Δ R) ∧
+        ∀ n rule,
+          nth_error R n = Some rule →
+          let m := length rule.(cr_env) in
+          let δ := length Δ in
+          let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
+          let lhs0 := rule_lhs M ξ' δ rule in
+          let rhs0 := rule_rhs M ξ' δ rule in
+          scoped m lhs0 = true →
+          scoped m rhs0 = true →
+          let lhs := einst (liftn m ξ) lhs0 in
+          let rhs := einst (liftn m ξ) rhs0 in
+          Γ ,,, Θ ⊢ lhs ≡ rhs.
+
+End Equations.
+
 Inductive conversion (Γ : ctx) : term → term → Prop :=
 
 (** Computation rules **)
@@ -55,6 +82,7 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
 | conv_unfold :
     ∀ c ξ Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
+      inst_equations_ conversion Γ ξ Ξ' →
       closed t = true →
       Γ ⊢ const c ξ ≡ einst ξ t
 
@@ -115,6 +143,8 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
 
 where "Γ ⊢ u ≡ v" := (conversion Γ u v).
 
+Notation inst_equations := (inst_equations_ conversion).
+
 (** Turn list into parallel substitution **)
 
 Definition dummy := (Sort 0).
@@ -125,30 +155,12 @@ Fixpoint slist (l : list term) :=
   | u :: l => u .: slist l
   end.
 
-(** Instance typing (relative to typing for now) **)
+(** Instance typing **)
 Section Inst.
 
   Context (typing : ctx → term → term → Prop).
 
   Notation "Γ ⊢ u : A" := (typing Γ u A).
-
-  Definition inst_equations (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
-    ∀ E M ξ',
-      ectx_get Ξ' M = Some (E, ξ') →
-      ∃ Ξ'' Δ R,
-        Σ E = Some (Ext Ξ'' Δ R) ∧
-        ∀ n rule,
-          nth_error R n = Some rule →
-          let m := length rule.(cr_env) in
-          let δ := length Δ in
-          let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
-          let lhs0 := rule_lhs M ξ' δ rule in
-          let rhs0 := rule_rhs M ξ' δ rule in
-          scoped m lhs0 = true →
-          scoped m rhs0 = true →
-          let lhs := einst (liftn m ξ) lhs0 in
-          let rhs := einst (liftn m ξ) rhs0 in
-          Γ ,,, Θ ⊢ lhs ≡ rhs.
 
   Definition inst_eget_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
     ∀ M E ξ',
@@ -343,4 +355,5 @@ Proof.
 Qed.
 
 Notation inst_eget Σ Ξ := (inst_eget_ Σ (typing Σ Ξ)).
+Notation inst_equations Σ Ξ := (inst_equations_ Σ (conversion Σ Ξ)).
 Notation inst_typing Σ Ξ := (inst_typing_ Σ Ξ (typing Σ Ξ)).

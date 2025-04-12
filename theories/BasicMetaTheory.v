@@ -72,6 +72,8 @@ Lemma conversion_ind :
     (∀ Γ A t u, P Γ (app (lam A t) u) (t <[ u.. ])) →
     (∀ Γ c ξ Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
+      inst_equations Σ Ξ Γ ξ Ξ' →
+      inst_equations_ Σ P Γ ξ Ξ' →
       closed t = true →
       P Γ (const c ξ) (einst ξ t)
     ) →
@@ -137,6 +139,12 @@ Proof.
       revert σ σ' hσ. fix aux2 3. intros σ σ' hσ.
       destruct hσ as [| t t' σ σ' ht hσ]. 1: constructor.
       constructor. all: eauto.
+  }
+  2:{
+    eapply hunfold. 1,2,4: eassumption.
+    intros E M ξ' eM. specialize (H0 _ _ _ eM) as (Ξ'' & Δ & R & eE & h).
+    eexists _,_,_.
+    intuition eauto.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
@@ -274,9 +282,13 @@ Proof.
   induction 1 using conversion_ind in Δ |- *.
   all: try solve [ ttconv ].
   all: try solve [ econstructor ; eauto ].
-  econstructor. eapply Forall2_impl. 2: eassumption.
-  intros. eapply Forall2_impl. 2: eassumption.
-  auto.
+  - econstructor. 1,3: eassumption.
+    intros E M ξ' eM. specialize (H1 _ _ _ eM) as (Ξ'' & Δ' & R & eE & h).
+    eexists _,_,_.
+    intuition eauto.
+  - econstructor. eapply Forall2_impl. 2: eassumption.
+    intros. eapply Forall2_impl. 2: eassumption.
+    auto.
 Qed.
 
 (** Renaming preserves typing **)
@@ -519,6 +531,30 @@ Proof.
   cbn. rasimpl. apply closed_ren.
 Qed.
 
+Lemma inst_equations_ren_ih Σ Ξ Γ Δ ρ ξ Ξ' :
+  inst_equations Σ Ξ Γ ξ Ξ' →
+  inst_equations_ Σ (λ _ u v, ∀ Δ ρ, Σ ;; Ξ | Δ ⊢ ρ ⋅ u ≡ ρ ⋅ v) Γ ξ Ξ' →
+  inst_equations Σ Ξ Δ (ren_eargs ρ ξ) Ξ'.
+Proof.
+  intros h ih.
+  intros E M ξ' hM.
+  specialize (ih _ _ _ hM) as (Ξ'' & Δ' & R & e & ih).
+  eexists _,_,_. split. 1: eauto.
+  intros n rule hn m δ Θ lhs0 rhs0 hl hr. cbn.
+  (* forward *)
+  specialize ih with (1 := hn) (2 := hl) (3 := hr). cbn in ih.
+  fold m δ lhs0 rhs0 in ih.
+  specialize ih with (ρ := uprens m ρ).
+  (* 2:{
+    eapply rtyping_uprens_eq. 1: eassumption.
+    rewrite 2!length_ctx_einst. reflexivity.
+  } *)
+  rewrite 2!ren_inst in ih.
+  rewrite 2!scoped_ren in ih. 2,3: eassumption.
+  rewrite liftn_ren_eargs.
+  eauto.
+Qed.
+
 Lemma conv_ren Σ Ξ Γ Δ ρ u v :
   (* rtyping Γ ρ Δ → *)
   Σ ;; Ξ | Δ ⊢ u ≡ v →
@@ -529,7 +565,8 @@ Proof.
   all: try solve [ rasimpl ; econstructor ; eauto using rtyping_up ].
   - rasimpl. eapply meta_conv_trans_r. 1: econstructor.
     rasimpl. reflexivity.
-  - rasimpl. eapply conv_trans. 1: econstructor. 1,2: eassumption.
+  - rasimpl. eapply conv_trans. 1: econstructor. 1,3: eassumption.
+    1: eauto using inst_equations_ren_ih.
     rewrite ren_inst. rewrite closed_ren. 2: assumption.
     ttconv.
   - cbn. constructor.
@@ -654,6 +691,19 @@ Proof.
     (* Would need the context to be closed *)
 Abort.
 
+(* TODO MOVE *)
+Lemma inst_equations_prop Σ Ξ Γ ξ Ξ' P :
+  inst_equations Σ Ξ Γ ξ Ξ' →
+  (∀ Γ u v, Σ ;; Ξ | Γ ⊢ u ≡ v → P Γ u v) →
+  inst_equations_ Σ P Γ ξ Ξ'.
+Proof.
+  intros h ih.
+  intros E M ξ' hM.
+  specialize (h _ _ _ hM) as (Ξ'' & Δ & R & hE & h).
+  eexists _,_,_. split. 1: eassumption.
+  intuition eauto.
+Qed.
+
 Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →
   inst_typing Σ Ξ Γ ξ Ξ' →
@@ -664,22 +714,7 @@ Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
 Proof.
   intros hρ [h1 [h2 h3]] [ih1 [ih2 ih3]].
   split. 2: split.
-  - intros E M ξ' hM.
-    specialize (h1 _ _ _ hM) as (Ξ'' & Δ' & R & e & h).
-    eexists _,_,_. split. 1: eauto.
-    intros n rule hn m δ Θ lhs0 rhs0 hl hr. cbn.
-    (* forward *)
-    specialize h with (1 := hn) (2 := hl) (3 := hr). cbn in h.
-    fold m δ lhs0 rhs0 in h.
-    eapply conv_ren with (ρ := uprens m ρ) in h.
-    (* 2:{
-      eapply rtyping_uprens_eq. 1: eassumption.
-      rewrite 2!length_ctx_einst. reflexivity.
-    } *)
-    rewrite 2!ren_inst in h.
-    rewrite 2!scoped_ren in h. 2,3: eassumption.
-    rewrite liftn_ren_eargs.
-    eassumption.
+  - eauto using inst_equations_ren_ih, inst_equations_prop, conv_ren.
   - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? [? ih2]]]]]].
     split. 1: assumption.
     eexists _,_,_. split. 1: eassumption.
@@ -1018,6 +1053,63 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma subst_eargs_ext σ θ ξ :
+  (∀ n, σ n = θ n) →
+  subst_eargs σ ξ = subst_eargs θ ξ.
+Proof.
+  intros h.
+  apply map_ext. intro.
+  apply map_ext. intro.
+  apply ext_term. assumption.
+Qed.
+
+Lemma ren_subst_eargs ρ σ ξ :
+  ren_eargs ρ (subst_eargs σ ξ) = subst_eargs (σ >> (ren_term ρ)) ξ.
+Proof.
+  rewrite map_map. apply map_ext. intro.
+  rewrite map_map. apply map_ext. intro.
+  rasimpl. reflexivity.
+Qed.
+
+Lemma subst_ren_eargs ρ σ ξ :
+  subst_eargs σ (ren_eargs ρ ξ) = subst_eargs (ρ >> σ) ξ.
+Proof.
+  rewrite map_map. apply map_ext. intro.
+  rewrite map_map. apply map_ext. intro.
+  rasimpl. reflexivity.
+Qed.
+
+Corollary liftn_subst_eargs n σ ξ :
+  liftn n (subst_eargs σ ξ) = subst_eargs (ups n σ) (liftn n ξ).
+Proof.
+  rewrite subst_ren_eargs. rewrite ren_subst_eargs.
+  apply subst_eargs_ext. intro m.
+  unfold core.funcomp.
+  induction n as [| n ih] in m, σ |- *.
+  - cbn. rasimpl. reflexivity.
+  - cbn. unfold core.funcomp. rewrite <- ih.
+    rasimpl. reflexivity.
+Qed.
+
+Lemma inst_equations_subst_ih Σ Ξ Γ Δ σ ξ Ξ' :
+  inst_equations Σ Ξ Γ ξ Ξ' →
+  inst_equations_ Σ (λ _ u v, ∀ Δ σ, Σ ;; Ξ | Δ ⊢ u <[ σ ] ≡ v <[ σ ]) Γ ξ Ξ' →
+  inst_equations Σ Ξ Δ (subst_eargs σ ξ) Ξ'.
+Proof.
+  intros h ih.
+  intros E M ξ' hM.
+  specialize (ih _ _ _ hM) as (Ξ'' & Δ' & R & e & ih).
+  eexists _,_,_. split. 1: eauto.
+  intros n rule hn m δ Θ lhs0 rhs0 hl hr. cbn.
+  rewrite liftn_subst_eargs.
+  (* forward *)
+  specialize ih with (1 := hn) (2 := hl) (3 := hr). cbn in ih.
+  fold m δ lhs0 rhs0 in ih.
+  specialize ih with (σ := ups m σ).
+  erewrite 2!subst_inst_ups in ih. 2,3: eassumption.
+  eauto.
+Qed.
+
 (** Note:
 
   It is a bit silly because the context is ignored for conversion (for now).
@@ -1033,7 +1125,7 @@ Proof.
   - rasimpl. eapply meta_conv_trans_r. 1: econstructor.
     rasimpl. reflexivity.
   - cbn. eapply meta_conv_trans_r.
-    1:{ econstructor. all: eassumption. }
+    1:{ econstructor. 1,3: eassumption. 1: eauto using inst_equations_subst_ih. }
     symmetry. apply subst_inst_closed. assumption.
   - cbn. constructor.
     apply Forall2_map_l, Forall2_map_r.
@@ -1102,44 +1194,6 @@ Proof.
   cbn. intros ? hσ%forallb_All.
   apply map_ext_All. eapply All_impl. 2: eassumption.
   cbn. rasimpl. apply closed_subst.
-Qed.
-
-Lemma subst_eargs_ext σ θ ξ :
-  (∀ n, σ n = θ n) →
-  subst_eargs σ ξ = subst_eargs θ ξ.
-Proof.
-  intros h.
-  apply map_ext. intro.
-  apply map_ext. intro.
-  apply ext_term. assumption.
-Qed.
-
-Lemma ren_subst_eargs ρ σ ξ :
-  ren_eargs ρ (subst_eargs σ ξ) = subst_eargs (σ >> (ren_term ρ)) ξ.
-Proof.
-  rewrite map_map. apply map_ext. intro.
-  rewrite map_map. apply map_ext. intro.
-  rasimpl. reflexivity.
-Qed.
-
-Lemma subst_ren_eargs ρ σ ξ :
-  subst_eargs σ (ren_eargs ρ ξ) = subst_eargs (ρ >> σ) ξ.
-Proof.
-  rewrite map_map. apply map_ext. intro.
-  rewrite map_map. apply map_ext. intro.
-  rasimpl. reflexivity.
-Qed.
-
-Corollary liftn_subst_eargs n σ ξ :
-  liftn n (subst_eargs σ ξ) = subst_eargs (ups n σ) (liftn n ξ).
-Proof.
-  rewrite subst_ren_eargs. rewrite ren_subst_eargs.
-  apply subst_eargs_ext. intro m.
-  unfold core.funcomp.
-  induction n as [| n ih] in m, σ |- *.
-  - cbn. rasimpl. reflexivity.
-  - cbn. unfold core.funcomp. rewrite <- ih.
-    rasimpl. reflexivity.
 Qed.
 
 Lemma closed_lift_eargs ξ :
@@ -1311,17 +1365,7 @@ Lemma inst_typing_subst Σ Ξ Δ Γ σ ξ Ξ' :
 Proof.
   intros hσ [h1 [h2 h3]] [ih1 [ih2 ih3]].
   split. 2: split.
-  - intros E M ξ' hM.
-    specialize (h1 _ _ _ hM) as (Ξ'' & Δ' & R & e & h).
-    eexists _,_,_. split. 1: eauto.
-    intros n rule hn m δ Θ lhs0 rhs0 hl hr. cbn.
-    rewrite liftn_subst_eargs.
-    (* forward *)
-    specialize h with (1 := hn) (2 := hl) (3 := hr). cbn in h.
-    fold m δ lhs0 rhs0 in h.
-    eapply conv_subst with (σ := ups m σ) in h.
-    erewrite 2!subst_inst_ups in h. 2,3: eassumption.
-    eassumption.
+  - eauto using inst_equations_subst_ih, inst_equations_prop, conv_subst.
   - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? [? ih2]]]]]].
     split. 1: assumption.
     eexists _,_,_. split. 1: eassumption.
@@ -1460,6 +1504,34 @@ Proof.
   eauto.
 Qed.
 
+Lemma inst_equations_einst_ih Σ Ξ Ξ' Ξ'' Γ Δ ξ ξ' :
+  inst_equations Σ Ξ Δ ξ Ξ' →
+  inst_equations Σ Ξ' Γ ξ' Ξ'' →
+  inst_equations_ Σ (λ Γ u v,
+    ∀ Ξ Δ ξ,
+      inst_equations Σ Ξ Δ ξ Ξ' →
+      Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst (liftn (length Γ) ξ) u ≡ einst (liftn (length Γ) ξ) v
+  ) Γ ξ' Ξ'' →
+  inst_equations Σ Ξ (Δ ,,, ctx_einst ξ Γ) (einst_eargs (liftn (length Γ) ξ) ξ') Ξ''.
+Proof.
+  intros hξ h ih.
+  intros E M ξ'' hM.
+  specialize (ih _ _ _ hM) as (Ξ3 & Δ3 & R & hE & ih).
+  eexists _,_,_. split. 1: eassumption.
+  intros n rule hn m δ Θ lhs0 rhs0 hl hr. cbn.
+  specialize ih with (1 := hn) (2 := hl) (3 := hr). cbn in ih.
+  fold m δ Θ lhs0 rhs0 in ih.
+  specialize ih with (1 := hξ).
+  rewrite ctx_einst_app in ih. rewrite <- app_assoc in ih.
+  rewrite ctx_einst_comp in ih.
+  rewrite !length_app in ih. rewrite !length_ctx_einst in ih.
+  fold δ m in ih.
+  rewrite !einst_einst in ih.
+  rewrite liftn_map_map.
+  rewrite liftn_liftn.
+  assumption.
+Qed.
+
 Lemma conv_einst Σ Ξ Ξ' Γ Δ u v ξ :
   inst_equations Σ Ξ Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ u ≡ v →
@@ -1472,7 +1544,11 @@ Proof.
   - cbn. rewrite subst_inst with (m := S (length Γ)). 2: auto.
     eapply meta_conv_trans_r. 1: constructor.
     cbn. rewrite lift_liftn. apply ext_term. intros []. all: reflexivity.
-  - cbn. eapply meta_conv_trans_r. 1:{ eapply conv_unfold. all: eassumption. }
+  - cbn. eapply meta_conv_trans_r.
+    1:{
+      eapply conv_unfold. 1,3: eassumption.
+      eauto using inst_equations_einst_ih.
+    }
     rewrite einst_einst. reflexivity.
   - erewrite ext_term_scoped. 3: eapply eq_subst_trunc. 2: eassumption.
     erewrite (ext_term_scoped _ rhs).
@@ -1557,21 +1633,8 @@ Proof.
     + econstructor. 1,3: eassumption.
       destruct H1 as [? [? ?]].
       split. 2: split.
-      * intros E M ξ' hM.
-        specialize (H1 _ _ _ hM) as (Ξ'' & Δ' & R & e & h).
-        eexists _,_,_. split. 1: eauto.
-        intros n rule hn m δ ??? hl hr. cbn.
-        (* forward for now *)
-        specialize h with (1 := hn) (2 := hl) (3 := hr).
-        eapply conv_einst in h. 2: apply hξ.
-        rewrite ctx_einst_app in h. rewrite <- app_assoc in h.
-        rewrite ctx_einst_comp in h.
-        rewrite !length_app in h. rewrite !length_ctx_einst in h.
-        fold δ m rξ in h.
-        rewrite !einst_einst in h.
-        rewrite liftn_map_map. subst rξ.
-        rewrite liftn_liftn.
-        assumption.
+      * destruct hξ as (? & ? & ?).
+        eauto using inst_equations_einst_ih, inst_equations_prop, conv_einst.
       * rename H3 into ih2.
         intros M E ξ' e.
         specialize (ih2 _ _ _ e) as [? [? [? [? [? [? ih2]]]]]].
@@ -1772,13 +1835,25 @@ Qed.
 
 (** Global environment weakening **)
 
+Lemma inst_equations_gweak_ih Σ Σ' Ξ Γ ξ Ξ' :
+  Σ ⊑ Σ' →
+  inst_equations_ Σ (λ Γ u v, Σ' ;; Ξ | Γ ⊢ u ≡ v) Γ ξ Ξ' →
+  inst_equations Σ' Ξ Γ ξ Ξ'.
+Proof.
+  intros hle ih.
+  intros E M ξ' hM.
+  specialize (ih _ _ _ hM) as (Ξ'' & Δ & R & e & ih).
+  eexists _,_,_. intuition eauto.
+Qed.
+
 Lemma conv_gweak Σ Σ' Ξ Γ u v :
   Σ ;; Ξ | Γ ⊢ u ≡ v →
   Σ ⊑ Σ' →
   Σ' ;; Ξ | Γ ⊢ u ≡ v.
 Proof.
   intros h hle. induction h using conversion_ind.
-  all: solve [ econstructor ; eauto ].
+  all: try solve [ econstructor ; eauto ].
+  econstructor ; eauto using inst_equations_gweak_ih.
 Qed.
 
 Lemma inst_equations_gweak Σ Σ' Ξ Γ ξ Ξ' :
@@ -1787,12 +1862,7 @@ Lemma inst_equations_gweak Σ Σ' Ξ Γ ξ Ξ' :
   inst_equations Σ' Ξ Γ ξ Ξ'.
 Proof.
   intros h hle.
-  intros E M ξ' hM.
-  specialize (h _ _ _ hM) as (Ξ'' & Δ & R & e & h).
-  eexists _,_,_. split. 1: eauto.
-  intros n rule hn m δ θ lhs0 rhs0 hl hr.
-  eapply conv_gweak. 2: eassumption.
-  eapply h. all: eassumption.
+  eauto using inst_equations_gweak_ih, inst_equations_prop, conv_gweak.
 Qed.
 
 Lemma inst_eget_gweak Σ Σ' Ξ Γ ξ Ξ' :
