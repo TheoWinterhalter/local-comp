@@ -1041,11 +1041,37 @@ Proof.
     + admit. (* Missing some validity for R *)
 Admitted.
 
+Lemma inline_gctx_None (Σ : gctx) c :
+  Σ c = None →
+  ⟦ Σ ⟧g c = None.
+Proof.
+  intros e.
+  induction Σ as [| [c' []] Σ ih].
+  - reflexivity.
+  - cbn in *. destruct (c =? c')%string eqn:ec. 1: discriminate.
+    eauto.
+  - cbn in *. destruct (c =? c')%string eqn:ec. 1: discriminate.
+    eauto.
+Qed.
+
 Lemma gwf_type Σ :
   gwf Σ →
   g_type Σ ⟦ Σ ⟧κ ⟦ Σ ⟧g.
 Proof.
   intros h c Ξ' A t ec.
+  induction h as [ | c' ?????? ih | c' ??????? ih ].
+  - discriminate.
+  - cbn in *. destruct (c =? c')%string eqn:e. 1: discriminate.
+    eapply typing_gweak. 1: eauto.
+    eapply extends_gcons.
+    apply inline_gctx_None. assumption.
+  - cbn in *. destruct (c =? c')%string eqn:e.
+    + rewrite gcons_eq. 2: assumption.
+      (* We need to align the rest *)
+      admit.
+    + rewrite gcons_neq. 2: assumption.
+      (* Same here *)
+      admit.
 Admitted.
 
 Theorem inlining Ξ Σ Γ t A :
