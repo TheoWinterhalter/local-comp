@@ -530,10 +530,13 @@ Section Inline.
     rewrite nth_error_map in hn.
     destruct (nth_error R n) as [rule' |] eqn:hn'. 2: discriminate.
     cbn in hn. inversion hn. subst. clear hn.
-    subst lhs0 rhs0.
-    rewrite <- inline_rule_lhs in hl. rewrite <- inline_rule_rhs in hr.
+    (* subst lhs0 rhs0. *)
+    (* rewrite <- inline_rule_lhs in hl. rewrite <- inline_rule_rhs in hr. *)
     (* eapply scoped_inline in hl, hr. *)
-    (* We would need the reverse! *)
+    (* We would need the reverse!
+      But this is not true because we can't invert scoping for einst.
+      Instead we could require gwf and then get the scoping conditions this way.
+    *)
     (* specialize ih with (1 := hn') (2 := hl) (3 := hr). cbn in ih. *)
   Admitted.
 
@@ -547,7 +550,7 @@ Section Inline.
     - cbn. rewrite inline_subst. eapply meta_conv_trans_r. 1: econstructor.
       apply ext_term. intros []. all: reflexivity.
     - cbn. rewrite inline_einst. eapply conv_einst_closed.
-      + (* eapply inst_equations_inline. eassumption. *) admit.
+      + eapply inst_equations_inline_ih. eassumption.
       + eapply h_conv_unfold. eassumption.
     - rewrite !inline_subst. subst lhs rhs.
       rewrite inline_rule_lhs, inline_rule_rhs.
@@ -568,7 +571,7 @@ Section Inline.
       cbn. auto.
     - econstructor. assumption.
     - eapply conv_trans. all: eassumption.
-  Admitted.
+  Qed.
 
   Definition g_type :=
     ∀ c Ξ' A t,
@@ -582,6 +585,36 @@ Section Inline.
   Proof.
     unfold delocal.
     rewrite inline_subst. reflexivity.
+  Qed.
+
+  Lemma inst_typing_inline Ξ Γ ξ Ξ' :
+    inst_typing_ Σ Ξ (λ Γ t A, Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧) Γ ξ Ξ' →
+    inst_typing Σᵗ ⟦ Ξ ⟧e ⟦ Γ ⟧* ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
+  Proof.
+    intros (he & ih & e).
+    split. 2: split.
+    - eauto using inst_equations_inline_ih, inst_equations_prop, conv_inline.
+    - intros M E ξ' eM.
+      rewrite ectx_get_map in eM.
+      destruct ectx_get as [[E' ξ'']|] eqn:eM'. 2: discriminate.
+      cbn in eM. inversion eM. subst. clear eM.
+      specialize (ih _ _ _ eM') as (? & Ξ'' & Δ & R & eE & ho & ih).
+      split. 1:{ apply scoped_eargs_inline. assumption. }
+      eexists _,_,_. split. 1: eauto.
+      split.
+      1:{
+        rewrite nth_error_map, onSome_map. setoid_rewrite length_map.
+        assumption.
+      }
+      intros x A hx.
+      rewrite nth_error_map in hx.
+      destruct (nth_error Δ x) as [B|] eqn: eB. 2: discriminate.
+      cbn in hx. inversion hx. subst. clear hx.
+      specialize ih with (1 := eB).
+      rewrite inline_eget, inline_einst, inline_delocal in ih.
+      rewrite inline_einst, inline_ren in ih.
+      assumption.
+    - rewrite 2!length_map. assumption.
   Qed.
 
   Lemma typing_inline Ξ Γ t A :
@@ -598,7 +631,7 @@ Section Inline.
       + tttype.
       + rewrite inline_subst. apply ext_term. intros []. all: reflexivity.
     - cbn. rewrite inline_einst. eapply typing_einst_closed.
-      + (* eapply inst_typing_inline. all: eassumption. *) admit.
+      + eapply inst_typing_inline. eassumption.
       + eapply h_type. all: eassumption.
     - cbn. rewrite inline_delocal. rewrite inline_einst. rewrite inline_ren.
       econstructor.
@@ -608,7 +641,7 @@ Section Inline.
       + eapply scoped_eargs_inline. assumption.
     - econstructor. 1,3: eassumption.
       apply conv_inline. assumption.
-  Admitted.
+  Qed.
 
 End Inline.
 
