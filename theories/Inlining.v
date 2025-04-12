@@ -1064,8 +1064,9 @@ Lemma gwf_type Σ :
   gwf Σ →
   g_type Σ ⟦ Σ ⟧κ ⟦ Σ ⟧g.
 Proof.
-  intros h c Ξ' A t ec.
+  intros h.
   induction h as [ | c' ?????? ih | c' ??????? ih ].
+  all: intros c Ξ' B u ec.
   - discriminate.
   - cbn in *. destruct (c =? c')%string eqn:e. 1: discriminate.
     eapply typing_gweak. 1: eauto.
@@ -1075,23 +1076,23 @@ Proof.
     + inversion ec. subst. clear ec.
       rewrite gcons_eq. 2: assumption.
       erewrite <- inline_ectx_ext. 2,3: eauto using eq_gscope_gcons.
-      erewrite <- inline_ext with (t := A).
+      erewrite <- inline_ext with (t := B).
       2,3: eauto using eq_gscope_gcons, typing_gscope.
       eapply typing_inline with (Γ := ∙).
       * eapply gwf_gclosed. assumption.
       * eapply gwf_conv_unfold. assumption.
       * eapply gwf_trans_gctx_ext. assumption.
-      * admit. (* Let's prove gwf_type by induction *)
+      * assumption.
       * assumption.
       * assumption.
     + rewrite gcons_neq. 2: assumption.
       eapply valid_def in ec as h'. 2: assumption.
-      destruct h' as (hΞ' & [j hA] & ht).
+      destruct h' as (hΞ' & [j hB] & ht).
       erewrite <- inline_ectx_ext. 2,3: eauto using eq_gscope_gcons.
-      erewrite <- inline_ext with (t := A).
+      erewrite <- inline_ext with (t := B).
       2,3: eauto using eq_gscope_gcons, typing_gscope.
       eauto.
-Admitted.
+Qed.
 
 Theorem inlining Ξ Σ Γ t A :
   gwf Σ →
