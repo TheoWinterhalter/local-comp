@@ -1879,8 +1879,9 @@ Lemma rule_typing_gweak Σ Σ' Ξ Δ r :
   Σ ⊑ Σ' →
   rule_typing Σ' Ξ Δ r.
 Proof.
-  intros [hl hr] hle.
-  split. all: eauto using typing_gweak.
+  intros (hctx & [i hty] & hl & hr) hle.
+  unfold rule_typing.
+  intuition eauto using typing_gweak, wf_gweak.
 Qed.
 
 Lemma wf_rules_gweak Σ Σ' Ξ Δ R :

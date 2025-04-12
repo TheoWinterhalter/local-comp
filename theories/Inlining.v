@@ -109,6 +109,15 @@ Proof.
   - assumption.
 Qed.
 
+Lemma wf_gscope Σ Ξ Γ :
+  wf Σ Ξ Γ →
+  Forall (gscope Σ) Γ.
+Proof.
+  induction 1 as [| Γ i A hΓ ih hA]. 1: constructor.
+  econstructor. 2: assumption.
+  eapply typing_gscope. eassumption.
+Qed.
+
 Inductive gscope_parg Σ : parg → Prop :=
 | gscope_pvar : gscope_parg Σ pvar
 | gscope_pforce t : gscope Σ t → gscope_parg Σ (pforce t)
@@ -127,10 +136,11 @@ Lemma rule_typing_gscope Σ Ξ Δ r :
   rule_typing Σ Ξ Δ r →
   gscope_rule Σ r.
 Proof.
-  intros [hl hr].
-  eapply typing_gscope in hl as gl, hr as gr.
+  intros (hctx & [i hty] & hl & hr).
+  eapply typing_gscope in hl as gl, hr as gr, hty.
+  eapply wf_gscope in hctx.
   unfold gscope_rule. intuition eauto.
-  (* Not enough currently *)
+  (* We need inversions now *)
 Admitted.
 
 Lemma rules_typing_gscope Σ Ξ Δ R :
@@ -685,15 +695,6 @@ Proof.
   intros hl he.
   eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
   intros. eapply inline_ext. all: eassumption.
-Qed.
-
-Lemma wf_gscope Σ Ξ Γ :
-  wf Σ Ξ Γ →
-  Forall (gscope Σ) Γ.
-Proof.
-  induction 1 as [| Γ i A hΓ ih hA]. 1: constructor.
-  econstructor. 2: assumption.
-  eapply typing_gscope. eassumption.
 Qed.
 
 Lemma inline_ctx_ext Σ Ξ Γ κ κ' :

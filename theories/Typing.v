@@ -261,6 +261,8 @@ Inductive ewf (Σ : gctx) : ectx → Prop :=
 
 Definition rule_typing Σ Ξ Δ rule :=
   let k := length rule.(cr_env) in
+  wf Σ Ξ (Δ ,,, rule.(cr_env)) ∧
+  (∃ i, Σ ;; Ξ | Δ ,,, rule.(cr_env) ⊢ rule.(cr_typ) : Sort i) ∧
   Σ ;; Ξ | Δ ,,, rule.(cr_env) ⊢ plinst k rule.(cr_pat) : rule.(cr_typ) ∧
   Σ ;; Ξ | Δ ,,, rule.(cr_env) ⊢ rule.(cr_rep) : rule.(cr_typ).
 
