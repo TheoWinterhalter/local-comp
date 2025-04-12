@@ -122,11 +122,12 @@ Lemma gscope_ind_alt :
     Forall (Forall P) ξ →
     P (const c ξ)
   ) →
+  (∀ M x, P (assm M x)) →
   ∀ t, gscope Σ t → P t.
 Proof.
-  intros Σ P hvar hsort hpi hlam happ hconst.
+  intros Σ P hvar hsort hpi hlam happ hconst hassm.
   fix aux 2. move aux at top.
-  intros t h. destruct h as [| | | | | ????? hc h].
+  intros t h. destruct h as [| | | | | ????? hc h |].
   6:{
     eapply hconst. 1,2: eassumption.
     revert ξ h.
@@ -821,12 +822,14 @@ Proof.
       admit.
 Admitted. *)
 
+Definition eq_gscope (Σ : gctx) (κ κ' : ginst) :=
+  ∀ c Ξ' A t,
+    Σ c = Some (Def Ξ' A t) →
+    κ c = κ' c.
+
 Lemma inline_ext Σ t κ κ' :
   gscope Σ t →
-  (∀ c Ξ' A t,
-    Σ c = Some (Def Ξ' A t) →
-    κ c = κ' c
-  ) →
+  eq_gscope Σ κ κ' →
   ⟦ t ⟧⟨ κ ⟩ = ⟦ t ⟧⟨ κ' ⟩.
 Proof.
   intros ht he.
@@ -846,10 +849,7 @@ Qed.
 
 Lemma inline_eargs_ext Σ (ξ : eargs) κ κ' :
   gscope_eargs Σ ξ →
-  (∀ c Ξ' A t,
-    Σ c = Some (Def Ξ' A t) →
-    κ c = κ' c
-  ) →
+  eq_gscope Σ κ κ' →
   ⟦ ξ ⟧×⟨ κ ⟩ = ⟦ ξ ⟧×⟨ κ' ⟩.
 Proof.
   intros hξ he.
@@ -860,10 +860,7 @@ Qed.
 
 Lemma inline_ectx_ext Σ Ξ κ κ' :
   ewf Σ Ξ →
-  (∀ c Ξ' A t,
-    Σ c = Some (Def Ξ' A t) →
-    κ c = κ' c
-  ) →
+  eq_gscope Σ κ κ' →
   ⟦ Ξ ⟧e⟨ κ ⟩ = ⟦ Ξ ⟧e⟨ κ' ⟩.
 Proof.
   intros hΞ he.
@@ -872,9 +869,37 @@ Proof.
   econstructor. 2: eauto.
   f_equal.
   eapply inline_eargs_ext. 2: eassumption.
-  eapply inst_typing_gscope. (* Now need the Ξ *)
-  admit.
-Admitted.
+  eapply inst_typing_gscope. eassumption.
+Qed.
+
+Lemma inline_list_ext Σ l κ κ' :
+  Forall (gscope Σ) l →
+  eq_gscope Σ κ κ' →
+  ⟦ l ⟧*⟨ κ ⟩ = ⟦ l ⟧*⟨ κ' ⟩.
+Proof.
+  intros hl he.
+  eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
+  intros. eapply inline_ext. all: eassumption.
+Qed.
+
+Lemma wf_gscope Σ Ξ Γ :
+  wf Σ Ξ Γ →
+  Forall (gscope Σ) Γ.
+Proof.
+  induction 1 as [| Γ i A hΓ ih hA]. 1: constructor.
+  econstructor. 2: assumption.
+  eapply typing_gscope. eassumption.
+Qed.
+
+Lemma inline_ctx_ext Σ Ξ Γ κ κ' :
+  wf Σ Ξ Γ →
+  eq_gscope Σ κ κ' →
+  ⟦ Γ ⟧*⟨ κ ⟩ = ⟦ Γ ⟧*⟨ κ' ⟩.
+Proof.
+  intros hΓ he.
+  eapply inline_list_ext. 2: eassumption.
+  eapply wf_gscope. eassumption.
+Qed.
 
 (* TODO MOVE *)
 Lemma extends_nil Σ :
@@ -1001,10 +1026,19 @@ Proof.
     + eauto.
   - cbn in *. destruct (E =? c)%string eqn:e. 1: discriminate.
     rewrite ih. 2: assumption.
+    assert (eg : eq_gscope Σ ⟦ Σ ⟧κ (gcons c ⟦ t ⟧⟨ ⟦ Σ ⟧κ ⟩ ⟦ Σ ⟧κ)).
+    { intros c' Ξ'' B u e'.
+      destruct (c' =? c)%string eqn:ec.
+      1:{ rewrite String.eqb_eq in ec. congruence. }
+      rewrite gcons_neq. 2: assumption.
+      reflexivity.
+    }
+    eapply valid_ext in eE as h'. 2: assumption.
+    destruct h' as [hΞ' hΔ].
     f_equal. f_equal.
-    + eapply inline_ectx_ext. all: admit.
-    + admit.
-    + admit.
+    + eapply inline_ectx_ext. all: eassumption.
+    + eapply inline_ctx_ext. all: eassumption.
+    + admit. (* Missing some validity for R *)
 Admitted.
 
 Lemma gwf_type Σ :
