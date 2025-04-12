@@ -121,6 +121,19 @@ Proof.
   - cbn. constructor. all: auto.
 Qed.
 
+Lemma forall_All A (P : A → Type) l :
+  (forall x, In x l → P x) →
+  All P l.
+Proof.
+  intros h.
+  induction l as [| x l ih].
+  - constructor.
+  - econstructor.
+    + eapply h. cbn. auto.
+    + eapply ih. intros y hy.
+      eapply h. cbn. auto.
+Qed.
+
 Lemma Forall2_map_l :
   ∀ A B C (f : A → B) R l (l' : list C),
     Forall2 R (map f l) l' ↔ Forall2 (λ x y, R (f x) y) l l'.

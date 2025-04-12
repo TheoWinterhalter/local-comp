@@ -1970,6 +1970,12 @@ Proof.
   assumption.
 Qed.
 
+Lemma extends_nil Σ :
+  [] ⊑ Σ.
+Proof.
+  intros ?? e. discriminate.
+Qed.
+
 Lemma extends_gcons (Σ : gctx) c d :
   Σ c = None →
   Σ ⊑ (c, d) :: Σ.

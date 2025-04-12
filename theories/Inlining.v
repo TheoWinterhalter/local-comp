@@ -462,20 +462,6 @@ Section Inline.
     - apply hclosed.
   Qed.
 
-  (* TODO MOVE *)
-  Lemma forall_All A (P : A → Type) l :
-    (forall x, In x l → P x) →
-    All P l.
-  Proof.
-    intros h.
-    induction l as [| x l ih].
-    - constructor.
-    - econstructor.
-      + eapply h. cbn. auto.
-      + eapply ih. intros y hy.
-        eapply h. cbn. auto.
-  Qed.
-
   Lemma scoped_eargs_inline k ξ :
     scoped_eargs k ξ = true →
     scoped_eargs k ⟦ ξ ⟧× = true.
@@ -683,13 +669,6 @@ Proof.
   intros hΓ he.
   eapply inline_list_ext. 2: eassumption.
   eapply wf_gscope. eassumption.
-Qed.
-
-(* TODO MOVE *)
-Lemma extends_nil Σ :
-  [] ⊑ Σ.
-Proof.
-  intros ?? e. discriminate.
 Qed.
 
 Reserved Notation "⟦ s ⟧g".
