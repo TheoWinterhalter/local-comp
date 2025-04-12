@@ -791,11 +791,11 @@ Proof.
       admit.
 Admitted. *)
 
-(* Lemma inline_ext_gscope Σ t κ κ' :
+Lemma inline_ext Σ t κ κ' :
   gscope Σ t →
-  (∀ c Ξ' A t ξ,
+  (∀ c Ξ' A t,
     Σ c = Some (Def Ξ' A t) →
-    κ c ξ = κ' c ξ
+    κ c = κ' c
   ) →
   ⟦ t ⟧⟨ κ ⟩ = ⟦ t ⟧⟨ κ' ⟩.
 Proof.
@@ -810,9 +810,37 @@ Proof.
     apply map_ext_Forall. eapply Forall_impl. 2: eassumption.
     cbn. auto.
   }
-  rewrite <- e.
+  rewrite <- e. f_equal.
   eapply he. eassumption.
-Qed. *)
+Qed.
+
+Lemma inline_eargs_ext Σ (ξ : eargs) κ κ' :
+  gscope_eargs Σ ξ →
+  (∀ c Ξ' A t,
+    Σ c = Some (Def Ξ' A t) →
+    κ c = κ' c
+  ) →
+  ⟦ ξ ⟧×⟨ κ ⟩ = ⟦ ξ ⟧×⟨ κ' ⟩.
+Proof.
+  intros hξ he.
+  eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
+  intros. eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
+  intros. eapply inline_ext. all: eassumption.
+Qed.
+
+Lemma inline_ectx_ext Σ Ξ κ κ' :
+  ewf Σ Ξ →
+  (∀ c Ξ' A t,
+    Σ c = Some (Def Ξ' A t) →
+    κ c = κ' c
+  ) →
+  ⟦ Ξ ⟧e⟨ κ ⟩ = ⟦ Ξ ⟧e⟨ κ' ⟩.
+Proof.
+  intros hΞ he.
+  eapply map_ext. intros [E ξ]. f_equal.
+  eapply inline_eargs_ext. 2: eassumption.
+  admit.
+Admitted.
 
 (* TODO MOVE *)
 Lemma extends_nil Σ :
@@ -932,6 +960,17 @@ Lemma gwf_trans_gctx_ext Σ :
   trans_gctx_ext Σ ⟦ Σ ⟧κ ⟦ Σ ⟧g.
 Proof.
   intros h E Ξ' Δ R eE.
+  induction h as [ | c ?????? ih | c ??????? ih ].
+  - discriminate.
+  - cbn in *. destruct (E =? c)%string eqn:e.
+    + inversion eE. subst. reflexivity.
+    + eauto.
+  - cbn in *. destruct (E =? c)%string eqn:e. 1: discriminate.
+    rewrite ih. 2: assumption.
+    f_equal. f_equal.
+    + eapply inline_ectx_ext. all: admit.
+    + admit.
+    + admit.
 Admitted.
 
 Lemma gwf_type Σ :
