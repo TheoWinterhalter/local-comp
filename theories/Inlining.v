@@ -42,6 +42,40 @@ Inductive gscope (Σ : gctx) : term → Prop :=
     Forall (Forall (gscope Σ)) ξ →
     gscope Σ (const c ξ).
 
+Notation gscope_eargs Σ ξ := (Forall (Forall (gscope Σ)) ξ).
+
+Lemma inst_typing_gscope_ih Σ (* Ξ *) Γ ξ Ξ' :
+  inst_typing Σ [] Γ ξ Ξ' →
+  inst_typing_ Σ [] (λ _ t _, gscope Σ t) Γ ξ Ξ' →
+  gscope_eargs Σ ξ.
+Proof.
+  intros h ih.
+  rewrite Forall_forall. intros σ hσ.
+  rewrite Forall_forall. intros u hu.
+  eapply In_nth_error in hσ as [M hM].
+  eapply In_nth_error in hu as [x hx].
+  destruct ih as [_ [ih e]]. red in ih. specialize (ih M).
+  destruct (ectx_get Ξ' M) as [[E ξ'] |] eqn:e'.
+  2:{
+    unfold ectx_get in e'. destruct (_ <=? _) eqn: e1.
+    - rewrite Nat.leb_le in e1. rewrite <- e in e1.
+      rewrite <- nth_error_None in e1. congruence.
+    - rewrite nth_error_None in e'.
+      rewrite Nat.leb_gt in e1. lia.
+  }
+  specialize ih with (1 := eq_refl).
+  destruct ih as (hξ' & Ξ'' & Δ & R & hE & eM & ih).
+  rewrite hM in eM. cbn in eM.
+  destruct (nth_error Δ x) eqn: eΔ.
+  2:{
+    rewrite nth_error_None in eΔ. rewrite <- eM in eΔ.
+    rewrite <- nth_error_None in eΔ. congruence.
+  }
+  specialize ih with (1 := eΔ).
+  unfold eget in ih. rewrite hM, hx in ih.
+  assumption.
+Qed.
+
 Lemma typing_gscope Σ Γ t A :
   Σ ;; [] | Γ ⊢ t : A →
   gscope Σ t.
@@ -49,35 +83,31 @@ Proof.
   intro h. induction h using typing_ind.
   all: try solve [ econstructor ; eauto ].
   - econstructor. 1: eassumption.
-    rewrite Forall_forall. intros σ hσ.
-    rewrite Forall_forall. intros u hu.
-    eapply In_nth_error in hσ as [M hM].
-    eapply In_nth_error in hu as [x hx].
-    destruct H1 as [_ [ih e]]. red in ih. specialize (ih M).
-    destruct (ectx_get Ξ' M) as [[E ξ'] |] eqn:e'.
-    2:{
-      unfold ectx_get in e'. destruct (_ <=? _) eqn: e1.
-      - rewrite Nat.leb_le in e1. rewrite <- e in e1.
-        rewrite <- nth_error_None in e1. congruence.
-      - rewrite nth_error_None in e'.
-        rewrite Nat.leb_gt in e1. lia.
-    }
-    specialize ih with (1 := eq_refl).
-    destruct ih as (hξ' & Ξ'' & Δ & R & hE & eM & ih).
-    rewrite hM in eM. cbn in eM.
-    destruct (nth_error Δ x) eqn: eΔ.
-    2:{
-      rewrite nth_error_None in eΔ. rewrite <- eM in eΔ.
-      rewrite <- nth_error_None in eΔ. congruence.
-    }
-    specialize ih with (1 := eΔ).
-    unfold eget in ih. rewrite hM, hx in ih.
-    assumption.
+    eapply inst_typing_gscope_ih. all: eassumption.
   - discriminate.
   - assumption.
 Qed.
 
-Notation gscope_eargs Σ ξ := (Forall (Forall (gscope Σ)) ξ).
+Lemma inst_typing_gscope Σ (* Ξ *) Γ ξ Ξ' :
+  inst_typing Σ [] Γ ξ Ξ' →
+  gscope_eargs Σ ξ.
+Proof.
+  intros h.
+  eapply inst_typing_gscope_ih. 1: eassumption.
+  destruct h as (he & ht & e).
+  split. 2: split.
+  - assumption.
+  - intros M E ξ' eM.
+    specialize (ht _ _ _ eM). destruct ht as (? & Ξ'' & Δ & R & eE & ho & ht).
+    split. 1: assumption.
+    eexists _,_,_. split. 1 : eassumption.
+    split. 1: assumption.
+    intros x A hx. specialize ht with (1 := hx).
+    unfold eget in *. destruct (nth_error ξ _) as [σ |] eqn:e1. 2: constructor.
+    destruct (nth_error σ _) eqn:e2. 2: constructor.
+    eapply typing_gscope. eassumption.
+  - assumption.
+Qed.
 
 Lemma gscope_ind_alt :
   ∀ Σ (P : term → Prop),
@@ -837,8 +867,12 @@ Lemma inline_ectx_ext Σ Ξ κ κ' :
   ⟦ Ξ ⟧e⟨ κ ⟩ = ⟦ Ξ ⟧e⟨ κ' ⟩.
 Proof.
   intros hΞ he.
-  eapply map_ext. intros [E ξ]. f_equal.
+  eapply map_ext_Forall.
+  induction hΞ as [| Ξ E ξ' Ξ' Δ R hΞ ih e hξ' ]. 1: constructor.
+  econstructor. 2: eauto.
+  f_equal.
   eapply inline_eargs_ext. 2: eassumption.
+  eapply inst_typing_gscope. (* Now need the Ξ *)
   admit.
 Admitted.
 
