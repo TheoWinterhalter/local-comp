@@ -132,6 +132,49 @@ Definition gscope_rule Σ rule :=
   gscope Σ rule.(cr_rep) ∧
   gscope Σ rule.(cr_typ).
 
+Lemma gscope_apps_inv Σ f l :
+  gscope Σ (apps f l) →
+  gscope Σ f ∧ Forall (gscope Σ) l.
+Proof.
+  intros h.
+  induction l as [| x l ih] in f, h |- *.
+  - cbn in h. intuition constructor.
+  - cbn in h. eapply ih in h as [happ hl].
+    inversion happ. subst.
+    split.
+    + assumption.
+    + constructor. all: assumption.
+Qed.
+
+(* Lemma gscope_plinst_arg_inv Σ pl k l n :
+  plinst_args plinst_arg pl k = (l, n) →
+  Forall (gscope Σ) l →
+  Forall (gscope_parg Σ) pl.
+Proof.
+  intros e h.
+  induction pl as [| p pl ih] in l, n, k, e, h |- *. 1: constructor.
+  cbn in e.
+  constructor.
+  -
+  - *)
+
+Lemma gscope_plinst_inv Σ k p :
+  gscope Σ (plinst k p) →
+  gscope_pat Σ p.
+Proof.
+  intros h.
+  unfold plinst in h.
+  destruct plinst_args eqn:e.
+  apply gscope_apps_inv in h as [_ h].
+  eapply Forall_rev in h. rewrite rev_involutive in h.
+  unfold gscope_pat.
+  unfold plinst_args in e. revert e.
+  generalize (∙, k). generalize p.(pat_args). intros pl r e.
+  clear p k.
+  induction pl as [| p pl ih] in r, l, n, e, h |- *. 1: constructor.
+  cbn in e. eapply ih in e as h'. 2: assumption.
+Admitted.
+
 Lemma rule_typing_gscope Σ Ξ Δ r :
   rule_typing Σ Ξ Δ r →
   gscope_rule Σ r.
@@ -139,9 +182,10 @@ Proof.
   intros (hctx & [i hty] & hl & hr).
   eapply typing_gscope in hl as gl, hr as gr, hty.
   eapply wf_gscope in hctx.
+  eapply gscope_plinst_inv in gl.
+  rewrite Forall_app in hctx.
   unfold gscope_rule. intuition eauto.
-  (* We need inversions now *)
-Admitted.
+Qed.
 
 Lemma rules_typing_gscope Σ Ξ Δ R :
   Forall (rule_typing Σ Ξ Δ) R →
