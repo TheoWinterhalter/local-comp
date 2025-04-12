@@ -1072,12 +1072,25 @@ Proof.
     eapply extends_gcons.
     apply inline_gctx_None. assumption.
   - cbn in *. destruct (c =? c')%string eqn:e.
-    + rewrite gcons_eq. 2: assumption.
-      (* We need to align the rest *)
-      admit.
+    + inversion ec. subst. clear ec.
+      rewrite gcons_eq. 2: assumption.
+      erewrite <- inline_ectx_ext. 2,3: eauto using eq_gscope_gcons.
+      erewrite <- inline_ext with (t := A).
+      2,3: eauto using eq_gscope_gcons, typing_gscope.
+      eapply typing_inline with (Γ := ∙).
+      * eapply gwf_gclosed. assumption.
+      * eapply gwf_conv_unfold. assumption.
+      * eapply gwf_trans_gctx_ext. assumption.
+      * admit. (* Let's prove gwf_type by induction *)
+      * assumption.
+      * assumption.
     + rewrite gcons_neq. 2: assumption.
-      (* Same here *)
-      admit.
+      eapply valid_def in ec as h'. 2: assumption.
+      destruct h' as (hΞ' & [j hA] & ht).
+      erewrite <- inline_ectx_ext. 2,3: eauto using eq_gscope_gcons.
+      erewrite <- inline_ext with (t := A).
+      2,3: eauto using eq_gscope_gcons, typing_gscope.
+      eauto.
 Admitted.
 
 Theorem inlining Ξ Σ Γ t A :
