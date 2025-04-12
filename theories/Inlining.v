@@ -1028,8 +1028,18 @@ Lemma gwf_gclosed Σ :
   gwf Σ →
   gclosed ⟦ Σ ⟧κ.
 Proof.
-  intros h c.
-Admitted.
+  intros h.
+  induction h as [ | c' ?????? ih | c' ??????? ih ].
+  all: intros c.
+  - cbn. reflexivity.
+  - cbn. eauto.
+  - cbn. destruct (c =? c')%string eqn:ec.
+    + rewrite gcons_eq. 2: assumption.
+      eapply scoped_inline. 1: assumption.
+      eapply typing_closed. eassumption.
+    + rewrite gcons_neq. 2: assumption.
+      eauto.
+Qed.
 
 Lemma gwf_conv_unfold Σ :
   gwf Σ →
