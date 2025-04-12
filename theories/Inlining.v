@@ -552,7 +552,9 @@ Notation "⟦ t ⟧⟨ k ⟩" := (inline k t) (at level 0).
 Notation "⟦ l ⟧*⟨ k ⟩" := (map (inline k) l).
 Notation "⟦ t ⟧×⟨ k ⟩" := (map (map (inline k)) t).
 Notation "⟦ X ⟧e⟨ k ⟩" := (map (λ '(E, ξ), (E, ⟦ ξ ⟧×⟨ k ⟩)) X).
+Notation "⟦ r ⟧r⟨ k ⟩" := (inline_crule k r).
 Notation "⟦ R ⟧R⟨ k ⟩" := (map (inline_crule k) R).
+Notation "⟦ p ⟧p⟨ k ⟩" := (inline_pat k p).
 
 Reserved Notation "⟦ s ⟧κ" (at level 0).
 
@@ -671,6 +673,72 @@ Proof.
   eapply wf_gscope. eassumption.
 Qed.
 
+(* TODO MOVE *)
+Inductive gscope_parg Σ : parg → Prop :=
+| gscope_pvar : gscope_parg Σ pvar
+| gscope_pforce t : gscope Σ t → gscope_parg Σ (pforce t)
+| gscope_psymb x l : Forall (gscope_parg Σ) l → gscope_parg Σ (psymb x l).
+
+Definition gscope_pat Σ p :=
+  Forall (gscope_parg Σ) p.(pat_args).
+
+Definition gscope_rule Σ rule :=
+  Forall (gscope Σ) rule.(cr_env) ∧
+  gscope_pat Σ rule.(cr_pat) ∧
+  gscope Σ rule.(cr_rep) ∧
+  gscope Σ rule.(cr_typ).
+
+Lemma inline_parg_ext Σ p κ κ' :
+  gscope_parg Σ p →
+  eq_gscope Σ κ κ' →
+  inline_parg κ p = inline_parg κ' p.
+Proof.
+  intros hp he.
+  induction hp.
+  - reflexivity.
+  - cbn. f_equal. eapply inline_ext. all: eauto.
+  - cbn. f_equal. eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
+    (* Need stronger ih *)
+    admit.
+Admitted.
+
+Lemma inline_pat_ext Σ p κ κ' :
+  gscope_pat Σ p →
+  eq_gscope Σ κ κ' →
+  ⟦ p ⟧p⟨ κ ⟩ = ⟦ p ⟧p⟨ κ' ⟩.
+Proof.
+  intros hp he.
+  unfold gscope_pat in hp.
+  destruct p as [a l].
+  unfold inline_pat. cbn in *. f_equal.
+  eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
+  intros. eapply inline_parg_ext. all: eassumption.
+Qed.
+
+Lemma inline_crule_ext Σ rule κ κ' :
+  gscope_rule Σ rule →
+  eq_gscope Σ κ κ' →
+  ⟦ rule ⟧r⟨ κ ⟩ = ⟦ rule ⟧r⟨ κ' ⟩.
+Proof.
+  intros [? [? []]] he.
+  destruct rule as [Θ p r A].
+  unfold inline_crule. cbn in *. f_equal.
+  - eapply inline_list_ext. all: eassumption.
+  - eapply inline_pat_ext. all: eassumption.
+  - eapply inline_ext. all: eassumption.
+  - eapply inline_ext. all: eassumption.
+Qed.
+
+Lemma inline_rules_ext Σ R κ κ' :
+  Forall (gscope_rule Σ) R →
+  eq_gscope Σ κ κ' →
+  ⟦ R ⟧R⟨ κ ⟩ = ⟦ R ⟧R⟨ κ' ⟩.
+Proof.
+  intros hR he.
+  eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
+  intros. eapply inline_crule_ext. all: eassumption.
+Qed.
+
 Reserved Notation "⟦ s ⟧g".
 
 Fixpoint inline_gctx (Σ : gctx) : gctx :=
@@ -771,7 +839,8 @@ Proof.
     f_equal. f_equal.
     + eapply inline_ectx_ext. all: eassumption.
     + eapply inline_ctx_ext. all: eassumption.
-    + admit. (* Missing some validity for R *)
+    + eapply inline_rules_ext. 2: eassumption.
+      (* This will need to be entailed by gwf *)
 Admitted.
 
 Lemma gwf_type Σ :
