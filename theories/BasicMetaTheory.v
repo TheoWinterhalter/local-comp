@@ -1874,6 +1874,25 @@ Proof.
     + eapply typing_gweak. all: eassumption.
 Qed.
 
+Lemma rule_typing_gweak Σ Σ' Ξ Δ r :
+  rule_typing Σ Ξ Δ r →
+  Σ ⊑ Σ' →
+  rule_typing Σ' Ξ Δ r.
+Proof.
+  intros [hl hr] hle.
+  split. all: eauto using typing_gweak.
+Qed.
+
+Lemma wf_rules_gweak Σ Σ' Ξ Δ R :
+  Forall (rule_typing Σ Ξ Δ) R →
+  Σ ⊑ Σ' →
+  Forall (rule_typing Σ' Ξ Δ) R.
+Proof.
+  intros h hle.
+  eapply Forall_impl. 2: eassumption.
+  intros. eauto using rule_typing_gweak.
+Qed.
+
 (** Validity (or presupposition) **)
 
 Lemma styping_ids Σ Ξ Γ :
@@ -2012,19 +2031,22 @@ Qed.
 Lemma valid_ext Σ c Ξ Δ R :
   gwf Σ →
   Σ c = Some (Ext Ξ Δ R) →
-  ewf Σ Ξ ∧ wf Σ Ξ Δ.
+  ewf Σ Ξ ∧ wf Σ Ξ Δ ∧ Forall (rule_typing Σ Ξ Δ) R.
 Proof.
   intros hΣ hc.
   induction hΣ as [ | c' ?????? ih | c' ??????? ih ] in c, Ξ, Δ, R, hc |- *.
   - discriminate.
   - cbn in hc. destruct (c =? c')%string.
     + inversion hc. subst.
-      intuition eauto using wf_gweak, ewf_gweak, typing_gweak, extends_gcons.
+      intuition eauto
+      using wf_gweak, ewf_gweak, typing_gweak, extends_gcons, wf_rules_gweak.
     + specialize ih with (1 := hc) as [? ?].
-      intuition eauto using wf_gweak, ewf_gweak, typing_gweak, extends_gcons.
+      intuition eauto
+      using wf_gweak, ewf_gweak, typing_gweak, extends_gcons, wf_rules_gweak.
   - cbn in hc. destruct (c =? c')%string. 1: discriminate.
     specialize ih with (1 := hc) as [? ?].
-    intuition eauto using wf_gweak, ewf_gweak, typing_gweak, extends_gcons.
+    intuition eauto
+    using wf_gweak, ewf_gweak, typing_gweak, extends_gcons, wf_rules_gweak.
 Qed.
 
 Definition styping_alt Σ Ξ (Γ : ctx) (σ : nat → term) (Δ : ctx) :=
@@ -2090,7 +2112,7 @@ Proof.
     + eapply typing_einst_closed. all: eassumption.
     + reflexivity.
   - eapply valid_ext in hΣ as h. 2: eassumption.
-    destruct h as [hΞ' hΔ].
+    destruct h as (hΞ' & hΔ & hR).
     eapply valid_wf in hΔ as hA. 2: eassumption.
     destruct hA as [i hA].
     exists i. eapply typing_lift_closed.

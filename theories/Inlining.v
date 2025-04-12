@@ -109,6 +109,37 @@ Proof.
   - assumption.
 Qed.
 
+Inductive gscope_parg Σ : parg → Prop :=
+| gscope_pvar : gscope_parg Σ pvar
+| gscope_pforce t : gscope Σ t → gscope_parg Σ (pforce t)
+| gscope_psymb x l : Forall (gscope_parg Σ) l → gscope_parg Σ (psymb x l).
+
+Definition gscope_pat Σ p :=
+  Forall (gscope_parg Σ) p.(pat_args).
+
+Definition gscope_rule Σ rule :=
+  Forall (gscope Σ) rule.(cr_env) ∧
+  gscope_pat Σ rule.(cr_pat) ∧
+  gscope Σ rule.(cr_rep) ∧
+  gscope Σ rule.(cr_typ).
+
+Lemma rule_typing_gscope Σ Ξ Δ r :
+  rule_typing Σ Ξ Δ r →
+  gscope_rule Σ r.
+Proof.
+  intros [hl hr].
+  eapply typing_gscope in hl as gl, hr as gr.
+  unfold gscope_rule. intuition eauto.
+  (* Not enough currently *)
+Admitted.
+
+Lemma rules_typing_gscope Σ Ξ Δ R :
+  Forall (rule_typing Σ Ξ Δ) R →
+  Forall (gscope_rule Σ) R.
+Proof.
+  eauto using Forall_impl, rule_typing_gscope.
+Qed.
+
 Lemma gscope_ind_alt :
   ∀ Σ (P : term → Prop),
   (∀ x, P (var x)) →
@@ -473,6 +504,8 @@ Section Inline.
     eapply scoped_inline. assumption.
   Qed.
 
+  (* TODO get back inst_equations_inline from cleaning *)
+
   Lemma conv_inline Ξ Γ u v :
     Σ ;; Ξ | Γ ⊢ u ≡ v →
     Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
@@ -673,21 +706,6 @@ Proof.
   eapply wf_gscope. eassumption.
 Qed.
 
-(* TODO MOVE *)
-Inductive gscope_parg Σ : parg → Prop :=
-| gscope_pvar : gscope_parg Σ pvar
-| gscope_pforce t : gscope Σ t → gscope_parg Σ (pforce t)
-| gscope_psymb x l : Forall (gscope_parg Σ) l → gscope_parg Σ (psymb x l).
-
-Definition gscope_pat Σ p :=
-  Forall (gscope_parg Σ) p.(pat_args).
-
-Definition gscope_rule Σ rule :=
-  Forall (gscope Σ) rule.(cr_env) ∧
-  gscope_pat Σ rule.(cr_pat) ∧
-  gscope Σ rule.(cr_rep) ∧
-  gscope Σ rule.(cr_typ).
-
 Lemma inline_parg_ext Σ p κ κ' :
   gscope_parg Σ p →
   eq_gscope Σ κ κ' →
@@ -835,13 +853,13 @@ Proof.
     assert (eg : eq_gscope Σ ⟦ Σ ⟧κ (gcons c ⟦ t ⟧⟨ ⟦ Σ ⟧κ ⟩ ⟦ Σ ⟧κ)).
     { eapply eq_gscope_gcons. assumption. }
     eapply valid_ext in eE as h'. 2: assumption.
-    destruct h' as [hΞ' hΔ].
+    destruct h' as (hΞ' & hΔ & hR).
     f_equal. f_equal.
     + eapply inline_ectx_ext. all: eassumption.
     + eapply inline_ctx_ext. all: eassumption.
     + eapply inline_rules_ext. 2: eassumption.
-      (* This will need to be entailed by gwf *)
-Admitted.
+      eapply rules_typing_gscope. eassumption.
+Qed.
 
 Lemma gwf_type Σ :
   gwf Σ →
