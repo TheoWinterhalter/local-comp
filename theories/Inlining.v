@@ -801,56 +801,56 @@ Proof.
   discriminate.
 Qed.
 
-Fixpoint remove_exts (Σ : gctx) : gctx :=
+Fixpoint only_exts (Σ : gctx) : bool :=
   match Σ with
-  | [] => []
-  | (c, Def Ξ A t) :: Σ => (c, Def Ξ A t) :: remove_exts Σ
-  | (c, Ext Ξ Δ R) :: Σ => remove_exts Σ
+  | [] => true
+  | (c, Def Ξ A t) :: Σ => false
+  | (c, Ext Ξ Δ R) :: Σ => only_exts Σ
   end.
 
-Lemma remove_exts_def (Σ : gctx) c Ξ A t :
+Lemma only_exts_no_def Σ c Ξ A t :
+  only_exts Σ = true →
   Σ c = Some (Def Ξ A t) →
-  remove_exts Σ c = Some (Def Ξ A t).
+  False.
 Proof.
-  intros e.
-  induction Σ as [| [c' d] Σ ih] in Ξ, A, t, e |- *.
-  - auto.
-  - cbn in e. destruct (c =? c')%string eqn:ec.
-    + inversion e. subst. clear e.
-      cbn. rewrite ec. reflexivity.
-    + destruct d.
-      * cbn. eauto.
-      * cbn. rewrite ec. eauto.
+  intros h hc.
+  induction Σ as [| [c' []] Σ ih] in Ξ, A, t, h, hc |- *. 1,3: discriminate.
+  cbn in *. destruct (c =? c')%string eqn:ec. 1: discriminate.
+  eauto.
 Qed.
 
 Lemma conv_noext Σ Γ u v :
+  only_exts Σ = true →
   Σ ;; [] | Γ ⊢ u ≡ v →
-  remove_exts Σ ;; [] | Γ ⊢ u ≡ v.
+  [] ;; [] | Γ ⊢ u ≡ v.
 Proof.
-  induction 1 using conversion_ind.
+  intros hΣ h.
+  induction h using conversion_ind.
   all: try solve [ ttconv ].
   all: try solve [ econstructor ; eauto ].
-  - econstructor.
-    + apply remove_exts_def. eassumption.
-    + intros E M ξ' hM.
-      specialize (H1 _ _ _ hM) as (Ξ'' & Δ' & R & e & ih).
-      (* Won't work, we need to remove everything *)
-      admit.
-    + assumption.
+  - exfalso. eauto using only_exts_no_def.
   - discriminate.
-Admitted.
+Qed.
 
 Lemma typing_noext Σ Γ t A :
+  only_exts Σ = true →
   Σ ;; [] | Γ ⊢ t : A →
-  remove_exts Σ ;; [] | Γ ⊢ t : A.
+  [] ;; [] | Γ ⊢ t : A.
 Proof.
-  induction 1 using typing_ind.
+  intros hΣ h.
+  induction h using typing_ind.
   all: try solve [ tttype ].
-  - econstructor. all: admit.
+  - exfalso. eauto using only_exts_no_def.
   - discriminate.
   - econstructor. 1,3: eauto.
-    apply conv_noext. assumption.
-Admitted.
+    eauto using conv_noext.
+Qed.
+
+Lemma only_exts_inline Σ :
+  only_exts ⟦ Σ ⟧g = true.
+Proof.
+  induction Σ as [| [c' []] Σ ih]. all: cbn ; auto.
+Qed.
 
 Theorem conservativity Σ t A i :
   gwf Σ →
@@ -864,5 +864,6 @@ Proof.
   cbn in ht.
   eapply typing_gscope in hA as gA. eapply inline_nil_id in gA.
   rewrite gA in ht.
-  (* What's left is strenghtening. *)
-Admitted.
+  eapply typing_noext. 2: eassumption.
+  eapply only_exts_inline.
+Qed.
