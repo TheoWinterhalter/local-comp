@@ -801,6 +801,57 @@ Proof.
   discriminate.
 Qed.
 
+Fixpoint remove_exts (Σ : gctx) : gctx :=
+  match Σ with
+  | [] => []
+  | (c, Def Ξ A t) :: Σ => (c, Def Ξ A t) :: remove_exts Σ
+  | (c, Ext Ξ Δ R) :: Σ => remove_exts Σ
+  end.
+
+Lemma remove_exts_def (Σ : gctx) c Ξ A t :
+  Σ c = Some (Def Ξ A t) →
+  remove_exts Σ c = Some (Def Ξ A t).
+Proof.
+  intros e.
+  induction Σ as [| [c' d] Σ ih] in Ξ, A, t, e |- *.
+  - auto.
+  - cbn in e. destruct (c =? c')%string eqn:ec.
+    + inversion e. subst. clear e.
+      cbn. rewrite ec. reflexivity.
+    + destruct d.
+      * cbn. eauto.
+      * cbn. rewrite ec. eauto.
+Qed.
+
+Lemma conv_noext Σ Γ u v :
+  Σ ;; [] | Γ ⊢ u ≡ v →
+  remove_exts Σ ;; [] | Γ ⊢ u ≡ v.
+Proof.
+  induction 1 using conversion_ind.
+  all: try solve [ ttconv ].
+  all: try solve [ econstructor ; eauto ].
+  - econstructor.
+    + apply remove_exts_def. eassumption.
+    + intros E M ξ' hM.
+      specialize (H1 _ _ _ hM) as (Ξ'' & Δ' & R & e & ih).
+      (* Won't work, we need to remove everything *)
+      admit.
+    + assumption.
+  - discriminate.
+Admitted.
+
+Lemma typing_noext Σ Γ t A :
+  Σ ;; [] | Γ ⊢ t : A →
+  remove_exts Σ ;; [] | Γ ⊢ t : A.
+Proof.
+  induction 1 using typing_ind.
+  all: try solve [ tttype ].
+  - econstructor. all: admit.
+  - discriminate.
+  - econstructor. 1,3: eauto.
+    apply conv_noext. assumption.
+Admitted.
+
 Theorem conservativity Σ t A i :
   gwf Σ →
   [] ;; [] | ∙ ⊢ A : Sort i →
