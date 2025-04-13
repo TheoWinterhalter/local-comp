@@ -790,6 +790,17 @@ Proof.
   - assumption.
 Qed.
 
+(** Conservativity **)
+
+Lemma inline_nil_id t κ :
+  gscope [] t →
+  ⟦ t ⟧⟨ κ ⟩ = t.
+Proof.
+  intros h. induction h using gscope_ind_alt.
+  all: try solve [ cbn ; f_equal ; eauto ].
+  discriminate.
+Qed.
+
 Theorem conservativity Σ t A i :
   gwf Σ →
   [] ;; [] | ∙ ⊢ A : Sort i →
@@ -800,6 +811,7 @@ Proof.
   intros hΣ hA ht κ.
   eapply inlining in ht. 2: assumption.
   cbn in ht.
-  (* TODO: Show that inline is the identity on MLTT. *)
-  (* Do we use a typing judgment or a global scoping one? *)
+  eapply typing_gscope in hA as gA. eapply inline_nil_id in gA.
+  rewrite gA in ht.
+  (* What's left is strenghtening. *)
 Admitted.
