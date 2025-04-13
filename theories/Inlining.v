@@ -245,6 +245,27 @@ Proof.
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
 
+Lemma gscope_parg_ind_alt :
+  ∀ (Σ : gctx) (P : parg → Prop),
+    P pvar →
+    (∀ t, gscope Σ t → P (pforce t)) →
+    (∀ x l, Forall (gscope_parg Σ) l → Forall P l → P (psymb x l)) →
+    ∀ p, gscope_parg Σ p → P p.
+Proof.
+  intros Σ P hvar hforce hsymb.
+  fix aux 2. move aux at top.
+  intros p h. destruct h as [| | x l h ].
+  3:{
+    eapply hsymb. 1: assumption.
+    revert l h.
+    fix aux1 2.
+    intros l h. destruct h as [| p l hp hl].
+    - constructor.
+    - constructor. all: eauto.
+  }
+  all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
+Qed.
+
 (** Inlining **)
 
 #[local] Notation ginst := (gref → term).
@@ -814,13 +835,12 @@ Lemma inline_parg_ext Σ p κ κ' :
   inline_parg κ p = inline_parg κ' p.
 Proof.
   intros hp he.
-  induction hp.
+  induction hp using gscope_parg_ind_alt.
   - reflexivity.
   - cbn. f_equal. eapply inline_ext. all: eauto.
   - cbn. f_equal. eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
-    (* Need stronger ih *)
-    admit.
-Admitted.
+    cbn. auto.
+Qed.
 
 Lemma inline_pat_ext Σ p κ κ' :
   gscope_pat Σ p →
