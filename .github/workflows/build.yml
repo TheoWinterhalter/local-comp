@@ -28,7 +28,7 @@ jobs:
       - name: Docker-Coq-Action
         uses: coq-community/docker-coq-action@v1
         with:
-          coq_version: ${{ env.coq_version }}
+          # coq_version: ${{ env.coq_version }}
           before_install: |
             startGroup "Print opam config"
               sudo chown -R coq:coq .
