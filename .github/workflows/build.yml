@@ -41,6 +41,7 @@ jobs:
             endGroup
           script: |
             startGroup "Build project"
+              opam exec -- make autosubst
               opam exec -- make -j 2
               opam exec -- make coqdoc
             endGroup
