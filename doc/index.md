@@ -11,10 +11,10 @@ General tactics, lemmas and notations are defined in
 We define a common syntax for both MLTT and its extension.
 [BasicAST] contains the notion of references (for variables).
 `autosubst/AST.sig` is used to generate the [autosubst/AST] module.
-[autosubst/core], [autosubst/unscoped] and [SubstNotations] contain the
-Autosubst library and some notations.
+[autosubst/core], [autosubst/unscoped] and [autosubst/SubstNotations] contain
+the Autosubst library and some notations.
 [autosubst/RAsimpl] contains implementation for the `rasimpl` tactic,
-whereas [autosubst/AAST_rasimpl] provide the corresponding instance for our
+whereas [autosubst/AST_rasimpl] provide the corresponding instance for our
 syntax.
 
 [Env] defines global, extension, and local environments.
@@ -26,7 +26,7 @@ syntax.
 [autosubst/core]: coqdoc/LocalComp.autosubst.core.html
 [autosubst/unscoped]: coqdoc/LocalComp.autosubst.unscoped.html
 [autosubst/RAsimpl]: coqdoc/LocalComp.autosubst.RAsimpl.html
-[SubstNotations]: coqdoc/LocalComp.SubstNotations.html
+[autosubst/SubstNotations]: coqdoc/LocalComp.autosubst.SubstNotations.html
 [Env]: coqdoc/LocalComp.Env.html
 [Inst]: coqdoc/LocalComp.Inst.html
 

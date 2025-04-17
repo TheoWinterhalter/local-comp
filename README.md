@@ -5,6 +5,8 @@ over computation rules.
 For the moment it contains a proof of conservativity of it over MLTT, and more
 of the meta-theory.
 
+[See the rendered Rocq code, with comments.](https://theowinterhalter.github.io/local-comp/)
+
 More to come…
 
 ## Building
