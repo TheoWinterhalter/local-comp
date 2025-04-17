@@ -12,5 +12,8 @@ depends: [
   "rocq-autosubst-ocaml"
 ]
 build: [
-  [make]
+  [
+    make autosubst
+    make
+  ]
 ]
