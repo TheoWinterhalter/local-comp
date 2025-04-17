@@ -15,3 +15,9 @@ them using
 opam repo add rocq-released https://rocq-prover.org/opam/released
 opam install --deps-only .
 ```
+
+Then to verify the proof, just use `make`:
+```sh
+make autosubst
+make
+```
