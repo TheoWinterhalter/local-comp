@@ -26,6 +26,7 @@ syntax.
 [autosubst/core]: coqdoc/LocalComp.autosubst.core.html
 [autosubst/unscoped]: coqdoc/LocalComp.autosubst.unscoped.html
 [autosubst/RAsimpl]: coqdoc/LocalComp.autosubst.RAsimpl.html
+[autosubst/AST_rasimpl]: coqdoc/LocalComp.autosubst.AST_rasimpl.html
 [autosubst/SubstNotations]: coqdoc/LocalComp.autosubst.SubstNotations.html
 [Env]: coqdoc/LocalComp.Env.html
 [Inst]: coqdoc/LocalComp.Inst.html
