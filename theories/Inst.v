@@ -79,9 +79,10 @@ Definition delocal M t :=
 Definition delocal_lift M k t :=
   t <[ ups k (assm M) ].
 
-(** Pattern linear instantiation
+(** Pattern instantiation
 
   This version keeps forced subterms intact.
+  It also assumes holes are in the same as the context.
 
 **)
 
@@ -112,3 +113,29 @@ Definition rule_lhs M ξ δ rule :=
 
 Definition rule_rhs M ξ δ rule :=
   rule_tm M ξ δ (length rule.(cr_env)) rule.(cr_rep).
+
+(** Linear pattern instantiation
+
+  This version replaces forced subterms by variables.
+
+
+  TODO: Think about this more.
+  Perhaps we should relax the current syntax a bit, because it forces the
+  order of variables and will align poorly with forced/unforced.
+
+  Maybe we give up on enforcing linearity, and just essentially get it from
+  typing.
+
+  So a computation rule will be like Θ ⊢ p ↦ r : A where r is a term in Θ and p
+  is still a pattern with forced subterms, and variables (with no linearity
+  requirement).
+  The instance with forced subterms should have type A in Θ.
+
+  For the reduction relation, we then want to replace forced terms with
+  variables so that we get Θ, Θ' ⊢ l ↦ r such that l well-typed instances
+  factor through p + the substitution establishing the forced subterms, up to
+  conversion.
+
+  So do I need a syntax for patterns or only a term + a forcing substitution?
+
+**)
