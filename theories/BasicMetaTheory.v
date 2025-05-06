@@ -57,8 +57,8 @@ Lemma conversion_ind :
       ectx_get Ξ M = Some (E, ξ') →
       nth_error (map crule_eq R) n = Some ε →
       let δ := length Δ in
-      let lhs := rule_lhs M ξ' δ ε in
-      let rhs := rule_rhs M ξ' δ ε in
+      let lhs := elhs M ξ' δ ε in
+      let rhs := erhs M ξ' δ ε in
       let k := length ε.(eq_env) in
       scoped k lhs = true →
       scoped k rhs = true →
@@ -1470,8 +1470,8 @@ Lemma conv_equations Σ Ξ Ξ' Γ ξ M E ξ' Ξ'' Δ R n ε :
   let m := length ε.(eq_env) in
   let δ := length Δ in
   let Θ := ctx_einst ξ (ctx_einst ξ' ε.(eq_env)) in
-  let lhs0 := rule_lhs M ξ' δ ε in
-  let rhs0 := rule_rhs M ξ' δ ε in
+  let lhs0 := elhs M ξ' δ ε in
+  let rhs0 := erhs M ξ' δ ε in
   (* scoped m lhs0 = true →
   scoped m rhs0 = true → *)
   let lhs := einst (liftn m ξ) lhs0 in

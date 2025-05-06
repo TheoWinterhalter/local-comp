@@ -35,14 +35,14 @@ Section Red.
       (* closed t = true → *)
       Γ ⊢ const c ξ ↦ einst ξ t
 
-(*   | conv_red E Ξ' Δ R M ξ' n rule σ :
+  (* | conv_red E Ξ' Δ R M ξ' n rule σ :
       Σ E = Some (Ext Ξ' Δ R) →
       ectx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
       let δ := length Δ in
       (* TODO Need linear version without forced terms *)
-      (* let lhs := rule_lhs M ξ' δ rule in
-      let rhs := rule_rhs M ξ' δ rule in *)
+      (* let lhs := elhs M ξ' δ rule in
+      let rhs := erhs M ξ' δ rule in *)
       let k := length rule.(cr_env) in
       scoped k lhs = true →
       scoped k rhs = true →

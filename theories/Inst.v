@@ -84,8 +84,8 @@ Definition delocal_lift M k t :=
 Definition rule_tm M ξ δ k t :=
   delocal_lift M k (einst (liftn (δ + k) ξ) t).
 
-Definition rule_lhs M ξ δ equ :=
-  rule_tm M ξ δ (length equ.(eq_env)) equ.(eq_lhs).
+Definition elhs M ξ δ ε :=
+  rule_tm M ξ δ (length ε.(eq_env)) ε.(eq_lhs).
 
-Definition rule_rhs M ξ δ equ :=
-  rule_tm M ξ δ (length equ.(eq_env)) equ.(eq_lhs).
+Definition erhs M ξ δ ε :=
+  rule_tm M ξ δ (length ε.(eq_env)) ε.(eq_lhs).

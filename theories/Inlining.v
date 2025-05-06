@@ -233,17 +233,17 @@ Section Inline.
       rewrite ups_above. reflexivity.
   Qed.
 
-  Lemma inline_rule_lhs M ξ δ rule :
-    ⟦ rule_lhs M ξ δ rule ⟧ = rule_lhs M ⟦ ξ ⟧× δ ⟦ rule ⟧ε.
+  Lemma inline_elhs M ξ δ rule :
+    ⟦ elhs M ξ δ rule ⟧ = elhs M ⟦ ξ ⟧× δ ⟦ rule ⟧ε.
   Proof.
-    unfold rule_lhs. rewrite inline_rule_tm. cbn - [rule_tm].
+    unfold elhs. rewrite inline_rule_tm. cbn - [rule_tm].
     rewrite length_map. reflexivity.
   Qed.
 
-  Lemma inline_rule_rhs M ξ δ rule :
-    ⟦ rule_rhs M ξ δ rule ⟧ = rule_rhs M ⟦ ξ ⟧× δ ⟦ rule ⟧ε.
+  Lemma inline_erhs M ξ δ rule :
+    ⟦ erhs M ξ δ rule ⟧ = erhs M ⟦ ξ ⟧× δ ⟦ rule ⟧ε.
   Proof.
-    unfold rule_rhs. rewrite inline_rule_tm. cbn - [rule_tm].
+    unfold erhs. rewrite inline_rule_tm. cbn - [rule_tm].
     rewrite length_map. reflexivity.
   Qed.
 
@@ -320,8 +320,8 @@ Section Inline.
     specialize ih with (1 := hn'). cbn in ih.
     destruct ih as (hl & hr & ih).
     subst m lhs0 rhs0 δ.
-    cbn - [ rule_lhs rule_rhs]. rewrite !length_map.
-    rewrite <- inline_rule_rhs, <- inline_rule_lhs.
+    cbn - [ elhs erhs]. rewrite !length_map.
+    rewrite <- inline_erhs, <- inline_elhs.
     rewrite map_app in ih. rewrite !inline_ctx_einst in ih.
     rewrite !inline_einst in ih. rewrite !inline_ren_eargs in ih.
     intuition eauto using scoped_inline.
