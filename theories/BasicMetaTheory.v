@@ -52,14 +52,14 @@ Lemma conversion_ind :
       closed t = true →
       P Γ (const c ξ) (einst ξ t)
     ) →
-    (∀ Γ E Ξ' Δ R M ξ' n rule σ,
+    (∀ Γ E Ξ' Δ R M ξ' n ε σ,
       Σ E = Some (Ext Ξ' Δ R) →
       ectx_get Ξ M = Some (E, ξ') →
-      nth_error R n = Some rule →
+      nth_error (map crule_eq R) n = Some ε →
       let δ := length Δ in
-      let lhs := rule_lhs M ξ' δ rule in
-      let rhs := rule_rhs M ξ' δ rule in
-      let k := length rule.(cr_env) in
+      let lhs := rule_lhs M ξ' δ ε in
+      let rhs := rule_rhs M ξ' δ ε in
+      let k := length ε.(eq_env) in
       scoped k lhs = true →
       scoped k rhs = true →
       P Γ (lhs <[ σ ]) (rhs <[ σ ])
@@ -517,7 +517,7 @@ Proof.
   intros E M ξ' hM.
   specialize (ih _ _ _ hM) as (Ξ'' & Δ' & R & e & ih).
   eexists _,_,_. split. 1: eauto.
-  intros n rule hn m δ Θ lhs0 rhs0. cbn.
+  intros n ε hn m δ Θ lhs0 rhs0. cbn.
   (* forward *)
   specialize ih with (1 := hn). cbn in ih.
   fold m δ lhs0 rhs0 in ih.
@@ -1079,7 +1079,7 @@ Proof.
   intros E M ξ' hM.
   specialize (ih _ _ _ hM) as (Ξ'' & Δ' & R & e & ih).
   eexists _,_,_. split. 1: eauto.
-  intros n rule hn m δ Θ lhs0 rhs0. cbn.
+  intros n ε hn m δ Θ lhs0 rhs0. cbn.
   rewrite liftn_subst_eargs.
   (* forward *)
   specialize ih with (1 := hn). cbn in ih.
@@ -1462,16 +1462,16 @@ Proof.
     rewrite liftn_map_map. reflexivity.
 Qed.
 
-Lemma conv_equations Σ Ξ Ξ' Γ ξ M E ξ' Ξ'' Δ R n rule :
+Lemma conv_equations Σ Ξ Ξ' Γ ξ M E ξ' Ξ'' Δ R n ε :
   inst_equations Σ Ξ Γ ξ Ξ' →
   ectx_get Ξ' M = Some (E, ξ') →
   Σ E = Some (Ext Ξ'' Δ R) →
-  nth_error R n = Some rule →
-  let m := length rule.(cr_env) in
+  nth_error (map crule_eq R) n = Some ε →
+  let m := length ε.(eq_env) in
   let δ := length Δ in
-  let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
-  let lhs0 := rule_lhs M ξ' δ rule in
-  let rhs0 := rule_rhs M ξ' δ rule in
+  let Θ := ctx_einst ξ (ctx_einst ξ' ε.(eq_env)) in
+  let lhs0 := rule_lhs M ξ' δ ε in
+  let rhs0 := rule_rhs M ξ' δ ε in
   (* scoped m lhs0 = true →
   scoped m rhs0 = true → *)
   let lhs := einst (liftn m ξ) lhs0 in
@@ -1498,7 +1498,7 @@ Proof.
   intros E M ξ'' hM.
   specialize (ih _ _ _ hM) as (Ξ3 & Δ3 & R & hE & ih).
   eexists _,_,_. split. 1: eassumption.
-  intros n rule hn m δ Θ lhs0 rhs0. cbn.
+  intros n ε hn m δ Θ lhs0 rhs0. cbn.
   specialize ih with (1 := hn). cbn in ih.
   fold m δ Θ lhs0 rhs0 in ih.
   destruct ih as (? & ? & ih).
@@ -1531,12 +1531,6 @@ Proof.
       eauto using inst_equations_einst_ih.
     }
     rewrite einst_einst. reflexivity.
-  - erewrite ext_term_scoped. 3: eapply eq_subst_trunc. 2: eassumption.
-    erewrite (ext_term_scoped _ rhs).
-    3: eapply eq_subst_trunc. 2: eassumption.
-    erewrite 2!subst_inst. 2,3: eapply trunc_bounds.
-    eapply conv_subst.
-    eapply conv_equations. all: eassumption.
   - cbn. constructor. 1: eauto.
     rewrite lift_liftn.
     apply IHh2. assumption.
@@ -1744,8 +1738,6 @@ Lemma conv_eweak Σ Ξ d Γ u v :
 Proof.
   intros h. induction h using conversion_ind.
   all: try solve [ econstructor ; eauto ].
-  econstructor. 1,3-5: eauto.
-  apply ectx_get_weak. eassumption.
 Qed.
 
 Lemma inst_equations_eweak Σ Ξ d Γ ξ Ξ' :
@@ -1756,7 +1748,7 @@ Proof.
   intros E M ξ' hM.
   specialize (h _ _ _ hM) as (Ξ'' & Δ & R & e & h).
   eexists _,_,_. split. 1: eauto.
-  intros n rule hn m δ θ lhs0 rhs0.
+  intros n ε hn m δ θ lhs0 rhs0.
   specialize h with (1 := hn).
   destruct h as (? & ? & h).
   eauto using conv_eweak.
@@ -1927,24 +1919,24 @@ Proof.
     + eapply typing_gweak. all: eassumption.
 Qed.
 
-Lemma rule_typing_gweak Σ Σ' Ξ Δ r :
-  rule_typing Σ Ξ Δ r →
+Lemma equation_typing_gweak Σ Σ' Ξ Δ r :
+  equation_typing Σ Ξ Δ r →
   Σ ⊑ Σ' →
-  rule_typing Σ' Ξ Δ r.
+  equation_typing Σ' Ξ Δ r.
 Proof.
   intros (hctx & [i hty] & hl & hr) hle.
-  unfold rule_typing.
+  unfold equation_typing.
   intuition eauto using typing_gweak, wf_gweak.
 Qed.
 
 Lemma wf_rules_gweak Σ Σ' Ξ Δ R :
-  Forall (rule_typing Σ Ξ Δ) R →
+  Forall (equation_typing Σ Ξ Δ) R →
   Σ ⊑ Σ' →
-  Forall (rule_typing Σ' Ξ Δ) R.
+  Forall (equation_typing Σ' Ξ Δ) R.
 Proof.
   intros h hle.
   eapply Forall_impl. 2: eassumption.
-  intros. eauto using rule_typing_gweak.
+  intros. eauto using equation_typing_gweak.
 Qed.
 
 (** Validity (or presupposition) **)
@@ -2085,7 +2077,7 @@ Qed.
 Lemma valid_ext Σ c Ξ Δ R :
   gwf Σ →
   Σ c = Some (Ext Ξ Δ R) →
-  ewf Σ Ξ ∧ wf Σ Ξ Δ ∧ Forall (rule_typing Σ Ξ Δ) R.
+  ewf Σ Ξ ∧ wf Σ Ξ Δ ∧ Forall (equation_typing Σ Ξ Δ) (map crule_eq R).
 Proof.
   intros hΣ hc.
   induction hΣ as [ | c' ?????? ih | c' ??????? ih ] in c, Ξ, Δ, R, hc |- *.

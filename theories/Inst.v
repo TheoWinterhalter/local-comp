@@ -84,8 +84,8 @@ Definition delocal_lift M k t :=
 Definition rule_tm M ξ δ k t :=
   delocal_lift M k (einst (liftn (δ + k) ξ) t).
 
-Definition rule_lhs M ξ δ rule :=
-  rule_tm M ξ δ (length rule.(cr_env)) (rule.(cr_pat) <[ rule.(cr_sub) ]).
+Definition rule_lhs M ξ δ equ :=
+  rule_tm M ξ δ (length equ.(eq_env)) equ.(eq_lhs).
 
-Definition rule_rhs M ξ δ rule :=
-  rule_tm M ξ δ (length rule.(cr_env)) rule.(cr_rep).
+Definition rule_rhs M ξ δ equ :=
+  rule_tm M ξ δ (length equ.(eq_env)) equ.(eq_lhs).

@@ -103,11 +103,11 @@ Proof.
   eapply typing_gscope. eassumption.
 Qed.
 
-Definition gscope_rule Σ rule :=
-  Forall (gscope Σ) rule.(cr_env) ∧
-  gscope Σ (rule.(cr_pat) <[ rule.(cr_sub) ]) ∧
-  gscope Σ rule.(cr_rep) ∧
-  gscope Σ rule.(cr_typ).
+Definition gscope_equation Σ ε :=
+  Forall (gscope Σ) ε.(eq_env) ∧
+  gscope Σ ε.(eq_lhs) ∧
+  gscope Σ ε.(eq_rhs) ∧
+  gscope Σ ε.(eq_typ).
 
 Lemma gscope_apps_inv Σ f l :
   gscope Σ (apps f l) →
@@ -123,22 +123,22 @@ Proof.
     + constructor. all: assumption.
 Qed.
 
-Lemma rule_typing_gscope Σ Ξ Δ r :
-  rule_typing Σ Ξ Δ r →
-  gscope_rule Σ r.
+Lemma equation_typing_gscope Σ Ξ Δ r :
+  equation_typing Σ Ξ Δ r →
+  gscope_equation Σ r.
 Proof.
   intros (hctx & [i hty] & hl & hr).
   eapply typing_gscope in hl as gl, hr as gr, hty.
   eapply wf_gscope in hctx.
   rewrite Forall_app in hctx.
-  unfold gscope_rule. intuition eauto.
+  unfold gscope_equation. intuition eauto.
 Qed.
 
-Lemma rules_typing_gscope Σ Ξ Δ R :
-  Forall (rule_typing Σ Ξ Δ) R →
-  Forall (gscope_rule Σ) R.
+Lemma equations_typing_gscope Σ Ξ Δ R :
+  Forall (equation_typing Σ Ξ Δ) R →
+  Forall (gscope_equation Σ) R.
 Proof.
-  eauto using Forall_impl, rule_typing_gscope.
+  eauto using Forall_impl, equation_typing_gscope.
 Qed.
 
 Lemma gscope_ind_alt :
