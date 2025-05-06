@@ -79,63 +79,13 @@ Definition delocal M t :=
 Definition delocal_lift M k t :=
   t <[ ups k (assm M) ].
 
-(** Pattern instantiation
-
-  This version keeps forced subterms intact.
-  It also assumes holes are in the same as the context.
-
-**)
-
-Definition plinst_args (plinst_arg : parg → nat → term * nat) (l : list parg) n :=
-  fold_left (λ '(acc, k) p,
-    let '(t,m) := plinst_arg p k in (t :: acc, m)
-  ) l ([], n).
-
-Fixpoint plinst_arg (p : parg) n : term * nat :=
-  match p with
-  | pvar => (var n, S n)
-  | pforce t => (t, n)
-  | psymb x l =>
-      let '(l', m) := plinst_args plinst_arg l n in
-      (apps (var x) (rev l'), m)
-  end.
-
-Definition plinst k (p : pat) : term :=
-  let '(l,_) := plinst_args plinst_arg p.(pat_args) k in
-  apps (var p.(pat_head)) (rev l).
+(** Rules lhs and rhs **)
 
 Definition rule_tm M ξ δ k t :=
   delocal_lift M k (einst (liftn (δ + k) ξ) t).
 
 Definition rule_lhs M ξ δ rule :=
-  let k := length rule.(cr_env) in
-  rule_tm M ξ δ k (plinst k rule.(cr_pat)).
+  rule_tm M ξ δ (length rule.(cr_env)) (rule.(cr_pat) <[ rule.(cr_sub) ]).
 
 Definition rule_rhs M ξ δ rule :=
   rule_tm M ξ δ (length rule.(cr_env)) rule.(cr_rep).
-
-(** Linear pattern instantiation
-
-  This version replaces forced subterms by variables.
-
-
-  TODO: Think about this more.
-  Perhaps we should relax the current syntax a bit, because it forces the
-  order of variables and will align poorly with forced/unforced.
-
-  Maybe we give up on enforcing linearity, and just essentially get it from
-  typing.
-
-  So a computation rule will be like Θ ⊢ p ↦ r : A where r is a term in Θ and p
-  is still a pattern with forced subterms, and variables (with no linearity
-  requirement).
-  The instance with forced subterms should have type A in Θ.
-
-  For the reduction relation, we then want to replace forced terms with
-  variables so that we get Θ, Θ' ⊢ l ↦ r such that l well-typed instances
-  factor through p + the substitution establishing the forced subterms, up to
-  conversion.
-
-  So do I need a syntax for patterns or only a term + a forcing substitution?
-
-**)

@@ -1,7 +1,7 @@
 (** Environments
 
   We have three kinds of environments:
-  - Σ the global signature, containing definitions.
+  - Σ the global signature, containing definitions and interfaces.
   - Ξ the extension environment.
   - Γ the local environment.
 
@@ -42,21 +42,23 @@ Definition ectx_get (Ξ : ectx) (M : eref) :=
   if length Ξ <=? M then None
   else nth_error Ξ (length Ξ - (S M)).
 
-(** Patterns and pattern arguments **)
-Inductive parg :=
-| pvar
-| pforce (t : term)
-| psymb (x : aref) (l : list parg).
+(** Custom computation rule
 
-Record pat := {
-  pat_head : aref ;
-  pat_args : list parg
-}.
+  Fields are
+  - [cr_env]: the environment of the rule [Θ]
+  - [cr_pat]: the "pattern" for the left-hand side [p]
+  - [cr_sub]: the "forcing" substitution [ρ] to go from [p] to the actual lhs
+  - [cr_rep]: the replacing term [r]
+  - [cr_typ]: the type for both sides [A]
 
-(** Custom computation rule **)
+  This represents the following (typed) definitional equality:
+  [Θ ⊢ l <[ρ] ≡ r : A]
+
+**)
 Record crule := {
   cr_env : ctx ;
-  cr_pat : pat ;
+  cr_pat : term ;
+  cr_sub : nat → term ;
   cr_rep : term ;
   cr_typ : term
 }.

@@ -158,23 +158,10 @@ Section Inline.
     intros. eapply conv_ren. eassumption.
   Qed.
 
-  Fixpoint inline_parg p :=
-    match p with
-    | pvar => pvar
-    | pforce t => pforce ⟦ t ⟧
-    | psymb x l => psymb x (map inline_parg l)
-    end.
-
-  Definition inline_pat p := {|
-    pat_head := p.(pat_head) ;
-    pat_args := map inline_parg p.(pat_args)
-  |}.
-
-  Notation "⟦ p ⟧p" := (inline_pat p).
-
   Definition inline_crule rule := {|
     cr_env := ⟦ rule.(cr_env) ⟧* ;
-    cr_pat := ⟦ rule.(cr_pat) ⟧p ;
+    cr_pat := ⟦ rule.(cr_pat) ⟧ ;
+    cr_sub x := ⟦ rule.(cr_sub) x ⟧ ;
     cr_rep := ⟦ rule.(cr_rep) ⟧ ;
     cr_typ := ⟦ rule.(cr_typ) ⟧
   |}.
@@ -228,56 +215,11 @@ Section Inline.
       rewrite ups_above. reflexivity.
   Qed.
 
-  Lemma inline_plinst_args f l n :
-    Forall (λ p, ∀ k, f (inline_parg p) k = map_fst inline (f p k)) l →
-    plinst_args f (map inline_parg l) n =
-    map_fst (map inline) (plinst_args f l n).
-  Proof.
-    intros h.
-    unfold plinst_args. change (∙, n) with (map_fst (map inline) (∙, n)) at 1.
-    generalize (∙, n) as p. intros p.
-    induction h as [| x l hx hl ih] in p |- *.
-    - reflexivity.
-    - cbn. rewrite <- ih. f_equal.
-      destruct p as [acc k]. cbn.
-      rewrite hx.
-      destruct (f x k). reflexivity.
-  Qed.
-
-  Lemma inline_apps u l :
-    ⟦ apps u l ⟧ = apps ⟦ u ⟧ ⟦ l ⟧*.
-  Proof.
-    induction l in u |- *.
-    - reflexivity.
-    - eauto.
-  Qed.
-
-  Lemma inline_plinst_arg p k :
-    plinst_arg (inline_parg p) k = map_fst inline (plinst_arg p k).
-  Proof.
-    induction p using parg_ind in k |- *.
-    - cbn. reflexivity.
-    - cbn. reflexivity.
-    - cbn. rewrite inline_plinst_args.
-      + destruct plinst_args. cbn.
-        rewrite inline_apps. rewrite map_rev. reflexivity.
-      + assumption.
-  Qed.
-
-  Lemma inline_plinst k p :
-    ⟦ plinst k p ⟧ = plinst k ⟦ p ⟧p.
-  Proof.
-    unfold plinst. cbn - [ plinst_args ].
-    rewrite inline_plinst_args.
-    - destruct plinst_args. rewrite inline_apps. rewrite map_rev. reflexivity.
-    - apply Forall_forall. intros. apply inline_plinst_arg.
-  Qed.
-
   Lemma inline_rule_lhs M ξ δ rule :
     ⟦ rule_lhs M ξ δ rule ⟧ = rule_lhs M ⟦ ξ ⟧× δ ⟦ rule ⟧r.
   Proof.
-    unfold rule_lhs. rewrite inline_rule_tm. cbn.
-    rewrite length_map. rewrite inline_plinst. reflexivity.
+    unfold rule_lhs. rewrite inline_rule_tm. rewrite inline_subst.
+    f_equal. cbn. rewrite length_map. reflexivity.
   Qed.
 
   Lemma inline_rule_rhs M ξ δ rule :
@@ -476,7 +418,6 @@ Notation "⟦ t ⟧×⟨ k ⟩" := (map (map (inline k)) t).
 Notation "⟦ X ⟧e⟨ k ⟩" := (map (λ '(E, ξ), (E, ⟦ ξ ⟧×⟨ k ⟩)) X).
 Notation "⟦ r ⟧r⟨ k ⟩" := (inline_crule k r).
 Notation "⟦ R ⟧R⟨ k ⟩" := (map (inline_crule k) R).
-Notation "⟦ p ⟧p⟨ k ⟩" := (inline_pat k p).
 
 Reserved Notation "⟦ s ⟧κ" (at level 0).
 
@@ -586,45 +527,19 @@ Proof.
   eapply wf_gscope. eassumption.
 Qed.
 
-Lemma inline_parg_ext Σ p κ κ' :
-  gscope_parg Σ p →
-  eq_gscope Σ κ κ' →
-  inline_parg κ p = inline_parg κ' p.
-Proof.
-  intros hp he.
-  induction hp using gscope_parg_ind_alt.
-  - reflexivity.
-  - cbn. f_equal. eapply inline_ext. all: eauto.
-  - cbn. f_equal. eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
-    cbn. auto.
-Qed.
-
-Lemma inline_pat_ext Σ p κ κ' :
-  gscope_pat Σ p →
-  eq_gscope Σ κ κ' →
-  ⟦ p ⟧p⟨ κ ⟩ = ⟦ p ⟧p⟨ κ' ⟩.
-Proof.
-  intros hp he.
-  unfold gscope_pat in hp.
-  destruct p as [a l].
-  unfold inline_pat. cbn in *. f_equal.
-  eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
-  intros. eapply inline_parg_ext. all: eassumption.
-Qed.
-
 Lemma inline_crule_ext Σ rule κ κ' :
   gscope_rule Σ rule →
   eq_gscope Σ κ κ' →
   ⟦ rule ⟧r⟨ κ ⟩ = ⟦ rule ⟧r⟨ κ' ⟩.
 Proof.
   intros [? [? []]] he.
-  destruct rule as [Θ p r A].
+  destruct rule as [Θ p ρ r A].
   unfold inline_crule. cbn in *. f_equal.
   - eapply inline_list_ext. all: eassumption.
-  - eapply inline_pat_ext. all: eassumption.
+  - eapply inline_ext. all: admit.
+  - admit.
   - eapply inline_ext. all: eassumption.
-  - eapply inline_ext. all: eassumption.
-Qed.
+Abort.
 
 Lemma inline_rules_ext Σ R κ κ' :
   Forall (gscope_rule Σ) R →
@@ -633,8 +548,8 @@ Lemma inline_rules_ext Σ R κ κ' :
 Proof.
   intros hR he.
   eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
-  intros. eapply inline_crule_ext. all: eassumption.
-Qed.
+  intros. (* eapply inline_crule_ext. all: eassumption. *)
+Abort.
 
 Reserved Notation "⟦ s ⟧g".
 
@@ -736,9 +651,9 @@ Proof.
     f_equal. f_equal.
     + eapply inline_ectx_ext. all: eassumption.
     + eapply inline_ctx_ext. all: eassumption.
-    + eapply inline_rules_ext. 2: eassumption.
-      eapply rules_typing_gscope. eassumption.
-Qed.
+    + (* eapply inline_rules_ext. 2: eassumption.
+      eapply rules_typing_gscope. eassumption. *)
+Abort.
 
 Lemma gwf_type Σ :
   gwf Σ →
@@ -761,7 +676,7 @@ Proof.
       eapply typing_inline with (Γ := ∙).
       * eapply gwf_gclosed. assumption.
       * eapply gwf_conv_unfold. assumption.
-      * eapply gwf_trans_gctx_ext. assumption.
+      * (* eapply gwf_trans_gctx_ext. assumption. *) admit.
       * assumption.
       * assumption.
       * assumption.
@@ -772,7 +687,7 @@ Proof.
       erewrite <- inline_ext with (t := B).
       2,3: eauto using eq_gscope_gcons, typing_gscope.
       eauto.
-Qed.
+Admitted.
 
 Theorem inlining Ξ Σ Γ t A :
   gwf Σ →
@@ -784,11 +699,11 @@ Proof.
   eapply typing_inline.
   - eapply gwf_gclosed. assumption.
   - eapply gwf_conv_unfold. assumption.
-  - eapply gwf_trans_gctx_ext. assumption.
+  - (* eapply gwf_trans_gctx_ext. assumption. *) admit.
   - eapply gwf_type. assumption.
   - eassumption.
   - assumption.
-Qed.
+Admitted.
 
 (** Conservativity **)
 

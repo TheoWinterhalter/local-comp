@@ -11,31 +11,6 @@ Import CombineNotations.
 
 Set Default Goal Selector "!".
 
-(** Induction principle for [parg] **)
-
-Lemma parg_ind :
-  ∀ (P : parg → Prop),
-    P pvar →
-    (∀ t, P (pforce t)) →
-    (∀ x l,
-      Forall P l →
-      P (psymb x l)
-    ) →
-    ∀ p, P p.
-Proof.
-  intros P hvar hforce hsymb.
-  fix aux 1. move aux at top.
-  intro p. destruct p.
-  3:{
-    eapply hsymb.
-    revert l. fix auxl 1.
-    intro l. destruct l.
-    - constructor.
-    - econstructor. all: eauto.
-  }
-  all: match goal with h : _ |- _ => eapply h end.
-Qed.
-
 (** Better induction principle for [term] **)
 
 Lemma term_rect :
