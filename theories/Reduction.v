@@ -52,7 +52,7 @@ Section Red.
       Γ ⊢ Pi A B ↦ Pi A' B
 
   | red_Pi_cod A B B' :
-      Γ ⊢ B ↦ B' →
+      Γ ,, A ⊢ B ↦ B' →
       Γ ⊢ Pi A B ↦ Pi A B'
 
   | red_lam_dom A t A' :
@@ -60,7 +60,7 @@ Section Red.
       Γ ⊢ lam A t ↦ lam A' t
 
   | red_lam_body A t t' :
-      Γ ⊢ t ↦ t' →
+      Γ ,, A ⊢ t ↦ t' →
       Γ ⊢ lam A t ↦ lam A t'
 
   | red_app_fun u v u' :
@@ -95,7 +95,86 @@ Notation "Σ ;; Ξ | Γ ⊢ u ↮ v" :=
   (equiv Σ Ξ Γ u v)
   (at level 80, u, v at next level).
 
+#[export] Instance equiv_refl Σ Ξ Γ : Reflexive (equiv Σ Ξ Γ).
+Proof.
+  intros u.
+  eapply rst_refl.
+Qed.
+
+#[export] Instance equiv_sym Σ Ξ Γ : Symmetric (equiv Σ Ξ Γ).
+Proof.
+  intros u v h.
+  eapply rst_sym. eassumption.
+Qed.
+
+#[export] Instance equiv_trans Σ Ξ Γ : Transitive (equiv Σ Ξ Γ).
+Proof.
+  intros u v w h1 h2.
+  eapply rst_trans. all: eassumption.
+Qed.
+
+Lemma rst_step_ind A B R R' f x y :
+  (∀ x y, R x y → clos_refl_sym_trans B R' (f x) (f y)) →
+  clos_refl_sym_trans A R x y →
+  clos_refl_sym_trans B R' (f x) (f y).
+Proof.
+  intros hstep h.
+  induction h.
+  - eauto.
+  - apply rst_refl.
+  - apply rst_sym. assumption.
+  - eapply rst_trans. all: eassumption.
+Qed.
+
+Lemma equiv_red_ind Σ Ξ Γ Δ f x y :
+  (∀ x y, Σ ;; Ξ | Δ ⊢ x ↦ y → Σ ;; Ξ | Γ ⊢ f x ↮ f y) →
+  Σ ;; Ξ | Δ ⊢ x ↮ y →
+  Σ ;; Ξ | Γ ⊢ f x ↮ f y.
+Proof.
+  intros hred h.
+  eapply rst_step_ind. all: eauto.
+Qed.
+
 (** Reduction characterises conversion **)
+
+Lemma red_Pi Σ Ξ Γ A A' B B' :
+  Σ ;; Ξ | Γ ⊢ A ↮ A' →
+  Σ ;; Ξ | Γ ,, A ⊢ B ↮ B' →
+  Σ ;; Ξ | Γ ⊢ Pi A B ↮ Pi A' B'.
+Proof.
+  intros hA hB.
+  transitivity (Pi A B').
+  - eapply equiv_red_ind. 2: eassumption.
+    intros. apply rst_step. econstructor. assumption.
+  - eapply equiv_red_ind with (f := λ x, Pi x B'). 2: eassumption.
+    intros. apply rst_step. econstructor. assumption.
+Qed.
+
+Lemma red_lam Σ Ξ Γ A A' t t' :
+  Σ ;; Ξ | Γ ⊢ A ↮ A' →
+  Σ ;; Ξ | Γ ,, A ⊢ t ↮ t' →
+  Σ ;; Ξ | Γ ⊢ lam A t ↮ lam A' t'.
+Proof.
+  intros hA ht.
+  transitivity (lam A t').
+  - eapply equiv_red_ind. 2: eassumption.
+    intros. apply rst_step. econstructor. assumption.
+  - eapply equiv_red_ind with (f := λ x, lam x t'). 2: eassumption.
+    intros. apply rst_step. econstructor. assumption.
+Qed.
+
+Lemma red_app Σ Ξ Γ u u' v v' :
+  Σ ;; Ξ | Γ ⊢ u ↮ u' →
+  Σ ;; Ξ | Γ ⊢ v ↮ v' →
+  Σ ;; Ξ | Γ ⊢ app u v ↮ app u' v'.
+Proof.
+  intros hu hv.
+  transitivity (app u v').
+  - eapply equiv_red_ind. 2: eassumption.
+    intros. apply rst_step. econstructor. assumption.
+  - eapply equiv_red_ind with (f := λ x, app x v'). 2: eassumption.
+    intros. apply rst_step. econstructor. assumption.
+Qed.
 
 Lemma conv_equiv Σ Ξ Γ u v :
   Σ ;; Ξ | Γ ⊢ u ≡ v →
@@ -104,5 +183,8 @@ Proof.
   intros h.
   induction h using conversion_ind.
   all: try solve [ econstructor ; econstructor ; eauto ].
-  - eapply rst_trans.
+  - eapply red_Pi. all: eassumption.
+  - eapply red_lam. all: eassumption.
+  - eapply red_app. all: eassumption.
+  - admit.
 Admitted.
