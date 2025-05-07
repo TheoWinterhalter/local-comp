@@ -12,7 +12,7 @@ From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst Typing BasicMetaTheory
   GScope.
-From Stdlib Require Import Setoid Morphisms Relation_Definitions.
+From Stdlib Require Import Setoid Morphisms Relation_Definitions Relation_Operators.
 
 Import ListNotations.
 Import CombineNotations.
@@ -74,3 +74,35 @@ Section Red.
   where "Γ ⊢ u ↦ v" := (red1 Γ u v).
 
 End Red.
+
+Notation "Σ ;; Ξ | Γ ⊢ u ↦ v" :=
+  (red1 Σ Ξ Γ u v)
+  (at level 80, u, v at next level).
+
+(** Reflexive transitive closure **)
+
+Definition red Σ Ξ Γ := clos_refl_trans _ (λ u v, Σ ;; Ξ | Γ ⊢ u ↦ v).
+
+Notation "Σ ;; Ξ | Γ ⊢ u ↦* v" :=
+  (red Σ Ξ Γ u v)
+  (at level 80, u, v at next level).
+
+(** Equivalence **)
+
+Definition equiv Σ Ξ Γ := clos_refl_sym_trans _ (λ u v, Σ ;; Ξ | Γ ⊢ u ↦ v).
+
+Notation "Σ ;; Ξ | Γ ⊢ u ↮ v" :=
+  (equiv Σ Ξ Γ u v)
+  (at level 80, u, v at next level).
+
+(** Reduction characterises conversion **)
+
+Lemma conv_equiv Σ Ξ Γ u v :
+  Σ ;; Ξ | Γ ⊢ u ≡ v →
+  Σ ;; Ξ | Γ ⊢ u ↮ v.
+Proof.
+  intros h.
+  induction h using conversion_ind.
+  all: try solve [ econstructor ; econstructor ; eauto ].
+  - eapply rst_trans.
+Admitted.
