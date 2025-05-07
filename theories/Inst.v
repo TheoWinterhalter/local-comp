@@ -89,3 +89,9 @@ Definition elhs M ξ δ ε :=
 
 Definition erhs M ξ δ ε :=
   rule_tm M ξ δ (length ε.(eq_env)) ε.(eq_lhs).
+
+Definition rlhs M ξ δ r :=
+  rule_tm M ξ δ (length r.(cr_env)) r.(cr_pat).
+
+Definition rrhs M ξ δ r :=
+  rule_tm M ξ δ (length r.(cr_env)) r.(cr_rep).
