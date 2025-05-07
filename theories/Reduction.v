@@ -19,6 +19,12 @@ Import CombineNotations.
 
 Set Default Goal Selector "!".
 
+(* TODO MOVE *)
+
+Inductive OnOne2 {A} (R : A → A → Prop) : list A → list A → Prop :=
+| OnOne2_hd a a' l : R a a' → OnOne2 R (a :: l) (a' :: l)
+| OnOne2_tl a l l' : OnOne2 R l l' → OnOne2 R (a :: l) (a :: l').
+
 Section Red.
 
   Reserved Notation "Γ ⊢ u ↦ v"
@@ -70,6 +76,10 @@ Section Red.
   | red_app_arg u v v' :
       Γ ⊢ v ↦ v' →
       Γ ⊢ app u v ↦ app u v'
+
+  | red_const c ξ ξ' :
+      OnOne2 (OnOne2 (λ u v, Γ ⊢ u ↦ v)) ξ ξ' →
+      Γ ⊢ const c ξ ↦ const c ξ'
 
   where "Γ ⊢ u ↦ v" := (red1 Γ u v).
 
@@ -137,7 +147,7 @@ Qed.
 
 (** Reduction characterises conversion **)
 
-Lemma red_Pi Σ Ξ Γ A A' B B' :
+Lemma equiv_Pi Σ Ξ Γ A A' B B' :
   Σ ;; Ξ | Γ ⊢ A ↮ A' →
   Σ ;; Ξ | Γ ,, A ⊢ B ↮ B' →
   Σ ;; Ξ | Γ ⊢ Pi A B ↮ Pi A' B'.
@@ -150,7 +160,7 @@ Proof.
     intros. apply rst_step. econstructor. assumption.
 Qed.
 
-Lemma red_lam Σ Ξ Γ A A' t t' :
+Lemma equiv_lam Σ Ξ Γ A A' t t' :
   Σ ;; Ξ | Γ ⊢ A ↮ A' →
   Σ ;; Ξ | Γ ,, A ⊢ t ↮ t' →
   Σ ;; Ξ | Γ ⊢ lam A t ↮ lam A' t'.
@@ -163,7 +173,7 @@ Proof.
     intros. apply rst_step. econstructor. assumption.
 Qed.
 
-Lemma red_app Σ Ξ Γ u u' v v' :
+Lemma equiv_app Σ Ξ Γ u u' v v' :
   Σ ;; Ξ | Γ ⊢ u ↮ u' →
   Σ ;; Ξ | Γ ⊢ v ↮ v' →
   Σ ;; Ξ | Γ ⊢ app u v ↮ app u' v'.
@@ -176,6 +186,58 @@ Proof.
     intros. apply rst_step. econstructor. assumption.
 Qed.
 
+Lemma Forall2_rst_OnOne2 A (R : relation A) l l' :
+  Forall2 R l l' →
+  clos_refl_sym_trans _ (OnOne2 R) l l'.
+Proof.
+  intros h.
+  induction h as [| x y l l' h hl ih].
+  - apply rst_refl.
+  - eapply rst_trans.
+    + apply rst_step. constructor. eassumption.
+    + eapply rst_step_ind. 2: eassumption.
+      intros. eapply rst_step. constructor. assumption.
+Qed.
+
+Lemma OnOne2_rst_comm A R l l' :
+  OnOne2 (clos_refl_sym_trans A R) l l' →
+  clos_refl_sym_trans _ (OnOne2 R) l l'.
+Proof.
+  intros h.
+  induction h as [| x l l' hl ih].
+  - eapply rst_step_ind with (f := λ z, z :: l). 2: eassumption.
+    intros. apply rst_step. constructor. assumption.
+  - eapply rst_step_ind. 2: eassumption.
+    intros. apply rst_step. constructor. assumption.
+Qed.
+
+Lemma clos_refl_sym_trans_incl A R R' :
+  inclusion A R R' →
+  inclusion A (clos_refl_sym_trans A R) (clos_refl_sym_trans A R').
+Proof.
+  intros hR x y h.
+  eapply rst_step_ind with (f := λ x, x). 2: eassumption.
+  intros. apply rst_step. eauto.
+Qed.
+
+Lemma equiv_const Σ Ξ Γ c ξ ξ' :
+  Forall2 (Forall2 (λ u v, Σ ;; Ξ | Γ ⊢ u ↮ v)) ξ ξ' →
+  Σ ;; Ξ | Γ ⊢ const c ξ ↮ const c ξ'.
+Proof.
+  intros hξ.
+  eapply Forall2_impl in hξ. 2: eapply Forall2_rst_OnOne2.
+  eapply Forall2_impl in hξ.
+  2:{ eapply clos_refl_sym_trans_incl. intros ??. eapply OnOne2_rst_comm. }
+  eapply Forall2_impl in hξ. 2: eapply Operators_Properties.clos_rst_idempotent.
+  eapply Forall2_rst_OnOne2 in hξ.
+  eapply clos_refl_sym_trans_incl in hξ.
+  2:{ intros ??. eapply OnOne2_rst_comm. }
+  eapply Operators_Properties.clos_rst_idempotent in hξ.
+  eapply rst_step_ind. 2: eassumption.
+  intros. apply rst_step.
+  constructor. assumption.
+Qed.
+
 Lemma conv_equiv Σ Ξ Γ u v :
   Σ ;; Ξ | Γ ⊢ u ≡ v →
   Σ ;; Ξ | Γ ⊢ u ↮ v.
@@ -183,8 +245,8 @@ Proof.
   intros h.
   induction h using conversion_ind.
   all: try solve [ econstructor ; econstructor ; eauto ].
-  - eapply red_Pi. all: eassumption.
-  - eapply red_lam. all: eassumption.
-  - eapply red_app. all: eassumption.
-  - admit.
-Admitted.
+  - eapply equiv_Pi. all: eassumption.
+  - eapply equiv_lam. all: eassumption.
+  - eapply equiv_app. all: eassumption.
+  - eapply equiv_const. assumption.
+Qed.
