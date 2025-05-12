@@ -353,12 +353,11 @@ Proof.
   apply Forall2_diag. rewrite Forall_forall. auto.
 Qed.
 
-Lemma OnOne2_refl_Forall2 A (R : relation A) l l' :
-  OnOne2 R l l' →
+Lemma OnOne2_refl_Forall2 A (R : relation A) :
   Reflexive R →
-  Forall2 R l l'.
+  inclusion _ (OnOne2 R) (Forall2 R).
 Proof.
-  intros h hrefl.
+  intros hrefl l l' h.
   induction h as [ x y l h | x l l' h ih ].
   - constructor.
     + assumption.
@@ -372,6 +371,24 @@ Proof.
   intros u. ttconv.
 Qed.
 
+Lemma OnOne2_impl A (R R' : relation A) l l' :
+  inclusion _ R R' →
+  OnOne2 R l l' →
+  OnOne2 R' l l'.
+Proof.
+  intros hR h.
+  induction h.
+  - constructor. auto.
+  - constructor. auto.
+Qed.
+
+#[export] Instance Reflexive_eta A (R : relation A) :
+  Reflexive R →
+  Reflexive (λ x y, R x y).
+Proof.
+  auto.
+Qed.
+
 Lemma red_conv Σ Ξ Γ u v :
   Σ ;; Ξ | Γ ⊢ u ↦ v →
   Σ ;; Ξ | Γ ⊢ u ≡ v.
@@ -381,5 +398,7 @@ Proof.
   all: try solve [ ttconv ].
   - econstructor. all: eauto. all: admit.
   - admit.
-  - constructor. apply OnOne2_refl_Forall2. 2: exact _.
+  - constructor. apply OnOne2_refl_Forall2. 1: exact _.
+    eapply OnOne2_impl. 2: eassumption.
+    apply OnOne2_refl_Forall2. exact _.
 Abort.
