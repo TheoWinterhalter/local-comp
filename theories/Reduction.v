@@ -145,7 +145,50 @@ Proof.
   eapply rst_step_ind. all: eauto.
 Qed.
 
-(** Reduction characterises conversion **)
+(** Notion of confluence **)
+
+Definition red_confluent Σ Ξ :=
+  ∀ Γ t u v,
+    Σ ;; Ξ | Γ ⊢ t ↦* u →
+    Σ ;; Ξ | Γ ⊢ t ↦* v →
+    ∃ w,
+      Σ ;; Ξ | Γ ⊢ u ↦* w ∧
+      Σ ;; Ξ | Γ ⊢ v ↦* w.
+
+(** Joinability **)
+
+Definition joinable Σ Ξ Γ u v :=
+  ∃ w,
+    Σ ;; Ξ | Γ ⊢ u ↦* w ∧
+    Σ ;; Ξ | Γ ⊢ v ↦* w.
+
+Notation "Σ ;; Ξ | Γ ⊢ u ⋈ v" :=
+  (joinable Σ Ξ Γ u v)
+  (at level 80, u, v at next level).
+
+(** Assuming confluence, equivalence is the same as joinability **)
+
+Lemma equiv_join Σ Ξ Γ u v :
+  red_confluent Σ Ξ →
+  Σ ;; Ξ | Γ ⊢ u ↮ v →
+  Σ ;; Ξ | Γ ⊢ u ⋈ v.
+Proof.
+  intros hc h.
+  induction h as [u v hr | u | u v h ih | u v w h1 ih1 h2 ih2 ].
+  - exists v. split.
+    + apply rt_step. assumption.
+    + apply rt_refl.
+  - exists u. split. all: apply rt_refl.
+  - destruct ih as [w [h1 h2]]. exists w. intuition auto.
+  - destruct ih1 as [w1 [? hv1]], ih2 as [w2 [hv2 ?]].
+    eapply hc in hv1 as hw. specialize hw with (1 := hv2).
+    destruct hw as [w3 []].
+    exists w3. split.
+    + eapply rt_trans. all: eassumption.
+    + eapply rt_trans. all: eassumption.
+Qed.
+
+(** Conversion is included in the congruence closure of reduction **)
 
 Lemma equiv_Pi Σ Ξ Γ A A' B B' :
   Σ ;; Ξ | Γ ⊢ A ↮ A' →
