@@ -83,6 +83,53 @@ Section Red.
 
   where "Γ ⊢ u ↦ v" := (red1 Γ u v).
 
+  Lemma red1_ind_alt :
+    ∀ (P : ctx → term → term → Prop),
+      (∀ Γ A t u, P Γ (app (lam A t) u) (t <[ u..])) →
+      (∀ Γ c ξ Ξ' A t, Σ c = Some (Def Ξ' A t) → P Γ (const c ξ) (einst ξ t)) →
+      (∀ Γ E Ξ' Δ R M ξ' n rule σ,
+        Σ E = Some (Ext Ξ' Δ R) →
+        ectx_get Ξ M = Some (E, ξ') →
+        nth_error R n = Some rule →
+        let δ := Datatypes.length Δ in
+        let lhs := rlhs M ξ' δ rule in
+        let rhs := rrhs M ξ' δ rule in
+        P Γ (lhs <[ σ]) (rhs <[ σ])
+      ) →
+      (∀ Γ A B A',
+        Γ ⊢ A ↦ A' →
+        P Γ A A' →
+        P Γ (Pi A B) (Pi A' B)
+      ) →
+      (∀ Γ A B B', Γ,, A ⊢ B ↦ B' → P (Γ,, A) B B' → P Γ (Pi A B) (Pi A B')) →
+      (∀ Γ A t A', Γ ⊢ A ↦ A' → P Γ A A' → P Γ (lam A t) (lam A' t)) →
+      (∀ Γ A t t', Γ,, A ⊢ t ↦ t' → P (Γ,, A) t t' → P Γ (lam A t) (lam A t')) →
+      (∀ Γ u v u', Γ ⊢ u ↦ u' → P Γ u u' → P Γ (app u v) (app u' v)) →
+      (∀ Γ u v v', Γ ⊢ v ↦ v' → P Γ v v' → P Γ (app u v) (app u v')) →
+      (∀ Γ c ξ ξ',
+        OnOne2 (OnOne2 (λ u v : term, Γ ⊢ u ↦ v)) ξ ξ' →
+        OnOne2 (OnOne2 (P Γ)) ξ ξ' →
+        P Γ (const c ξ) (const c ξ')
+      ) →
+      ∀ Γ u v, Γ ⊢ u ↦ v → P Γ u v.
+  Proof.
+    intros P hbeta hunf hrl hpid hpic hlamd hlamb happf happa hconst.
+    fix aux 4. move aux at top.
+    intros Γ u v h. destruct h.
+    10:{
+      eapply hconst. 1: assumption.
+      revert ξ ξ' H. fix aux1 3.
+      intros ξ ξ' h. destruct h as [ σ σ' ξ h | σ ξ ξ' h ].
+      - constructor. revert σ σ' h. fix aux2 3.
+        intros σ σ' h. destruct h as [ u v σ h | u σ σ' h ].
+        + constructor. auto.
+        + constructor. auto.
+      - constructor. auto.
+    }
+    all: match goal with h : _ |- _ => eapply h end.
+    all: eauto.
+  Qed.
+
 End Red.
 
 Notation "Σ ;; Ξ | Γ ⊢ u ↦ v" :=
@@ -293,3 +340,17 @@ Proof.
   - eapply equiv_app. all: eassumption.
   - eapply equiv_const. assumption.
 Qed.
+
+(** One-step reduction embeds in conversion, provided typing **)
+
+Lemma red_conv Σ Ξ Γ u v :
+  Σ ;; Ξ | Γ ⊢ u ↦ v →
+  Σ ;; Ξ | Γ ⊢ u ≡ v.
+Proof.
+  intros h.
+  induction h.
+  all: try solve [ ttconv ].
+  - econstructor. all: eauto. all: admit.
+  - admit.
+  - admit.
+Abort.
