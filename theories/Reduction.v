@@ -343,14 +343,43 @@ Qed.
 
 (** One-step reduction embeds in conversion, provided typing **)
 
+(* TODO MOVE *)
+
+#[export] Instance Reflexive_Forall2 A (R : relation A) :
+  Reflexive R →
+  Reflexive (Forall2 R).
+Proof.
+  intros hrefl. intros l.
+  apply Forall2_diag. rewrite Forall_forall. auto.
+Qed.
+
+Lemma OnOne2_refl_Forall2 A (R : relation A) l l' :
+  OnOne2 R l l' →
+  Reflexive R →
+  Forall2 R l l'.
+Proof.
+  intros h hrefl.
+  induction h as [ x y l h | x l l' h ih ].
+  - constructor.
+    + assumption.
+    + reflexivity.
+  - constructor. all: auto.
+Qed.
+
+#[export] Instance Reflexive_conversion Σ Ξ Γ :
+  Reflexive (conversion Σ Ξ Γ).
+Proof.
+  intros u. ttconv.
+Qed.
+
 Lemma red_conv Σ Ξ Γ u v :
   Σ ;; Ξ | Γ ⊢ u ↦ v →
   Σ ;; Ξ | Γ ⊢ u ≡ v.
 Proof.
   intros h.
-  induction h.
+  induction h using red1_ind_alt.
   all: try solve [ ttconv ].
   - econstructor. all: eauto. all: admit.
   - admit.
-  - admit.
+  - constructor. apply OnOne2_refl_Forall2. 2: exact _.
 Abort.
