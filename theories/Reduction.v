@@ -389,16 +389,25 @@ Proof.
   auto.
 Qed.
 
-Lemma red_conv Σ Ξ Γ u v :
+Lemma red_conv Σ Ξ Γ u v A :
+  Σ ;; Ξ | Γ ⊢ u : A →
   Σ ;; Ξ | Γ ⊢ u ↦ v →
   Σ ;; Ξ | Γ ⊢ u ≡ v.
 Proof.
-  intros h.
-  induction h using red1_ind_alt.
-  all: try solve [ ttconv ].
+  intros hu h.
+  induction h in A, hu |- * using red1_ind_alt.
+  all: try solve [ (* ttinv ; intuition *) ttconv ].
   - econstructor. all: eauto. all: admit.
+  - admit. (* Missing forcing condition *)
+  - ttconv. (* Need inversion *) admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
   - admit.
   - constructor. apply OnOne2_refl_Forall2. 1: exact _.
-    eapply OnOne2_impl. 2: eassumption.
-    apply OnOne2_refl_Forall2. exact _.
+    eapply OnOne2_impl.
+    + apply OnOne2_refl_Forall2. exact _.
+    + (* Might be a good idea to have OnOne2_exist *)
+      admit.
 Abort.
