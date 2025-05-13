@@ -378,3 +378,16 @@ Proof.
       eapply OnOne2_impl. 2: eassumption.
       intros a b [[? ha] h]. eauto.
 Admitted.
+
+(** Rest of the approach
+
+  Things might not work as well as I had hoped.
+
+  Assuming factorisation and confluence we get
+
+  u ≡ v entails u ⋈ v
+  but then to get that u ⋈ v (+ u and v well typed) entails u ≡ v we will
+  also need subject reduction, which for β will require injectivity of Π
+  the problem is that we need the entailment above to get it
+
+**)
