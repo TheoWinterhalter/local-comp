@@ -458,11 +458,12 @@ Proof.
 Qed.
 
 Lemma red1_conv Σ Ξ Γ u v A :
+  gwf Σ →
   Σ ;; Ξ | Γ ⊢ u : A →
   Σ ;; Ξ | Γ ⊢ u ↦ v →
   Σ ;; Ξ | Γ ⊢ u ≡ v.
 Proof.
-  intros hu h.
+  intros hΣ hu h.
   induction h in A, hu |- * using red1_ind_alt.
   all: try solve [
     let h' := fresh in
@@ -474,7 +475,8 @@ Proof.
     econstructor.
     + eassumption.
     + apply hξ.
-    + (* TODO Will need gwf Σ *) admit.
+    + eapply valid_def in e as h. 2: assumption.
+      eapply typing_closed. intuition eauto.
   - admit. (* Missing forcing condition *)
   - constructor. apply OnOne2_refl_Forall2. 1: exact _.
     eapply OnOne2_impl.
