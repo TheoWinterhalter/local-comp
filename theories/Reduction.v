@@ -11,8 +11,9 @@ From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst Typing BasicMetaTheory
-  GScope.
-From Stdlib Require Import Setoid Morphisms Relation_Definitions Relation_Operators.
+  GScope Inversion.
+From Stdlib Require Import Setoid Morphisms Relation_Definitions
+  Relation_Operators.
 
 Import ListNotations.
 Import CombineNotations.
@@ -400,6 +401,62 @@ Proof.
   - constructor. inversion hf. intuition auto.
 Qed.
 
+Ltac eqtwice :=
+  match goal with
+  | e1 : ?x = _, e2 : ?x = _ |- _ =>
+    rewrite e2 in e1 ; inversion e1 ; clear e1
+  end.
+
+Lemma nth_error_Some_alt A (l : list A) n x :
+  nth_error l n = Some x →
+  n < length l.
+Proof.
+  intro h.
+  rewrite <- nth_error_Some. congruence.
+Qed.
+
+Lemma inst_typing_Forall_typed Σ Ξ Γ ξ Ξ' :
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  Forall (Forall (λ t, ∃ A, Σ ;; Ξ | Γ ⊢ t : A)) ξ.
+Proof.
+  intros (_ & h & e).
+  rewrite Forall_forall. intros σ hσ.
+  rewrite Forall_forall. intros t ht.
+  apply In_nth_error in hσ as [n hn].
+  apply In_nth_error in ht as [m hm].
+  unfold inst_eget in h.
+  specialize (h n).
+  destruct ectx_get as [[E ξ']|] eqn: eg.
+  2:{ unfold ectx_get in eg. destruct (_ <=? _) eqn: en.
+    - rewrite Nat.leb_le in en.
+      rewrite <- e in en.
+      rewrite <- nth_error_None in en.
+      congruence.
+    - rewrite nth_error_None in eg.
+      rewrite Nat.leb_gt in en.
+      lia.
+  }
+  specialize h with (1 := eq_refl).
+  destruct h as (? & ? & Δ & ? & ? & en & h).
+  rewrite hn in en. cbn in en.
+  destruct (nth_error Δ m) eqn: em.
+  2:{ rewrite nth_error_None in em. apply nth_error_Some_alt in hm. lia. }
+  specialize h with (1 := em).
+  unfold eget in h. rewrite hn, hm in h.
+  eexists. eassumption.
+Qed.
+
+Lemma OnOne2_and_Forall_l A P (R : relation A) l l' :
+  Forall P l →
+  OnOne2 R l l' →
+  OnOne2 (λ x y, P x ∧ R x y) l l'.
+Proof.
+  intros hf ho.
+  induction ho in hf |- *.
+  - constructor. inversion hf. intuition auto.
+  - constructor. inversion hf. intuition auto.
+Qed.
+
 Lemma red1_conv Σ Ξ Γ u v A :
   Σ ;; Ξ | Γ ⊢ u : A →
   Σ ;; Ξ | Γ ⊢ u ↦ v →
@@ -407,18 +464,27 @@ Lemma red1_conv Σ Ξ Γ u v A :
 Proof.
   intros hu h.
   induction h in A, hu |- * using red1_ind_alt.
-  all: try solve [ (* ttinv ; intuition *) ttconv ].
-  - econstructor. all: eauto. all: admit.
+  all: try solve [
+    let h' := fresh in
+    ttinv hu h' ; destruct_exists h' ;
+    intuition ttconv
+  ].
+  - ttinv hu h'. destruct h' as (? & ? & ? & e & hξ & ?).
+    eqtwice. subst.
+    econstructor.
+    + eassumption.
+    + apply hξ.
+    + (* TODO Will need gwf Σ *) admit.
   - admit. (* Missing forcing condition *)
-  - ttconv. (* Need inversion *) admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
   - constructor. apply OnOne2_refl_Forall2. 1: exact _.
     eapply OnOne2_impl.
     + apply OnOne2_refl_Forall2. exact _.
-    + (* use OnOne2_and_Forall2 *)
-      admit.
+    + ttinv hu h'. destruct h' as (Ξ' & ? & ? & e & hξ & ?).
+      eapply inst_typing_Forall_typed in hξ.
+      eapply OnOne2_and_Forall_l in hξ. 2: eassumption.
+      eapply OnOne2_impl. 2: eassumption.
+      intros σ σ' [hf ho].
+      eapply OnOne2_and_Forall_l in hf. 2: eassumption.
+      eapply OnOne2_impl. 2: eassumption.
+      intros a b [[? ha] h]. eauto.
 Abort.
