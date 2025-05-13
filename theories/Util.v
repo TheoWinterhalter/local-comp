@@ -1,4 +1,5 @@
-From Stdlib Require Import Utf8 List Bool Setoid Morphisms Relation_Definitions.
+From Stdlib Require Import Utf8 List Bool Setoid Morphisms Relation_Definitions
+  Setoid Morphisms Relation_Definitions Relation_Operators.
 From Equations Require Import Equations.
 
 Import ListNotations.
@@ -48,6 +49,39 @@ Ltac wlog_iff_using tac :=
 
 Ltac wlog_iff :=
   wlog_iff_using firstorder.
+
+(** Relations **)
+
+Lemma rst_step_ind A B R R' f x y :
+  (∀ x y, R x y → clos_refl_sym_trans B R' (f x) (f y)) →
+  clos_refl_sym_trans A R x y →
+  clos_refl_sym_trans B R' (f x) (f y).
+Proof.
+  intros hstep h.
+  induction h.
+  - eauto.
+  - apply rst_refl.
+  - apply rst_sym. assumption.
+  - eapply rst_trans. all: eassumption.
+Qed.
+
+Lemma clos_refl_sym_trans_incl A R R' :
+  inclusion A R R' →
+  inclusion A (clos_refl_sym_trans A R) (clos_refl_sym_trans A R').
+Proof.
+  intros hR x y h.
+  eapply rst_step_ind with (f := λ x, x). 2: eassumption.
+  intros. apply rst_step. eauto.
+Qed.
+
+#[export] Instance Reflexive_eta A (R : relation A) :
+  Reflexive R →
+  Reflexive (λ x y, R x y).
+Proof.
+  auto.
+Qed.
+
+(** [All] predicate **)
 
 Inductive All {A} (P : A → Type) : list A → Type :=
 | All_nil : All P []
@@ -185,6 +219,108 @@ Proof.
       cbn. eexists. intuition eauto.
     + cbn in e. eapply ih in e as (b & e1 & e2).
       eexists. intuition eauto.
+Qed.
+
+#[export] Instance Reflexive_Forall2 A (R : relation A) :
+  Reflexive R →
+  Reflexive (Forall2 R).
+Proof.
+  intros hrefl. intros l.
+  apply Forall2_diag. rewrite Forall_forall. auto.
+Qed.
+
+(** [OnOne2] predicate **)
+
+Inductive OnOne2 {A} (R : A → A → Prop) : list A → list A → Prop :=
+| OnOne2_hd a a' l : R a a' → OnOne2 R (a :: l) (a' :: l)
+| OnOne2_tl a l l' : OnOne2 R l l' → OnOne2 R (a :: l) (a :: l').
+
+Lemma Forall2_rst_OnOne2 A (R : relation A) l l' :
+  Forall2 R l l' →
+  clos_refl_sym_trans _ (OnOne2 R) l l'.
+Proof.
+  intros h.
+  induction h as [| x y l l' h hl ih].
+  - apply rst_refl.
+  - eapply rst_trans.
+    + apply rst_step. constructor. eassumption.
+    + eapply rst_step_ind. 2: eassumption.
+      intros. eapply rst_step. constructor. assumption.
+Qed.
+
+Lemma OnOne2_rst_comm A R l l' :
+  OnOne2 (clos_refl_sym_trans A R) l l' →
+  clos_refl_sym_trans _ (OnOne2 R) l l'.
+Proof.
+  intros h.
+  induction h as [| x l l' hl ih].
+  - eapply rst_step_ind with (f := λ z, z :: l). 2: eassumption.
+    intros. apply rst_step. constructor. assumption.
+  - eapply rst_step_ind. 2: eassumption.
+    intros. apply rst_step. constructor. assumption.
+Qed.
+
+Lemma OnOne2_refl_Forall2 A (R : relation A) :
+  Reflexive R →
+  inclusion _ (OnOne2 R) (Forall2 R).
+Proof.
+  intros hrefl l l' h.
+  induction h as [ x y l h | x l l' h ih ].
+  - constructor.
+    + assumption.
+    + reflexivity.
+  - constructor. all: auto.
+Qed.
+
+Lemma OnOne2_impl A (R R' : relation A) l l' :
+  inclusion _ R R' →
+  OnOne2 R l l' →
+  OnOne2 R' l l'.
+Proof.
+  intros hR h.
+  induction h.
+  - constructor. auto.
+  - constructor. auto.
+Qed.
+
+Lemma OnOne2_and_Forall2 A (R R' : relation A) l l' :
+  Forall2 R l l' →
+  OnOne2 R' l l' →
+  OnOne2 (λ x y, R x y ∧ R' x y) l l'.
+Proof.
+  intros hf ho.
+  induction ho in hf |- *.
+  - constructor. inversion hf. intuition auto.
+  - constructor. inversion hf. intuition auto.
+Qed.
+
+Lemma OnOne2_and_Forall_l A P (R : relation A) l l' :
+  Forall P l →
+  OnOne2 R l l' →
+  OnOne2 (λ x y, P x ∧ R x y) l l'.
+Proof.
+  intros hf ho.
+  induction ho in hf |- *.
+  - constructor. inversion hf. intuition auto.
+  - constructor. inversion hf. intuition auto.
+Qed.
+
+(** Some mini [congruence] **)
+
+Ltac eqtwice :=
+  match goal with
+  | e1 : ?x = _, e2 : ?x = _ |- _ =>
+    rewrite e2 in e1 ; inversion e1 ; clear e1
+  end.
+
+(** On [nth_error] **)
+
+Lemma nth_error_Some_alt A (l : list A) n x :
+  nth_error l n = Some x →
+  n < length l.
+Proof.
+  intro h.
+  rewrite <- nth_error_Some. congruence.
 Qed.
 
 (** [option] util **)

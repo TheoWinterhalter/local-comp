@@ -20,12 +20,6 @@ Import CombineNotations.
 
 Set Default Goal Selector "!".
 
-(* TODO MOVE *)
-
-Inductive OnOne2 {A} (R : A → A → Prop) : list A → list A → Prop :=
-| OnOne2_hd a a' l : R a a' → OnOne2 R (a :: l) (a' :: l)
-| OnOne2_tl a l l' : OnOne2 R l l' → OnOne2 R (a :: l) (a :: l').
-
 Section Red.
 
   Reserved Notation "Γ ⊢ u ↦ v"
@@ -171,19 +165,6 @@ Proof.
   eapply rst_trans. all: eassumption.
 Qed.
 
-Lemma rst_step_ind A B R R' f x y :
-  (∀ x y, R x y → clos_refl_sym_trans B R' (f x) (f y)) →
-  clos_refl_sym_trans A R x y →
-  clos_refl_sym_trans B R' (f x) (f y).
-Proof.
-  intros hstep h.
-  induction h.
-  - eauto.
-  - apply rst_refl.
-  - apply rst_sym. assumption.
-  - eapply rst_trans. all: eassumption.
-Qed.
-
 Lemma equiv_red_ind Σ Ξ Γ Δ f x y :
   (∀ x y, Σ ;; Ξ | Δ ⊢ x ↦ y → Σ ;; Ξ | Γ ⊢ f x ↮ f y) →
   Σ ;; Ξ | Δ ⊢ x ↮ y →
@@ -277,40 +258,6 @@ Proof.
     intros. apply rst_step. econstructor. assumption.
 Qed.
 
-Lemma Forall2_rst_OnOne2 A (R : relation A) l l' :
-  Forall2 R l l' →
-  clos_refl_sym_trans _ (OnOne2 R) l l'.
-Proof.
-  intros h.
-  induction h as [| x y l l' h hl ih].
-  - apply rst_refl.
-  - eapply rst_trans.
-    + apply rst_step. constructor. eassumption.
-    + eapply rst_step_ind. 2: eassumption.
-      intros. eapply rst_step. constructor. assumption.
-Qed.
-
-Lemma OnOne2_rst_comm A R l l' :
-  OnOne2 (clos_refl_sym_trans A R) l l' →
-  clos_refl_sym_trans _ (OnOne2 R) l l'.
-Proof.
-  intros h.
-  induction h as [| x l l' hl ih].
-  - eapply rst_step_ind with (f := λ z, z :: l). 2: eassumption.
-    intros. apply rst_step. constructor. assumption.
-  - eapply rst_step_ind. 2: eassumption.
-    intros. apply rst_step. constructor. assumption.
-Qed.
-
-Lemma clos_refl_sym_trans_incl A R R' :
-  inclusion A R R' →
-  inclusion A (clos_refl_sym_trans A R) (clos_refl_sym_trans A R').
-Proof.
-  intros hR x y h.
-  eapply rst_step_ind with (f := λ x, x). 2: eassumption.
-  intros. apply rst_step. eauto.
-Qed.
-
 Lemma equiv_const Σ Ξ Γ c ξ ξ' :
   Forall2 (Forall2 (λ u v, Σ ;; Ξ | Γ ⊢ u ↮ v)) ξ ξ' →
   Σ ;; Ξ | Γ ⊢ const c ξ ↮ const c ξ'.
@@ -344,75 +291,10 @@ Qed.
 
 (** One-step reduction embeds in conversion, provided typing **)
 
-(* TODO MOVE *)
-
-#[export] Instance Reflexive_Forall2 A (R : relation A) :
-  Reflexive R →
-  Reflexive (Forall2 R).
-Proof.
-  intros hrefl. intros l.
-  apply Forall2_diag. rewrite Forall_forall. auto.
-Qed.
-
-Lemma OnOne2_refl_Forall2 A (R : relation A) :
-  Reflexive R →
-  inclusion _ (OnOne2 R) (Forall2 R).
-Proof.
-  intros hrefl l l' h.
-  induction h as [ x y l h | x l l' h ih ].
-  - constructor.
-    + assumption.
-    + reflexivity.
-  - constructor. all: auto.
-Qed.
-
 #[export] Instance Reflexive_conversion Σ Ξ Γ :
   Reflexive (conversion Σ Ξ Γ).
 Proof.
   intros u. ttconv.
-Qed.
-
-Lemma OnOne2_impl A (R R' : relation A) l l' :
-  inclusion _ R R' →
-  OnOne2 R l l' →
-  OnOne2 R' l l'.
-Proof.
-  intros hR h.
-  induction h.
-  - constructor. auto.
-  - constructor. auto.
-Qed.
-
-#[export] Instance Reflexive_eta A (R : relation A) :
-  Reflexive R →
-  Reflexive (λ x y, R x y).
-Proof.
-  auto.
-Qed.
-
-Lemma OnOne2_and_Forall2 A (R R' : relation A) l l' :
-  Forall2 R l l' →
-  OnOne2 R' l l' →
-  OnOne2 (λ x y, R x y ∧ R' x y) l l'.
-Proof.
-  intros hf ho.
-  induction ho in hf |- *.
-  - constructor. inversion hf. intuition auto.
-  - constructor. inversion hf. intuition auto.
-Qed.
-
-Ltac eqtwice :=
-  match goal with
-  | e1 : ?x = _, e2 : ?x = _ |- _ =>
-    rewrite e2 in e1 ; inversion e1 ; clear e1
-  end.
-
-Lemma nth_error_Some_alt A (l : list A) n x :
-  nth_error l n = Some x →
-  n < length l.
-Proof.
-  intro h.
-  rewrite <- nth_error_Some. congruence.
 Qed.
 
 Lemma inst_typing_Forall_typed Σ Ξ Γ ξ Ξ' :
@@ -444,17 +326,6 @@ Proof.
   specialize h with (1 := em).
   unfold eget in h. rewrite hn, hm in h.
   eexists. eassumption.
-Qed.
-
-Lemma OnOne2_and_Forall_l A P (R : relation A) l l' :
-  Forall P l →
-  OnOne2 R l l' →
-  OnOne2 (λ x y, P x ∧ R x y) l l'.
-Proof.
-  intros hf ho.
-  induction ho in hf |- *.
-  - constructor. inversion hf. intuition auto.
-  - constructor. inversion hf. intuition auto.
 Qed.
 
 Definition factor_rules (Σ : gctx) Ξ :=
