@@ -457,13 +457,25 @@ Proof.
   - constructor. inversion hf. intuition auto.
 Qed.
 
+Definition factor_rules (Σ : gctx) Ξ :=
+  ∀ M E ξ' Ξ' Δ R n rule σ Γ A,
+    ectx_get Ξ M = Some (E, ξ') →
+    Σ E = Some (Ext Ξ' Δ R) →
+    nth_error R n = Some rule →
+    let δ := length Δ in
+    let lhs := rlhs M ξ' δ rule in
+    let lhs' := elhs M ξ' δ (crule_eq rule) in
+    Σ ;; Ξ | Γ ⊢ lhs <[ σ ] : A →
+    ∃ θ, lhs <[ σ ] = lhs' <[ θ ].
+
 Lemma red1_conv Σ Ξ Γ u v A :
   gwf Σ →
+  factor_rules Σ Ξ →
   Σ ;; Ξ | Γ ⊢ u : A →
   Σ ;; Ξ | Γ ⊢ u ↦ v →
   Σ ;; Ξ | Γ ⊢ u ≡ v.
 Proof.
-  intros hΣ hu h.
+  intros hΣ hfac hu h.
   induction h in A, hu |- * using red1_ind_alt.
   all: try solve [
     let h' := fresh in
@@ -477,7 +489,12 @@ Proof.
     + apply hξ.
     + eapply valid_def in e as h. 2: assumption.
       eapply typing_closed. intuition eauto.
-  - admit. (* Missing forcing condition *)
+  - eapply hfac in hu as h. 2-4: eassumption.
+    destruct h as [θ e].
+    subst lhs δ. rewrite e.
+    (* I suspect crule_eq might be wrong currently for the rhs *)
+    (* In any case, factor_rules needs to be fixed as well *)
+    admit.
   - constructor. apply OnOne2_refl_Forall2. 1: exact _.
     eapply OnOne2_impl.
     + apply OnOne2_refl_Forall2. exact _.
@@ -489,4 +506,4 @@ Proof.
       eapply OnOne2_and_Forall_l in hf. 2: eassumption.
       eapply OnOne2_impl. 2: eassumption.
       intros a b [[? ha] h]. eauto.
-Abort.
+Admitted.
