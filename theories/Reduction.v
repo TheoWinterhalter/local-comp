@@ -389,7 +389,18 @@ Proof.
   auto.
 Qed.
 
-Lemma red_conv Σ Ξ Γ u v A :
+Lemma OnOne2_and_Forall2 A (R R' : relation A) l l' :
+  Forall2 R l l' →
+  OnOne2 R' l l' →
+  OnOne2 (λ x y, R x y ∧ R' x y) l l'.
+Proof.
+  intros hf ho.
+  induction ho in hf |- *.
+  - constructor. inversion hf. intuition auto.
+  - constructor. inversion hf. intuition auto.
+Qed.
+
+Lemma red1_conv Σ Ξ Γ u v A :
   Σ ;; Ξ | Γ ⊢ u : A →
   Σ ;; Ξ | Γ ⊢ u ↦ v →
   Σ ;; Ξ | Γ ⊢ u ≡ v.
@@ -408,6 +419,6 @@ Proof.
   - constructor. apply OnOne2_refl_Forall2. 1: exact _.
     eapply OnOne2_impl.
     + apply OnOne2_refl_Forall2. exact _.
-    + (* Might be a good idea to have OnOne2_exist *)
+    + (* use OnOne2_and_Forall2 *)
       admit.
 Abort.
