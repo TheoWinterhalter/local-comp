@@ -390,4 +390,60 @@ Admitted.
   also need subject reduction, which for β will require injectivity of Π
   the problem is that we need the entailment above to get it
 
+  ! Potential solution
+
+  Do the usual trick of requiring information you recover from typing in the
+  reduction relation. This means the closed stuff, and something like
+  lhs [σ] = lhs' [θ] and same for rhs.
+
+  This uses equality so it's wrong. The challenge is going to be how to get
+  confluence with this, so separation of concerns crumbles.
+
+  Maybe there is another way by define some typing+ judgement that uses ⋈ for
+  conversion (maybe as an extra, only at top-level, or as a replacement for ≡)
+  to prove SR.
+
+  Assuming (λ A t) u : T we have to show t[u] : T
+
+  we get by inversion
+  λ A t : Π A' B'
+  u : A'
+  B'[u] ≡ T
+
+  then by inversion
+  A ⊢ t : B
+  Π A B ≡ Π A' B'
+
+  thus
+  Π A B ⋈ Π A' B'
+
+  and thus
+  A ⋈ A'
+  B ⋈ B'
+
+  we then have u :⁺ A where typing⁺ is defined by adding one layer of ⋈
+  conversion on top of typing
+
+  similarly, A ⊢ t :⁺ B'
+
+  now, if we can prove a substitution lemma for typing⁺ (which would be able
+  to reuse the substitution lemma for typing + the property that ⋈ is
+  substitutive, ie ↦ is) then
+
+  t[u] :⁺ B'[u]
+
+  and then, since B'[u] ⋈ T, we get
+
+  t[u] :⁺ T
+
+  Now, we have to make sure we do have a substitution lemma for it,
+  and that it still works for stuff like congruence rules because maybe
+  the IH is going to be too weak.
+
+  Take u ↦ u' | u v ↦ u' v
+
+  If u v : T then u : Π A B and v : A and B[v] ≡ T
+  by IH, we have u' :⁺ Π A B and we need to show u' v :⁺ B[v]
+  why would that be true?
+
 **)
