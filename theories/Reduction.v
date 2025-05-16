@@ -369,3 +369,24 @@ Proof.
     + apply OnOne2_refl_Forall2. exact _.
     + assumption.
 Qed.
+
+Lemma red_conv Σ Ξ Γ u v :
+  Σ ;; Ξ | Γ ⊢ u ↦* v →
+  Σ ;; Ξ | Γ ⊢ u ≡ v.
+Proof.
+  intros h.
+  induction h.
+  - apply red1_conv. assumption.
+  - reflexivity.
+  - eapply conv_trans. all: eassumption.
+Qed.
+
+Lemma join_conv Σ Ξ Γ u v :
+  Σ ;; Ξ | Γ ⊢ u ⋈ v →
+  Σ ;; Ξ | Γ ⊢ u ≡ v.
+Proof.
+  intros (w & hu & hv).
+  eapply conv_trans.
+  - eapply red_conv. eassumption.
+  - apply conv_sym. eapply red_conv. eassumption.
+Qed.
