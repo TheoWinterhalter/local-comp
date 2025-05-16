@@ -5,6 +5,10 @@
   Those will be achieved with some assumptions on the reduction relation,
   namely confluence and type preservation.
 
+  TODO:
+  - Check that reduction as defined below is suitable for the usual proofs of
+    confluence.
+
 **)
 
 From Stdlib Require Import Utf8 String List Arith Lia.
@@ -35,6 +39,8 @@ Section Red.
 
   | red_unfold c ξ Ξ' A t :
       Σ c = Some (Def Ξ' A t) →
+      inst_equations Σ Ξ Γ ξ Ξ' →
+      closed t = true →
       Γ ⊢ const c ξ ↦ einst ξ t
 
   | red_rule E Ξ' Δ R M ξ' n rule σ :
@@ -44,6 +50,9 @@ Section Red.
       let δ := length Δ in
       let lhs := rlhs M ξ' δ rule in
       let rhs := rrhs M ξ' δ rule in
+      let k := length rule.(cr_env) in
+      scoped k lhs = true →
+      scoped k rhs = true →
       Γ ⊢ lhs <[ σ ] ↦ rhs <[ σ ]
 
   (** Congruence rules **)
@@ -81,7 +90,12 @@ Section Red.
   Lemma red1_ind_alt :
     ∀ (P : ctx → term → term → Prop),
       (∀ Γ A t u, P Γ (app (lam A t) u) (t <[ u..])) →
-      (∀ Γ c ξ Ξ' A t, Σ c = Some (Def Ξ' A t) → P Γ (const c ξ) (einst ξ t)) →
+      (∀ Γ c ξ Ξ' A t,
+        Σ c = Some (Def Ξ' A t) →
+        inst_equations Σ Ξ Γ ξ Ξ' →
+        closed t = true →
+        P Γ (const c ξ) (einst ξ t)
+      ) →
       (∀ Γ E Ξ' Δ R M ξ' n rule σ,
         Σ E = Some (Ext Ξ' Δ R) →
         ectx_get Ξ M = Some (E, ξ') →
@@ -89,6 +103,9 @@ Section Red.
         let δ := Datatypes.length Δ in
         let lhs := rlhs M ξ' δ rule in
         let rhs := rrhs M ξ' δ rule in
+        let k := length rule.(cr_env) in
+        scoped k lhs = true →
+        scoped k rhs = true →
         P Γ (lhs <[ σ]) (rhs <[ σ])
       ) →
       (∀ Γ A B A',
@@ -289,7 +306,7 @@ Proof.
   - eapply equiv_const. assumption.
 Qed.
 
-(** One-step reduction embeds in conversion, provided typing **)
+(** One-step reduction embeds in conversion **)
 
 #[export] Instance Reflexive_conversion Σ Ξ Γ :
   Reflexive (conversion Σ Ξ Γ).
@@ -328,7 +345,7 @@ Proof.
   eexists. eassumption.
 Qed.
 
-Definition factor_rules (Σ : gctx) Ξ :=
+(* Definition factor_rules (Σ : gctx) Ξ :=
   ∀ M E ξ' Ξ' Δ R n rule σ Γ A,
     ectx_get Ξ M = Some (E, ξ') →
     Σ E = Some (Ext Ξ' Δ R) →
@@ -337,117 +354,18 @@ Definition factor_rules (Σ : gctx) Ξ :=
     let lhs := rlhs M ξ' δ rule in
     let lhs' := elhs M ξ' δ (crule_eq rule) in
     Σ ;; Ξ | Γ ⊢ lhs <[ σ ] : A →
-    ∃ θ, lhs <[ σ ] = lhs' <[ θ ].
+    ∃ θ, lhs <[ σ ] = lhs' <[ θ ]. *)
 
-Lemma red1_conv Σ Ξ Γ u v A :
-  gwf Σ →
-  factor_rules Σ Ξ →
-  Σ ;; Ξ | Γ ⊢ u : A →
+Lemma red1_conv Σ Ξ Γ u v :
   Σ ;; Ξ | Γ ⊢ u ↦ v →
   Σ ;; Ξ | Γ ⊢ u ≡ v.
 Proof.
-  intros hΣ hfac hu h.
-  induction h in A, hu |- * using red1_ind_alt.
-  all: try solve [
-    let h' := fresh in
-    ttinv hu h' ; destruct_exists h' ;
-    intuition ttconv
-  ].
-  - ttinv hu h'. destruct h' as (? & ? & ? & e & hξ & ?).
-    eqtwice. subst.
-    econstructor.
-    + eassumption.
-    + apply hξ.
-    + eapply valid_def in e as h. 2: assumption.
-      eapply typing_closed. intuition eauto.
-  - eapply hfac in hu as h. 2-4: eassumption.
-    destruct h as [θ e].
-    subst lhs δ. rewrite e.
-    (* I suspect crule_eq might be wrong currently for the rhs *)
-    (* In any case, factor_rules needs to be fixed as well *)
-    admit.
+  intros h.
+  induction h using red1_ind_alt.
+  all: try solve [ ttconv ].
+  - econstructor. all: eassumption.
   - constructor. apply OnOne2_refl_Forall2. 1: exact _.
     eapply OnOne2_impl.
     + apply OnOne2_refl_Forall2. exact _.
-    + ttinv hu h'. destruct h' as (Ξ' & ? & ? & e & hξ & ?).
-      eapply inst_typing_Forall_typed in hξ.
-      eapply OnOne2_and_Forall_l in hξ. 2: eassumption.
-      eapply OnOne2_impl. 2: eassumption.
-      intros σ σ' [hf ho].
-      eapply OnOne2_and_Forall_l in hf. 2: eassumption.
-      eapply OnOne2_impl. 2: eassumption.
-      intros a b [[? ha] h]. eauto.
-Admitted.
-
-(** Rest of the approach
-
-  Things might not work as well as I had hoped.
-
-  Assuming factorisation and confluence we get
-
-  u ≡ v entails u ⋈ v
-  but then to get that u ⋈ v (+ u and v well typed) entails u ≡ v we will
-  also need subject reduction, which for β will require injectivity of Π
-  the problem is that we need the entailment above to get it
-
-  ! Potential solution
-
-  Do the usual trick of requiring information you recover from typing in the
-  reduction relation. This means the closed stuff, and something like
-  lhs [σ] = lhs' [θ] and same for rhs.
-
-  This uses equality so it's wrong. The challenge is going to be how to get
-  confluence with this, so separation of concerns crumbles.
-
-  Maybe there is another way by define some typing+ judgement that uses ⋈ for
-  conversion (maybe as an extra, only at top-level, or as a replacement for ≡)
-  to prove SR.
-
-  Assuming (λ A t) u : T we have to show t[u] : T
-
-  we get by inversion
-  λ A t : Π A' B'
-  u : A'
-  B'[u] ≡ T
-
-  then by inversion
-  A ⊢ t : B
-  Π A B ≡ Π A' B'
-
-  thus
-  Π A B ⋈ Π A' B'
-
-  and thus
-  A ⋈ A'
-  B ⋈ B'
-
-  we then have u :⁺ A where typing⁺ is defined by adding one layer of ⋈
-  conversion on top of typing
-
-  similarly, A ⊢ t :⁺ B'
-
-  now, if we can prove a substitution lemma for typing⁺ (which would be able
-  to reuse the substitution lemma for typing + the property that ⋈ is
-  substitutive, ie ↦ is) then
-
-  t[u] :⁺ B'[u]
-
-  and then, since B'[u] ⋈ T, we get
-
-  t[u] :⁺ T
-
-  Now, we have to make sure we do have a substitution lemma for it,
-  and that it still works for stuff like congruence rules because maybe
-  the IH is going to be too weak.
-
-  Take u ↦ u' | u v ↦ u' v
-
-  If u v : T then u : Π A B and v : A and B[v] ≡ T
-  by IH, we have u' :⁺ Π A B and we need to show u' v :⁺ B[v]
-  why would that be true?
-
-  So it's not true, instead we can replace ≡ by ⋈ or maybe something less
-  intrusive would be to change the rule for computation rules since we don't
-  care about implementation there. So we could just be more general.
-
-**)
+    + assumption.
+Qed.
