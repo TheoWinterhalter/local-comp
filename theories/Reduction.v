@@ -446,4 +446,8 @@ Admitted.
   by IH, we have u' :⁺ Π A B and we need to show u' v :⁺ B[v]
   why would that be true?
 
+  So it's not true, instead we can replace ≡ by ⋈ or maybe something less
+  intrusive would be to change the rule for computation rules since we don't
+  care about implementation there. So we could just be more general.
+
 **)
