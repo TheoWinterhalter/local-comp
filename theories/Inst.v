@@ -79,7 +79,17 @@ Definition delocal M t :=
 Definition delocal_lift M k t :=
   t <[ ups k (assm M) ].
 
-(** Rules lhs and rhs **)
+(** Rules lhs and rhs
+
+  We have two versions, depending on whether we see the rule as a reduction
+  rule (rlhs/rrhs) or an equation (elhs/erhs).
+
+  For conversion, we would ideally use the equation version which morally
+  doesn't care about stuff like linearity and just presents two terms.
+  As a technicality we will however use the reduction version and only show
+  at a later time, that the equation version suffices.
+
+**)
 
 Definition rule_tm M ξ δ k t :=
   delocal_lift M k (einst (liftn (δ + k) ξ) t).

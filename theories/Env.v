@@ -42,7 +42,7 @@ Definition ectx_get (Ξ : ectx) (M : eref) :=
   if length Ξ <=? M then None
   else nth_error Ξ (length Ξ - (S M)).
 
-(** Custom computation rule
+(** * Custom computation rule
 
   We consider them as definitional equalities which might be nonlinear.
   For implementation purposes however, it's better to have a linear version

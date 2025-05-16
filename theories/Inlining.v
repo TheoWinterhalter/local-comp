@@ -161,40 +161,22 @@ Section Inline.
   Definition inline_crule rule := {|
     cr_env := ⟦ rule.(cr_env) ⟧* ;
     cr_pat := ⟦ rule.(cr_pat) ⟧ ;
-    cr_sub x := ⟦ rule.(cr_sub) x ⟧ ;
+    cr_sub := rule.(cr_sub) ;
     cr_rep := ⟦ rule.(cr_rep) ⟧ ;
     cr_typ := ⟦ rule.(cr_typ) ⟧
   |}.
 
   Notation "⟦ r ⟧r" := (inline_crule r).
 
-  Definition inline_equation ε := {|
-    eq_env := ⟦ ε.(eq_env) ⟧* ;
-    eq_lhs := ⟦ ε.(eq_lhs) ⟧ ;
-    eq_rhs := ⟦ ε.(eq_rhs) ⟧ ;
-    eq_typ := ⟦ ε.(eq_typ) ⟧
-  |}.
-
-  Notation "⟦ e ⟧ε" := (inline_equation e).
-
-  Lemma inline_crule_eq r :
-    ⟦ crule_eq r ⟧ε = crule_eq ⟦ r ⟧r.
-  Proof.
-    unfold inline_crule, inline_equation, crule_eq. cbn. f_equal.
-    apply inline_subst.
-  Qed.
-
   Definition map_fst [A B C] (f : A → C) (p : A * B) :=
     let '(a,b) := p in (f a, b).
 
-  Notation "⟦ E ⟧𝔼" := (map inline_equation E).
+  Notation "⟦ R ⟧R" := (map inline_crule R).
 
   Definition trans_gctx_ext :=
     ∀ E Ξ' Δ R,
       Σ E = Some (Ext Ξ' Δ R) →
-      ∃ R',
-        Σᵗ E = Some (Ext ⟦ Ξ' ⟧e ⟦ Δ ⟧* R') ∧
-        ⟦ map crule_eq R ⟧𝔼 = map crule_eq R'.
+      Σᵗ E = Some (Ext ⟦ Ξ' ⟧e ⟦ Δ ⟧* ⟦ R ⟧R).
 
   Context (hext : trans_gctx_ext).
 
@@ -233,17 +215,17 @@ Section Inline.
       rewrite ups_above. reflexivity.
   Qed.
 
-  Lemma inline_elhs M ξ δ rule :
-    ⟦ elhs M ξ δ rule ⟧ = elhs M ⟦ ξ ⟧× δ ⟦ rule ⟧ε.
+  Lemma inline_rlhs M ξ δ rule :
+    ⟦ rlhs M ξ δ rule ⟧ = rlhs M ⟦ ξ ⟧× δ ⟦ rule ⟧r.
   Proof.
-    unfold elhs. rewrite inline_rule_tm. cbn - [rule_tm].
+    unfold rlhs. rewrite inline_rule_tm. cbn - [rule_tm].
     rewrite length_map. reflexivity.
   Qed.
 
-  Lemma inline_erhs M ξ δ rule :
-    ⟦ erhs M ξ δ rule ⟧ = erhs M ⟦ ξ ⟧× δ ⟦ rule ⟧ε.
+  Lemma inline_rrhs M ξ δ rule :
+    ⟦ rrhs M ξ δ rule ⟧ = rrhs M ⟦ ξ ⟧× δ ⟦ rule ⟧r.
   Proof.
-    unfold erhs. rewrite inline_rule_tm. cbn - [rule_tm].
+    unfold rrhs. rewrite inline_rule_tm. cbn - [rule_tm].
     rewrite length_map. reflexivity.
   Qed.
 
@@ -310,18 +292,16 @@ Section Inline.
     destruct ectx_get as [[E' ξ'']|] eqn:hM'. 2: discriminate.
     cbn in hM. inversion hM. subst. clear hM.
     specialize (ih _ _ _ hM') as (Ξ'' & Δ' & R & e & ih).
-    eapply hext in e as e'. destruct e' as (R' & ? & eR).
     eexists _,_,_. split. 1: eauto.
-    intros n ε hn m δ Θ lhs0 rhs0. cbn.
-    rewrite <- eR in hn.
+    intros n rl hn m δ Θ lhs0 rhs0. cbn.
     rewrite nth_error_map in hn.
-    destruct (nth_error _ n) as [ε' |] eqn:hn'. 2: discriminate.
+    destruct (nth_error _ n) as [rl' |] eqn:hn'. 2: discriminate.
     cbn in hn. inversion hn. subst. clear hn.
     specialize ih with (1 := hn'). cbn in ih.
     destruct ih as (hl & hr & ih).
     subst m lhs0 rhs0 δ.
-    cbn - [ elhs erhs]. rewrite !length_map.
-    rewrite <- inline_erhs, <- inline_elhs.
+    cbn - [ rlhs rrhs]. rewrite !length_map.
+    rewrite <- inline_rrhs, <- inline_rlhs.
     rewrite map_app in ih. rewrite !inline_ctx_einst in ih.
     rewrite !inline_einst in ih. rewrite !inline_ren_eargs in ih.
     intuition eauto using scoped_inline.
@@ -339,6 +319,17 @@ Section Inline.
     - cbn. rewrite inline_einst. eapply conv_einst_closed.
       + eapply inst_equations_inline_ih. eassumption.
       + eapply h_conv_unfold. eassumption.
+    - rewrite !inline_subst. subst lhs rhs.
+      rewrite inline_rlhs, inline_rrhs.
+      replace δ with (length ⟦ Δ ⟧*). 2:{ apply length_map. }
+      eapply conv_red.
+      + eapply hext. eassumption.
+      + apply ectx_get_inline. assumption.
+      + rewrite nth_error_map. rewrite H1. reflexivity.
+      + rewrite <- inline_rlhs. eapply scoped_inline.
+        cbn. rewrite 2!length_map. assumption.
+      + rewrite <- inline_rrhs. eapply scoped_inline.
+        cbn. rewrite 2!length_map. assumption.
     - cbn. eapply conv_einsts.
       apply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
@@ -376,7 +367,6 @@ Section Inline.
       cbn in eM. inversion eM. subst. clear eM.
       specialize (ih _ _ _ eM') as (? & Ξ'' & Δ & R & eE & ho & ih).
       split. 1:{ apply scoped_eargs_inline. assumption. }
-      eapply hext in eE as e'. destruct e' as (R' & ? & eR).
       eexists _,_,_. split. 1: eauto.
       split.
       1:{
@@ -411,7 +401,6 @@ Section Inline.
       + eapply inst_typing_inline. eassumption.
       + eapply h_type. all: eassumption.
     - cbn. rewrite inline_delocal. rewrite inline_einst. rewrite inline_ren.
-      eapply hext in H0 as e'. destruct e' as (R' & ? & eR).
       econstructor.
       + eapply ectx_get_inline. eassumption.
       + eauto.
@@ -427,9 +416,8 @@ Notation "⟦ t ⟧⟨ k ⟩" := (inline k t) (at level 0).
 Notation "⟦ l ⟧*⟨ k ⟩" := (map (inline k) l).
 Notation "⟦ t ⟧×⟨ k ⟩" := (map (map (inline k)) t).
 Notation "⟦ X ⟧e⟨ k ⟩" := (map (λ '(E, ξ), (E, ⟦ ξ ⟧×⟨ k ⟩)) X).
-Notation "⟦ e ⟧ε⟨ k ⟩" := (inline_equation k e).
+Notation "⟦ r ⟧r⟨ k ⟩" := (inline_crule k r).
 Notation "⟦ R ⟧R⟨ k ⟩" := (map (inline_crule k) R).
-Notation "⟦ E ⟧𝔼⟨ k ⟩" := (map (inline_equation k) E).
 
 Reserved Notation "⟦ s ⟧κ" (at level 0).
 
@@ -480,7 +468,7 @@ Lemma inline_ext Σ t κ κ' :
   ⟦ t ⟧⟨ κ ⟩ = ⟦ t ⟧⟨ κ' ⟩.
 Proof.
   intros ht he.
-  induction ht in κ, κ', he |- * using gscope_ind_alt.
+  induction ht in κ, κ', he |- * using gscope_ind.
   all: try solve [ cbn ; eauto ].
   all: try solve [ cbn ; f_equal ; eauto ].
   cbn.
@@ -539,28 +527,28 @@ Proof.
   eapply wf_gscope. eassumption.
 Qed.
 
-Lemma inline_equation_ext Σ ε κ κ' :
-  gscope_equation Σ ε →
+Lemma inline_crule_ext Σ rl κ κ' :
+  gscope_crule Σ rl →
   eq_gscope Σ κ κ' →
-  ⟦ ε ⟧ε⟨ κ ⟩ = ⟦ ε ⟧ε⟨ κ' ⟩.
+  ⟦ rl ⟧r⟨ κ ⟩ = ⟦ rl ⟧r⟨ κ' ⟩.
 Proof.
   intros [? [? []]] he.
-  destruct ε as [Θ l r A].
-  unfold inline_equation. cbn in *. f_equal.
+  destruct rl as [Θ l r θ A].
+  unfold inline_crule. cbn in *. f_equal.
   - eapply inline_list_ext. all: eassumption.
   - eapply inline_ext. all: eassumption.
   - eapply inline_ext. all: eassumption.
   - eapply inline_ext. all: eassumption.
 Qed.
 
-Lemma inline_equations_ext Σ R κ κ' :
-  Forall (gscope_equation Σ) R →
+Lemma inline_crules_ext Σ R κ κ' :
+  Forall (gscope_crule Σ) R →
   eq_gscope Σ κ κ' →
-  ⟦ R ⟧𝔼⟨ κ ⟩ = ⟦ R ⟧𝔼⟨ κ' ⟩.
+  ⟦ R ⟧R⟨ κ ⟩ = ⟦ R ⟧R⟨ κ' ⟩.
 Proof.
   intros hR he.
   eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
-  intros. eapply inline_equation_ext. all: eassumption.
+  intros. eapply inline_crule_ext. all: eassumption.
 Qed.
 
 Reserved Notation "⟦ s ⟧g".
@@ -652,25 +640,18 @@ Proof.
   induction h as [ | c ?????? ih | c ??????? ih ].
   - discriminate.
   - cbn in *. destruct (E =? c)%string eqn:e.
-    + inversion eE. subst. eexists. split.
-      * reflexivity.
-      * rewrite !map_map. eapply map_ext.
-        intros. apply inline_crule_eq.
-        eapply gwf_gclosed. assumption.
+    + inversion eE. subst. reflexivity.
     + eauto.
   - cbn in *. destruct (E =? c)%string eqn:e. 1: discriminate.
-    eapply ih in eE as h'. destruct h' as (R' & eE' & eR).
-    exists R'. rewrite <- eR.
+    rewrite ih. 2: assumption.
     assert (eg : eq_gscope Σ ⟦ Σ ⟧κ (gcons c ⟦ t ⟧⟨ ⟦ Σ ⟧κ ⟩ ⟦ Σ ⟧κ)).
     { eapply eq_gscope_gcons. assumption. }
     eapply valid_ext in eE as h'. 2: assumption.
-    destruct h' as (hΞ' & hΔ & hR).
-    split.
-    + rewrite eE'. f_equal. f_equal.
-      * eapply inline_ectx_ext. all: eassumption.
-      * eapply inline_ctx_ext. all: eassumption.
-    + symmetry. eapply inline_equations_ext. 2: eassumption.
-      eapply equations_typing_gscope. eassumption.
+    destruct h' as (hΞ' & hΔ & hR & hE).
+    f_equal. f_equal.
+    + eapply inline_ectx_ext. all: eassumption.
+    + eapply inline_ctx_ext. all: eassumption.
+    + eapply inline_crules_ext. all: eassumption.
 Qed.
 
 Lemma gwf_type Σ :
@@ -729,7 +710,7 @@ Lemma inline_nil_id t κ :
   gscope [] t →
   ⟦ t ⟧⟨ κ ⟩ = t.
 Proof.
-  intros h. induction h using gscope_ind_alt.
+  intros h. induction h using gscope_ind.
   all: try solve [ cbn ; f_equal ; eauto ].
   discriminate.
 Qed.
@@ -761,7 +742,8 @@ Proof.
   induction h using conversion_ind.
   all: try solve [ ttconv ].
   all: try solve [ econstructor ; eauto ].
-  exfalso. eauto using only_exts_no_def.
+  - exfalso. eauto using only_exts_no_def.
+  - discriminate.
 Qed.
 
 Lemma typing_noext Σ Γ t A :

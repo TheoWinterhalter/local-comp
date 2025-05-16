@@ -3,6 +3,8 @@
   It tracks whether [c] in [const c ξ] always points to [Σ].
   It doesn't ensure anything about [assm].
 
+  The definition is in [Typing] for dependency reasons.
+
 **)
 
 From Stdlib Require Import Utf8 String List Arith Lia.
@@ -15,20 +17,6 @@ Import ListNotations.
 Import CombineNotations.
 
 Set Default Goal Selector "!".
-
-Inductive gscope (Σ : gctx) : term → Prop :=
-| gscope_var x : gscope Σ (var x)
-| gscope_sort i : gscope Σ (Sort i)
-| gscope_pi A B : gscope Σ A → gscope Σ B → gscope Σ (Pi A B)
-| gscope_lam A t : gscope Σ A → gscope Σ t → gscope Σ (lam A t)
-| gscope_app u v : gscope Σ u → gscope Σ v → gscope Σ (app u v)
-| gscope_const c ξ Ξ' A t :
-    Σ c = Some (Def Ξ' A t) →
-    Forall (Forall (gscope Σ)) ξ →
-    gscope Σ (const c ξ)
-| gscope_assm M x : gscope Σ (assm M x).
-
-Notation gscope_eargs Σ ξ := (Forall (Forall (gscope Σ)) ξ).
 
 Lemma inst_typing_gscope_ih Σ Ξ Γ ξ Ξ' :
   inst_typing Σ Ξ Γ ξ Ξ' →
@@ -139,37 +127,4 @@ Lemma equations_typing_gscope Σ Ξ Δ R :
   Forall (gscope_equation Σ) R.
 Proof.
   eauto using Forall_impl, equation_typing_gscope.
-Qed.
-
-Lemma gscope_ind_alt :
-  ∀ Σ (P : term → Prop),
-  (∀ x, P (var x)) →
-  (∀ i, P (Sort i)) →
-  (∀ A B, gscope Σ A → P A → gscope Σ B → P B → P (Pi A B)) →
-  (∀ A t, gscope Σ A → P A → gscope Σ t → P t → P (lam A t)) →
-  (∀ u v, gscope Σ u → P u → gscope Σ v → P v → P (app u v)) →
-  (∀ c ξ Ξ' A t,
-    Σ c = Some (Def Ξ' A t) →
-    gscope_eargs Σ ξ →
-    Forall (Forall P) ξ →
-    P (const c ξ)
-  ) →
-  (∀ M x, P (assm M x)) →
-  ∀ t, gscope Σ t → P t.
-Proof.
-  intros Σ P hvar hsort hpi hlam happ hconst hassm.
-  fix aux 2. move aux at top.
-  intros t h. destruct h as [| | | | | ????? hc h |].
-  6:{
-    eapply hconst. 1,2: eassumption.
-    revert ξ h.
-    fix aux1 2.
-    intros ξ h. destruct h as [| σ ξ hσ hξ].
-    - constructor.
-    - constructor. 2: eauto.
-      revert σ hσ. fix aux2 2. intros σ hσ.
-      destruct hσ as [| u σ h hσ]. 1: constructor.
-      constructor. all: eauto.
-  }
-  all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
