@@ -18,11 +18,14 @@ From LocalComp Require Import Util BasicAST Env Inst Typing BasicMetaTheory
   GScope Inversion.
 From Stdlib Require Import Setoid Morphisms Relation_Definitions
   Relation_Operators.
+From Equations Require Import Equations.
 
 Import ListNotations.
 Import CombineNotations.
 
 Set Default Goal Selector "!".
+
+Require Import Equations.Prop.DepElim.
 
 Section Red.
 
@@ -390,3 +393,80 @@ Proof.
   - eapply red_conv. eassumption.
   - apply conv_sym. eapply red_conv. eassumption.
 Qed.
+
+(** * Injectivity of Π
+
+  The key component to subject reduction.
+  To prove it, we need more constraints about computation rules.
+  If they can a Π we lose.
+
+**)
+
+#[export] Instance Reflexive_red Σ Ξ Γ :
+  Reflexive (red Σ Ξ Γ).
+Proof.
+  intros u. apply rt_refl.
+Qed.
+
+Derive Signature for red1.
+
+Lemma red1_pi_inv Σ Ξ Γ A B T :
+  Σ ;; Ξ | Γ ⊢ Pi A B ↦ T →
+  ∃ A' B',
+    T = Pi A' B' ∧
+    Σ ;; Ξ | Γ ⊢ A ↦* A' ∧
+    Σ ;; Ξ | Γ ,, A ⊢ B ↦* B'.
+Proof.
+  intros h.
+  depelim h.
+  - (* Should disallow *) admit.
+  - eexists _, _. intuition eauto.
+    + apply rt_step. assumption.
+    + reflexivity.
+  - eexists _, _. intuition eauto.
+    + reflexivity.
+    + apply rt_step. assumption.
+Admitted.
+
+Derive Signature for clos_refl_trans.
+
+#[export] Instance Transitive_red Σ Ξ Γ :
+  Transitive (red Σ Ξ Γ).
+Proof.
+  intros u v w. eapply rt_trans.
+Qed.
+
+Lemma red_pi_inv Σ Ξ Γ A B T :
+  Σ ;; Ξ | Γ ⊢ Pi A B ↦* T →
+  ∃ A' B',
+    T = Pi A' B' ∧
+    Σ ;; Ξ | Γ ⊢ A ↦* A' ∧
+    Σ ;; Ξ | Γ ,, A ⊢ B ↦* B'.
+Proof.
+  intros h.
+  dependent induction h.
+  - cbn in *. eapply red1_pi_inv. assumption.
+  - eexists _,_. intuition eauto. all: reflexivity.
+  - destruct IHh1 as (A' & B' & -> & hA & hB).
+    specialize IHh2 with (1 := eq_refl).
+    destruct IHh2 as (A'' & B'' & -> & hA' & hB').
+    eexists _,_. intuition eauto.
+    + etransitivity. all: eassumption.
+    + etransitivity. 1: eassumption.
+      (* Would need context conversion *)
+Admitted.
+
+Lemma join_pi_inv Σ Ξ Γ A B A' B' :
+  Σ ;; Ξ | Γ ⊢ Pi A B ⋈ Pi A' B' →
+  Σ ;; Ξ | Γ ⊢ A ⋈ A' ∧
+  Σ ;; Ξ | Γ ,, A ⊢ B ⋈ B'.
+Proof.
+  intros (T & h & h').
+  eapply red_pi_inv in h as (A1 & B1 & -> & hA1 & hB1), h' as (?&?&e&hA2&hB2).
+  noconf e.
+  split.
+  - exists A1. intuition assumption.
+  - exists B1. intuition auto.
+    (* Context conversion too *)
+    admit.
+Admitted.
