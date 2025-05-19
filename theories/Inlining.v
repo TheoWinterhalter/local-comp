@@ -158,23 +158,10 @@ Section Inline.
     intros. eapply conv_ren. eassumption.
   Qed.
 
-  Fixpoint inline_parg p :=
-    match p with
-    | pvar => pvar
-    | pforce t => pforce ⟦ t ⟧
-    | psymb x l => psymb x (map inline_parg l)
-    end.
-
-  Definition inline_pat p := {|
-    pat_head := p.(pat_head) ;
-    pat_args := map inline_parg p.(pat_args)
-  |}.
-
-  Notation "⟦ p ⟧p" := (inline_pat p).
-
   Definition inline_crule rule := {|
     cr_env := ⟦ rule.(cr_env) ⟧* ;
-    cr_pat := ⟦ rule.(cr_pat) ⟧p ;
+    cr_pat := ⟦ rule.(cr_pat) ⟧ ;
+    cr_sub := rule.(cr_sub) ;
     cr_rep := ⟦ rule.(cr_rep) ⟧ ;
     cr_typ := ⟦ rule.(cr_typ) ⟧
   |}.
@@ -228,62 +215,17 @@ Section Inline.
       rewrite ups_above. reflexivity.
   Qed.
 
-  Lemma inline_plinst_args f l n :
-    Forall (λ p, ∀ k, f (inline_parg p) k = map_fst inline (f p k)) l →
-    plinst_args f (map inline_parg l) n =
-    map_fst (map inline) (plinst_args f l n).
+  Lemma inline_rlhs M ξ δ rule :
+    ⟦ rlhs M ξ δ rule ⟧ = rlhs M ⟦ ξ ⟧× δ ⟦ rule ⟧r.
   Proof.
-    intros h.
-    unfold plinst_args. change (∙, n) with (map_fst (map inline) (∙, n)) at 1.
-    generalize (∙, n) as p. intros p.
-    induction h as [| x l hx hl ih] in p |- *.
-    - reflexivity.
-    - cbn. rewrite <- ih. f_equal.
-      destruct p as [acc k]. cbn.
-      rewrite hx.
-      destruct (f x k). reflexivity.
+    unfold rlhs. rewrite inline_rule_tm. cbn - [rule_tm].
+    rewrite length_map. reflexivity.
   Qed.
 
-  Lemma inline_apps u l :
-    ⟦ apps u l ⟧ = apps ⟦ u ⟧ ⟦ l ⟧*.
+  Lemma inline_rrhs M ξ δ rule :
+    ⟦ rrhs M ξ δ rule ⟧ = rrhs M ⟦ ξ ⟧× δ ⟦ rule ⟧r.
   Proof.
-    induction l in u |- *.
-    - reflexivity.
-    - eauto.
-  Qed.
-
-  Lemma inline_plinst_arg p k :
-    plinst_arg (inline_parg p) k = map_fst inline (plinst_arg p k).
-  Proof.
-    induction p using parg_ind in k |- *.
-    - cbn. reflexivity.
-    - cbn. reflexivity.
-    - cbn. rewrite inline_plinst_args.
-      + destruct plinst_args. cbn.
-        rewrite inline_apps. rewrite map_rev. reflexivity.
-      + assumption.
-  Qed.
-
-  Lemma inline_plinst k p :
-    ⟦ plinst k p ⟧ = plinst k ⟦ p ⟧p.
-  Proof.
-    unfold plinst. cbn - [ plinst_args ].
-    rewrite inline_plinst_args.
-    - destruct plinst_args. rewrite inline_apps. rewrite map_rev. reflexivity.
-    - apply Forall_forall. intros. apply inline_plinst_arg.
-  Qed.
-
-  Lemma inline_rule_lhs M ξ δ rule :
-    ⟦ rule_lhs M ξ δ rule ⟧ = rule_lhs M ⟦ ξ ⟧× δ ⟦ rule ⟧r.
-  Proof.
-    unfold rule_lhs. rewrite inline_rule_tm. cbn.
-    rewrite length_map. rewrite inline_plinst. reflexivity.
-  Qed.
-
-  Lemma inline_rule_rhs M ξ δ rule :
-    ⟦ rule_rhs M ξ δ rule ⟧ = rule_rhs M ⟦ ξ ⟧× δ ⟦ rule ⟧r.
-  Proof.
-    unfold rule_rhs. rewrite inline_rule_tm. cbn - [rule_tm].
+    unfold rrhs. rewrite inline_rule_tm. cbn - [rule_tm].
     rewrite length_map. reflexivity.
   Qed.
 
@@ -351,15 +293,15 @@ Section Inline.
     cbn in hM. inversion hM. subst. clear hM.
     specialize (ih _ _ _ hM') as (Ξ'' & Δ' & R & e & ih).
     eexists _,_,_. split. 1: eauto.
-    intros n rule hn m δ Θ lhs0 rhs0. cbn.
+    intros n rl hn m δ Θ lhs0 rhs0. cbn.
     rewrite nth_error_map in hn.
-    destruct (nth_error R n) as [rule' |] eqn:hn'. 2: discriminate.
+    destruct (nth_error _ n) as [rl' |] eqn:hn'. 2: discriminate.
     cbn in hn. inversion hn. subst. clear hn.
     specialize ih with (1 := hn'). cbn in ih.
     destruct ih as (hl & hr & ih).
     subst m lhs0 rhs0 δ.
-    cbn - [ rule_lhs rule_rhs]. rewrite !length_map.
-    rewrite <- inline_rule_rhs, <- inline_rule_lhs.
+    cbn - [ rlhs rrhs]. rewrite !length_map.
+    rewrite <- inline_rrhs, <- inline_rlhs.
     rewrite map_app in ih. rewrite !inline_ctx_einst in ih.
     rewrite !inline_einst in ih. rewrite !inline_ren_eargs in ih.
     intuition eauto using scoped_inline.
@@ -378,15 +320,15 @@ Section Inline.
       + eapply inst_equations_inline_ih. eassumption.
       + eapply h_conv_unfold. eassumption.
     - rewrite !inline_subst. subst lhs rhs.
-      rewrite inline_rule_lhs, inline_rule_rhs.
+      rewrite inline_rlhs, inline_rrhs.
       replace δ with (length ⟦ Δ ⟧*). 2:{ apply length_map. }
       eapply conv_red.
       + eapply hext. eassumption.
       + apply ectx_get_inline. assumption.
       + rewrite nth_error_map. rewrite H1. reflexivity.
-      + rewrite <- inline_rule_lhs. eapply scoped_inline.
+      + rewrite <- inline_rlhs. eapply scoped_inline.
         cbn. rewrite 2!length_map. assumption.
-      + rewrite <- inline_rule_rhs. eapply scoped_inline.
+      + rewrite <- inline_rrhs. eapply scoped_inline.
         cbn. rewrite 2!length_map. assumption.
     - cbn. eapply conv_einsts.
       apply Forall2_map_l, Forall2_map_r.
@@ -461,7 +403,7 @@ Section Inline.
     - cbn. rewrite inline_delocal. rewrite inline_einst. rewrite inline_ren.
       econstructor.
       + eapply ectx_get_inline. eassumption.
-      + eapply hext. eassumption.
+      + eauto.
       + rewrite nth_error_map. rewrite H1. reflexivity.
       + eapply scoped_eargs_inline. assumption.
     - econstructor. 1,3: eassumption.
@@ -476,7 +418,6 @@ Notation "⟦ t ⟧×⟨ k ⟩" := (map (map (inline k)) t).
 Notation "⟦ X ⟧e⟨ k ⟩" := (map (λ '(E, ξ), (E, ⟦ ξ ⟧×⟨ k ⟩)) X).
 Notation "⟦ r ⟧r⟨ k ⟩" := (inline_crule k r).
 Notation "⟦ R ⟧R⟨ k ⟩" := (map (inline_crule k) R).
-Notation "⟦ p ⟧p⟨ k ⟩" := (inline_pat k p).
 
 Reserved Notation "⟦ s ⟧κ" (at level 0).
 
@@ -527,7 +468,7 @@ Lemma inline_ext Σ t κ κ' :
   ⟦ t ⟧⟨ κ ⟩ = ⟦ t ⟧⟨ κ' ⟩.
 Proof.
   intros ht he.
-  induction ht in κ, κ', he |- * using gscope_ind_alt.
+  induction ht in κ, κ', he |- * using gscope_ind.
   all: try solve [ cbn ; eauto ].
   all: try solve [ cbn ; f_equal ; eauto ].
   cbn.
@@ -586,48 +527,22 @@ Proof.
   eapply wf_gscope. eassumption.
 Qed.
 
-Lemma inline_parg_ext Σ p κ κ' :
-  gscope_parg Σ p →
+Lemma inline_crule_ext Σ rl κ κ' :
+  gscope_crule Σ rl →
   eq_gscope Σ κ κ' →
-  inline_parg κ p = inline_parg κ' p.
-Proof.
-  intros hp he.
-  induction hp using gscope_parg_ind_alt.
-  - reflexivity.
-  - cbn. f_equal. eapply inline_ext. all: eauto.
-  - cbn. f_equal. eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
-    cbn. auto.
-Qed.
-
-Lemma inline_pat_ext Σ p κ κ' :
-  gscope_pat Σ p →
-  eq_gscope Σ κ κ' →
-  ⟦ p ⟧p⟨ κ ⟩ = ⟦ p ⟧p⟨ κ' ⟩.
-Proof.
-  intros hp he.
-  unfold gscope_pat in hp.
-  destruct p as [a l].
-  unfold inline_pat. cbn in *. f_equal.
-  eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
-  intros. eapply inline_parg_ext. all: eassumption.
-Qed.
-
-Lemma inline_crule_ext Σ rule κ κ' :
-  gscope_rule Σ rule →
-  eq_gscope Σ κ κ' →
-  ⟦ rule ⟧r⟨ κ ⟩ = ⟦ rule ⟧r⟨ κ' ⟩.
+  ⟦ rl ⟧r⟨ κ ⟩ = ⟦ rl ⟧r⟨ κ' ⟩.
 Proof.
   intros [? [? []]] he.
-  destruct rule as [Θ p r A].
+  destruct rl as [Θ l r θ A].
   unfold inline_crule. cbn in *. f_equal.
   - eapply inline_list_ext. all: eassumption.
-  - eapply inline_pat_ext. all: eassumption.
+  - eapply inline_ext. all: eassumption.
   - eapply inline_ext. all: eassumption.
   - eapply inline_ext. all: eassumption.
 Qed.
 
-Lemma inline_rules_ext Σ R κ κ' :
-  Forall (gscope_rule Σ) R →
+Lemma inline_crules_ext Σ R κ κ' :
+  Forall (gscope_crule Σ) R →
   eq_gscope Σ κ κ' →
   ⟦ R ⟧R⟨ κ ⟩ = ⟦ R ⟧R⟨ κ' ⟩.
 Proof.
@@ -732,12 +647,11 @@ Proof.
     assert (eg : eq_gscope Σ ⟦ Σ ⟧κ (gcons c ⟦ t ⟧⟨ ⟦ Σ ⟧κ ⟩ ⟦ Σ ⟧κ)).
     { eapply eq_gscope_gcons. assumption. }
     eapply valid_ext in eE as h'. 2: assumption.
-    destruct h' as (hΞ' & hΔ & hR).
+    destruct h' as (hΞ' & hΔ & hR & hE).
     f_equal. f_equal.
     + eapply inline_ectx_ext. all: eassumption.
     + eapply inline_ctx_ext. all: eassumption.
-    + eapply inline_rules_ext. 2: eassumption.
-      eapply rules_typing_gscope. eassumption.
+    + eapply inline_crules_ext. all: eassumption.
 Qed.
 
 Lemma gwf_type Σ :
@@ -796,7 +710,7 @@ Lemma inline_nil_id t κ :
   gscope [] t →
   ⟦ t ⟧⟨ κ ⟩ = t.
 Proof.
-  intros h. induction h using gscope_ind_alt.
+  intros h. induction h using gscope_ind.
   all: try solve [ cbn ; f_equal ; eauto ].
   discriminate.
 Qed.

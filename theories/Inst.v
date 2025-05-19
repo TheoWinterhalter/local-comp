@@ -79,36 +79,29 @@ Definition delocal M t :=
 Definition delocal_lift M k t :=
   t <[ ups k (assm M) ].
 
-(** Pattern linear instantiation
+(** Rules lhs and rhs
 
-  This version keeps forced subterms intact.
+  We have two versions, depending on whether we see the rule as a reduction
+  rule (rlhs/rrhs) or an equation (elhs/erhs).
+
+  For conversion, we would ideally use the equation version which morally
+  doesn't care about stuff like linearity and just presents two terms.
+  As a technicality we will however use the reduction version and only show
+  at a later time, that the equation version suffices.
 
 **)
-
-Definition plinst_args (plinst_arg : parg → nat → term * nat) (l : list parg) n :=
-  fold_left (λ '(acc, k) p,
-    let '(t,m) := plinst_arg p k in (t :: acc, m)
-  ) l ([], n).
-
-Fixpoint plinst_arg (p : parg) n : term * nat :=
-  match p with
-  | pvar => (var n, S n)
-  | pforce t => (t, n)
-  | psymb x l =>
-      let '(l', m) := plinst_args plinst_arg l n in
-      (apps (var x) (rev l'), m)
-  end.
-
-Definition plinst k (p : pat) : term :=
-  let '(l,_) := plinst_args plinst_arg p.(pat_args) k in
-  apps (var p.(pat_head)) (rev l).
 
 Definition rule_tm M ξ δ k t :=
   delocal_lift M k (einst (liftn (δ + k) ξ) t).
 
-Definition rule_lhs M ξ δ rule :=
-  let k := length rule.(cr_env) in
-  rule_tm M ξ δ k (plinst k rule.(cr_pat)).
+Definition elhs M ξ δ ε :=
+  rule_tm M ξ δ (length ε.(eq_env)) ε.(eq_lhs).
 
-Definition rule_rhs M ξ δ rule :=
-  rule_tm M ξ δ (length rule.(cr_env)) rule.(cr_rep).
+Definition erhs M ξ δ ε :=
+  rule_tm M ξ δ (length ε.(eq_env)) ε.(eq_lhs).
+
+Definition rlhs M ξ δ r :=
+  rule_tm M ξ δ (length r.(cr_env)) r.(cr_pat).
+
+Definition rrhs M ξ δ r :=
+  rule_tm M ξ δ (length r.(cr_env)) r.(cr_rep).

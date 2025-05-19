@@ -3,6 +3,8 @@
   It tracks whether [c] in [const c ξ] always points to [Σ].
   It doesn't ensure anything about [assm].
 
+  The definition is in [Typing] for dependency reasons.
+
 **)
 
 From Stdlib Require Import Utf8 String List Arith Lia.
@@ -15,20 +17,6 @@ Import ListNotations.
 Import CombineNotations.
 
 Set Default Goal Selector "!".
-
-Inductive gscope (Σ : gctx) : term → Prop :=
-| gscope_var x : gscope Σ (var x)
-| gscope_sort i : gscope Σ (Sort i)
-| gscope_pi A B : gscope Σ A → gscope Σ B → gscope Σ (Pi A B)
-| gscope_lam A t : gscope Σ A → gscope Σ t → gscope Σ (lam A t)
-| gscope_app u v : gscope Σ u → gscope Σ v → gscope Σ (app u v)
-| gscope_const c ξ Ξ' A t :
-    Σ c = Some (Def Ξ' A t) →
-    Forall (Forall (gscope Σ)) ξ →
-    gscope Σ (const c ξ)
-| gscope_assm M x : gscope Σ (assm M x).
-
-Notation gscope_eargs Σ ξ := (Forall (Forall (gscope Σ)) ξ).
 
 Lemma inst_typing_gscope_ih Σ Ξ Γ ξ Ξ' :
   inst_typing Σ Ξ Γ ξ Ξ' →
@@ -103,19 +91,11 @@ Proof.
   eapply typing_gscope. eassumption.
 Qed.
 
-Inductive gscope_parg Σ : parg → Prop :=
-| gscope_pvar : gscope_parg Σ pvar
-| gscope_pforce t : gscope Σ t → gscope_parg Σ (pforce t)
-| gscope_psymb x l : Forall (gscope_parg Σ) l → gscope_parg Σ (psymb x l).
-
-Definition gscope_pat Σ p :=
-  Forall (gscope_parg Σ) p.(pat_args).
-
-Definition gscope_rule Σ rule :=
-  Forall (gscope Σ) rule.(cr_env) ∧
-  gscope_pat Σ rule.(cr_pat) ∧
-  gscope Σ rule.(cr_rep) ∧
-  gscope Σ rule.(cr_typ).
+Definition gscope_equation Σ ε :=
+  Forall (gscope Σ) ε.(eq_env) ∧
+  gscope Σ ε.(eq_lhs) ∧
+  gscope Σ ε.(eq_rhs) ∧
+  gscope Σ ε.(eq_typ).
 
 Lemma gscope_apps_inv Σ f l :
   gscope Σ (apps f l) →
@@ -131,122 +111,20 @@ Proof.
     + constructor. all: assumption.
 Qed.
 
-Lemma gscope_plinst_args_inv (f : parg → nat → term * nat) Σ pl l n r :
-  Forall (λ p, ∀ k t m, f p k = (t, m) → gscope Σ t → gscope_parg Σ p) pl →
-  fold_left (λ '(acc, k) p, let '(t, m) := f p k in (t :: acc, m)) pl r = (l, n) →
-  Forall (gscope Σ) l →
-  Forall (gscope Σ) (fst r) ∧ Forall (gscope_parg Σ) pl.
-Proof.
-  intros hl e h.
-  induction hl as [| p pl hp hl ih] in r, l, n, e, h |- *.
-  - cbn in e. subst. cbn. intuition constructor.
-  - cbn in e. eapply ih in e as h'. 2: assumption.
-    destruct r as [acc k]. cbn.
-    destruct f as [t m] eqn:e'. cbn in h'.
-    rewrite Forall_cons_iff in h' |- *.
-    intuition eauto.
-Qed.
-
-Lemma gscope_plinst_arg_inv Σ p k t m :
-  plinst_arg p k = (t, m) →
-  gscope Σ t →
-  gscope_parg Σ p.
-Proof.
-  intros e ht.
-  induction p using parg_ind in k, t, m, ht, e |- *.
-  - constructor.
-  - constructor. cbn in e. inversion e. assumption.
-  - cbn in e. destruct plinst_args eqn: es.
-    inversion e. subst. clear e.
-    constructor.
-    apply gscope_apps_inv in ht as [_ ht].
-    eapply Forall_rev in ht. rewrite rev_involutive in ht.
-    eapply gscope_plinst_args_inv in es. all: intuition eauto.
-Qed.
-
-Lemma gscope_plinst_inv Σ k p :
-  gscope Σ (plinst k p) →
-  gscope_pat Σ p.
-Proof.
-  intros h.
-  unfold plinst in h.
-  destruct plinst_args eqn:e.
-  apply gscope_apps_inv in h as [_ h].
-  eapply Forall_rev in h. rewrite rev_involutive in h.
-  unfold gscope_pat.
-  eapply gscope_plinst_args_inv in e. 1,3: intuition eauto.
-  rewrite Forall_forall. intros. eauto using gscope_plinst_arg_inv.
-Qed.
-
-Lemma rule_typing_gscope Σ Ξ Δ r :
-  rule_typing Σ Ξ Δ r →
-  gscope_rule Σ r.
+Lemma equation_typing_gscope Σ Ξ Δ r :
+  equation_typing Σ Ξ Δ r →
+  gscope_equation Σ r.
 Proof.
   intros (hctx & [i hty] & hl & hr).
   eapply typing_gscope in hl as gl, hr as gr, hty.
   eapply wf_gscope in hctx.
-  eapply gscope_plinst_inv in gl.
   rewrite Forall_app in hctx.
-  unfold gscope_rule. intuition eauto.
+  unfold gscope_equation. intuition eauto.
 Qed.
 
-Lemma rules_typing_gscope Σ Ξ Δ R :
-  Forall (rule_typing Σ Ξ Δ) R →
-  Forall (gscope_rule Σ) R.
+Lemma equations_typing_gscope Σ Ξ Δ R :
+  Forall (equation_typing Σ Ξ Δ) R →
+  Forall (gscope_equation Σ) R.
 Proof.
-  eauto using Forall_impl, rule_typing_gscope.
-Qed.
-
-Lemma gscope_ind_alt :
-  ∀ Σ (P : term → Prop),
-  (∀ x, P (var x)) →
-  (∀ i, P (Sort i)) →
-  (∀ A B, gscope Σ A → P A → gscope Σ B → P B → P (Pi A B)) →
-  (∀ A t, gscope Σ A → P A → gscope Σ t → P t → P (lam A t)) →
-  (∀ u v, gscope Σ u → P u → gscope Σ v → P v → P (app u v)) →
-  (∀ c ξ Ξ' A t,
-    Σ c = Some (Def Ξ' A t) →
-    gscope_eargs Σ ξ →
-    Forall (Forall P) ξ →
-    P (const c ξ)
-  ) →
-  (∀ M x, P (assm M x)) →
-  ∀ t, gscope Σ t → P t.
-Proof.
-  intros Σ P hvar hsort hpi hlam happ hconst hassm.
-  fix aux 2. move aux at top.
-  intros t h. destruct h as [| | | | | ????? hc h |].
-  6:{
-    eapply hconst. 1,2: eassumption.
-    revert ξ h.
-    fix aux1 2.
-    intros ξ h. destruct h as [| σ ξ hσ hξ].
-    - constructor.
-    - constructor. 2: eauto.
-      revert σ hσ. fix aux2 2. intros σ hσ.
-      destruct hσ as [| u σ h hσ]. 1: constructor.
-      constructor. all: eauto.
-  }
-  all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
-Qed.
-
-Lemma gscope_parg_ind_alt :
-  ∀ (Σ : gctx) (P : parg → Prop),
-    P pvar →
-    (∀ t, gscope Σ t → P (pforce t)) →
-    (∀ x l, Forall (gscope_parg Σ) l → Forall P l → P (psymb x l)) →
-    ∀ p, gscope_parg Σ p → P p.
-Proof.
-  intros Σ P hvar hforce hsymb.
-  fix aux 2. move aux at top.
-  intros p h. destruct h as [| | x l h ].
-  3:{
-    eapply hsymb. 1: assumption.
-    revert l h.
-    fix aux1 2.
-    intros l h. destruct h as [| p l hp hl].
-    - constructor.
-    - constructor. all: eauto.
-  }
-  all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
+  eauto using Forall_impl, equation_typing_gscope.
 Qed.

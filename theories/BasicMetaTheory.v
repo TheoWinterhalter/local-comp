@@ -11,31 +11,6 @@ Import CombineNotations.
 
 Set Default Goal Selector "!".
 
-(** Induction principle for [parg] **)
-
-Lemma parg_ind :
-  ∀ (P : parg → Prop),
-    P pvar →
-    (∀ t, P (pforce t)) →
-    (∀ x l,
-      Forall P l →
-      P (psymb x l)
-    ) →
-    ∀ p, P p.
-Proof.
-  intros P hvar hforce hsymb.
-  fix aux 1. move aux at top.
-  intro p. destruct p.
-  3:{
-    eapply hsymb.
-    revert l. fix auxl 1.
-    intro l. destruct l.
-    - constructor.
-    - econstructor. all: eauto.
-  }
-  all: match goal with h : _ |- _ => eapply h end.
-Qed.
-
 (** Better induction principle for [term] **)
 
 Lemma term_rect :
@@ -65,6 +40,41 @@ Proof.
   all: eauto.
 Defined.
 
+(** Better induction principle for [gscope] **)
+
+Lemma gscope_ind :
+  ∀ Σ (P : term → Prop),
+  (∀ x, P (var x)) →
+  (∀ i, P (Sort i)) →
+  (∀ A B, gscope Σ A → P A → gscope Σ B → P B → P (Pi A B)) →
+  (∀ A t, gscope Σ A → P A → gscope Σ t → P t → P (lam A t)) →
+  (∀ u v, gscope Σ u → P u → gscope Σ v → P v → P (app u v)) →
+  (∀ c ξ Ξ' A t,
+    Σ c = Some (Def Ξ' A t) →
+    gscope_eargs Σ ξ →
+    Forall (Forall P) ξ →
+    P (const c ξ)
+  ) →
+  (∀ M x, P (assm M x)) →
+  ∀ t, gscope Σ t → P t.
+Proof.
+  intros Σ P hvar hsort hpi hlam happ hconst hassm.
+  fix aux 2. move aux at top.
+  intros t h. destruct h as [| | | | | ????? hc h |].
+  6:{
+    eapply hconst. 1,2: eassumption.
+    revert ξ h.
+    fix aux1 2.
+    intros ξ h. destruct h as [| σ ξ hσ hξ].
+    - constructor.
+    - constructor. 2: eauto.
+      revert σ hσ. fix aux2 2. intros σ hσ.
+      destruct hσ as [| u σ h hσ]. 1: constructor.
+      constructor. all: eauto.
+  }
+  all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
+Qed.
+
 (** Better induction principle for [conversion] **)
 
 Lemma conversion_ind :
@@ -77,14 +87,14 @@ Lemma conversion_ind :
       closed t = true →
       P Γ (const c ξ) (einst ξ t)
     ) →
-    (∀ Γ E Ξ' Δ R M ξ' n rule σ,
+    (∀ Γ E Ξ' Δ R M ξ' n rl σ,
       Σ E = Some (Ext Ξ' Δ R) →
       ectx_get Ξ M = Some (E, ξ') →
-      nth_error R n = Some rule →
+      nth_error R n = Some rl →
       let δ := length Δ in
-      let lhs := rule_lhs M ξ' δ rule in
-      let rhs := rule_rhs M ξ' δ rule in
-      let k := length rule.(cr_env) in
+      let lhs := rlhs M ξ' δ rl in
+      let rhs := rrhs M ξ' δ rl in
+      let k := length rl.(cr_env) in
       scoped k lhs = true →
       scoped k rhs = true →
       P Γ (lhs <[ σ ]) (rhs <[ σ ])
@@ -542,7 +552,7 @@ Proof.
   intros E M ξ' hM.
   specialize (ih _ _ _ hM) as (Ξ'' & Δ' & R & e & ih).
   eexists _,_,_. split. 1: eauto.
-  intros n rule hn m δ Θ lhs0 rhs0. cbn.
+  intros n ε hn m δ Θ lhs0 rhs0. cbn.
   (* forward *)
   specialize ih with (1 := hn). cbn in ih.
   fold m δ lhs0 rhs0 in ih.
@@ -1104,7 +1114,7 @@ Proof.
   intros E M ξ' hM.
   specialize (ih _ _ _ hM) as (Ξ'' & Δ' & R & e & ih).
   eexists _,_,_. split. 1: eauto.
-  intros n rule hn m δ Θ lhs0 rhs0. cbn.
+  intros n ε hn m δ Θ lhs0 rhs0. cbn.
   rewrite liftn_subst_eargs.
   (* forward *)
   specialize ih with (1 := hn). cbn in ih.
@@ -1487,16 +1497,16 @@ Proof.
     rewrite liftn_map_map. reflexivity.
 Qed.
 
-Lemma conv_equations Σ Ξ Ξ' Γ ξ M E ξ' Ξ'' Δ R n rule :
+Lemma conv_equations Σ Ξ Ξ' Γ ξ M E ξ' Ξ'' Δ R n rl :
   inst_equations Σ Ξ Γ ξ Ξ' →
   ectx_get Ξ' M = Some (E, ξ') →
   Σ E = Some (Ext Ξ'' Δ R) →
-  nth_error R n = Some rule →
-  let m := length rule.(cr_env) in
+  nth_error R n = Some rl →
+  let m := length rl.(cr_env) in
   let δ := length Δ in
-  let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
-  let lhs0 := rule_lhs M ξ' δ rule in
-  let rhs0 := rule_rhs M ξ' δ rule in
+  let Θ := ctx_einst ξ (ctx_einst ξ' rl.(cr_env)) in
+  let lhs0 := rlhs M ξ' δ rl in
+  let rhs0 := rrhs M ξ' δ rl in
   (* scoped m lhs0 = true →
   scoped m rhs0 = true → *)
   let lhs := einst (liftn m ξ) lhs0 in
@@ -1523,7 +1533,7 @@ Proof.
   intros E M ξ'' hM.
   specialize (ih _ _ _ hM) as (Ξ3 & Δ3 & R & hE & ih).
   eexists _,_,_. split. 1: eassumption.
-  intros n rule hn m δ Θ lhs0 rhs0. cbn.
+  intros n ε hn m δ Θ lhs0 rhs0. cbn.
   specialize ih with (1 := hn). cbn in ih.
   fold m δ Θ lhs0 rhs0 in ih.
   destruct ih as (? & ? & ih).
@@ -1781,7 +1791,7 @@ Proof.
   intros E M ξ' hM.
   specialize (h _ _ _ hM) as (Ξ'' & Δ & R & e & h).
   eexists _,_,_. split. 1: eauto.
-  intros n rule hn m δ θ lhs0 rhs0.
+  intros n ε hn m δ θ lhs0 rhs0.
   specialize h with (1 := hn).
   destruct h as (? & ? & h).
   eauto using conv_eweak.
@@ -1952,24 +1962,44 @@ Proof.
     + eapply typing_gweak. all: eassumption.
 Qed.
 
-Lemma rule_typing_gweak Σ Σ' Ξ Δ r :
-  rule_typing Σ Ξ Δ r →
+Lemma equation_typing_gweak Σ Σ' Ξ Δ r :
+  equation_typing Σ Ξ Δ r →
   Σ ⊑ Σ' →
-  rule_typing Σ' Ξ Δ r.
+  equation_typing Σ' Ξ Δ r.
 Proof.
   intros (hctx & [i hty] & hl & hr) hle.
-  unfold rule_typing.
+  unfold equation_typing.
   intuition eauto using typing_gweak, wf_gweak.
 Qed.
 
 Lemma wf_rules_gweak Σ Σ' Ξ Δ R :
-  Forall (rule_typing Σ Ξ Δ) R →
+  Forall (equation_typing Σ Ξ Δ) R →
   Σ ⊑ Σ' →
-  Forall (rule_typing Σ' Ξ Δ) R.
+  Forall (equation_typing Σ' Ξ Δ) R.
 Proof.
   intros h hle.
   eapply Forall_impl. 2: eassumption.
-  intros. eauto using rule_typing_gweak.
+  intros. eauto using equation_typing_gweak.
+Qed.
+
+Lemma gscope_gweak Σ Σ' t :
+  gscope Σ t →
+  Σ ⊑ Σ' →
+  gscope Σ' t.
+Proof.
+  intros h hle.
+  induction h using gscope_ind.
+  all: solve [ econstructor ; eauto ].
+Qed.
+
+Lemma gscope_crule_gweak Σ Σ' rl :
+  gscope_crule Σ rl →
+  Σ ⊑ Σ' →
+  gscope_crule Σ' rl.
+Proof.
+  intros h hle.
+  destruct h. split.
+  all: intuition eauto using Forall_impl, gscope_gweak.
 Qed.
 
 (** Validity (or presupposition) **)
@@ -2110,7 +2140,10 @@ Qed.
 Lemma valid_ext Σ c Ξ Δ R :
   gwf Σ →
   Σ c = Some (Ext Ξ Δ R) →
-  ewf Σ Ξ ∧ wf Σ Ξ Δ ∧ Forall (rule_typing Σ Ξ Δ) R.
+  ewf Σ Ξ ∧
+  wf Σ Ξ Δ ∧
+  Forall (gscope_crule Σ) R ∧
+  Forall (equation_typing Σ Ξ Δ) (map crule_eq R).
 Proof.
   intros hΣ hc.
   induction hΣ as [ | c' ?????? ih | c' ??????? ih ] in c, Ξ, Δ, R, hc |- *.
@@ -2118,14 +2151,14 @@ Proof.
   - cbn in hc. destruct (c =? c')%string.
     + inversion hc. subst.
       intuition eauto
-      using wf_gweak, ewf_gweak, typing_gweak, extends_gcons, wf_rules_gweak.
+      using wf_gweak, ewf_gweak, typing_gweak, extends_gcons, wf_rules_gweak, Forall_impl, gscope_crule_gweak.
     + specialize ih with (1 := hc) as [? ?].
       intuition eauto
-      using wf_gweak, ewf_gweak, typing_gweak, extends_gcons, wf_rules_gweak.
+      using wf_gweak, ewf_gweak, typing_gweak, extends_gcons, wf_rules_gweak, Forall_impl, gscope_crule_gweak.
   - cbn in hc. destruct (c =? c')%string. 1: discriminate.
     specialize ih with (1 := hc) as [? ?].
     intuition eauto
-    using wf_gweak, ewf_gweak, typing_gweak, extends_gcons, wf_rules_gweak.
+    using wf_gweak, ewf_gweak, typing_gweak, extends_gcons, wf_rules_gweak, Forall_impl, gscope_crule_gweak.
 Qed.
 
 Definition styping_alt Σ Ξ (Γ : ctx) (σ : nat → term) (Δ : ctx) :=

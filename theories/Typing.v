@@ -34,6 +34,28 @@ Notation scoped_eargs k ξ :=
 Notation closed_eargs ξ :=
   (scoped_eargs 0 ξ).
 
+(** Global scoping (see GScope) **)
+
+Inductive gscope (Σ : gctx) : term → Prop :=
+| gscope_var x : gscope Σ (var x)
+| gscope_sort i : gscope Σ (Sort i)
+| gscope_pi A B : gscope Σ A → gscope Σ B → gscope Σ (Pi A B)
+| gscope_lam A t : gscope Σ A → gscope Σ t → gscope Σ (lam A t)
+| gscope_app u v : gscope Σ u → gscope Σ v → gscope Σ (app u v)
+| gscope_const c ξ Ξ' A t :
+    Σ c = Some (Def Ξ' A t) →
+    Forall (Forall (gscope Σ)) ξ →
+    gscope Σ (const c ξ)
+| gscope_assm M x : gscope Σ (assm M x).
+
+Notation gscope_eargs Σ ξ := (Forall (Forall (gscope Σ)) ξ).
+
+Definition gscope_crule Σ rule :=
+  Forall (gscope Σ) rule.(cr_env) ∧
+  gscope Σ rule.(cr_pat) ∧
+  gscope Σ rule.(cr_rep) ∧
+  gscope Σ rule.(cr_typ).
+
 Section Typing.
 
 Reserved Notation "Γ ⊢ t : A"
@@ -56,13 +78,13 @@ Section Equations.
       ectx_get Ξ' M = Some (E, ξ') →
       ∃ Ξ'' Δ R,
         Σ E = Some (Ext Ξ'' Δ R) ∧
-        ∀ n rule,
-          nth_error R n = Some rule →
-          let m := length rule.(cr_env) in
+        ∀ n rl,
+          nth_error R n = Some rl →
+          let m := length rl.(cr_env) in
           let δ := length Δ in
-          let Θ := ctx_einst ξ (ctx_einst ξ' rule.(cr_env)) in
-          let lhs0 := rule_lhs M ξ' δ rule in
-          let rhs0 := rule_rhs M ξ' δ rule in
+          let Θ := ctx_einst ξ (ctx_einst ξ' rl.(cr_env)) in
+          let lhs0 := rlhs M ξ' δ rl in
+          let rhs0 := rrhs M ξ' δ rl in
           let lhs := einst (liftn m ξ) lhs0 in
           let rhs := einst (liftn m ξ) rhs0 in
           scoped m lhs0 = true ∧
@@ -87,14 +109,14 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
       Γ ⊢ const c ξ ≡ einst ξ t
 
 | conv_red :
-    ∀ E Ξ' Δ R M ξ' n rule σ,
+    ∀ E Ξ' Δ R M ξ' n rl σ,
       Σ E = Some (Ext Ξ' Δ R) →
       ectx_get Ξ M = Some (E, ξ') →
-      nth_error R n = Some rule →
+      nth_error R n = Some rl →
       let δ := length Δ in
-      let lhs := rule_lhs M ξ' δ rule in
-      let rhs := rule_rhs M ξ' δ rule in
-      let k := length rule.(cr_env) in
+      let lhs := rlhs M ξ' δ rl in
+      let rhs := rrhs M ξ' δ rl in
+      let k := length rl.(cr_env) in
       scoped k lhs = true →
       scoped k rhs = true →
       Γ ⊢ lhs <[ σ ] ≡ rhs <[ σ ]
@@ -264,19 +286,14 @@ Inductive ewf (Σ : gctx) : ectx → Prop :=
     inst_typing_ Σ Ξ (typing Σ Ξ) ∙ ξ' Ξ' →
     ewf Σ ((E, ξ') :: Ξ).
 
-(** Computation rule typing
+(** Equation typing **)
 
-  TODO: We could also have some pattern typing to make sure forced terms are
-  indeed forced.
-
-**)
-
-Definition rule_typing Σ Ξ Δ rule :=
-  let k := length rule.(cr_env) in
-  wf Σ Ξ (Δ ,,, rule.(cr_env)) ∧
-  (∃ i, Σ ;; Ξ | Δ ,,, rule.(cr_env) ⊢ rule.(cr_typ) : Sort i) ∧
-  Σ ;; Ξ | Δ ,,, rule.(cr_env) ⊢ plinst k rule.(cr_pat) : rule.(cr_typ) ∧
-  Σ ;; Ξ | Δ ,,, rule.(cr_env) ⊢ rule.(cr_rep) : rule.(cr_typ).
+Definition equation_typing Σ Ξ Δ ε :=
+  let k := length ε.(eq_env) in
+  wf Σ Ξ (Δ ,,, ε.(eq_env)) ∧
+  (∃ i, Σ ;; Ξ | Δ ,,, ε.(eq_env) ⊢ ε.(eq_typ) : Sort i) ∧
+  Σ ;; Ξ | Δ ,,, ε.(eq_env) ⊢ ε.(eq_lhs) : ε.(eq_typ) ∧
+  Σ ;; Ξ | Δ ,,, ε.(eq_env) ⊢ ε.(eq_rhs) : ε.(eq_typ).
 
 (** Global environment typing **)
 
@@ -288,7 +305,8 @@ Inductive gwf : gctx → Prop :=
     gwf Σ →
     ewf Σ Ξ →
     wf Σ Ξ Δ →
-    Forall (rule_typing Σ Ξ Δ) R →
+    Forall (gscope_crule Σ) R →
+    Forall (equation_typing Σ Ξ Δ) (map crule_eq R) →
     gwf ((c, Ext Ξ Δ R) :: Σ)
 
 | gwf_def c (Σ : gctx) Ξ A t i :
