@@ -394,6 +394,31 @@ Proof.
   - apply conv_sym. eapply red_conv. eassumption.
 Qed.
 
+(** * Context reduction *)
+
+Reserved Notation "Σ ;; Ξ | Γ ↦* Δ" (at level 80).
+
+Inductive red_ctx (Σ : gctx) (Ξ : ectx) : ctx → ctx → Prop :=
+| red_nil : Σ ;; Ξ | ∙ ↦* ∙
+| red_cons Γ Δ A B :
+    Σ ;; Ξ | Γ ↦* Δ →
+    Σ ;; Ξ | Γ ⊢ A ↦* B →
+    Σ ;; Ξ | Γ ,, A ↦* Δ ,, B
+
+where "Σ ;; Ξ | Γ ↦* Δ" := (red_ctx Σ Ξ Γ Δ).
+
+Lemma red_ctx_red1 Σ Ξ Γ Δ u v :
+  Σ ;; Ξ | Δ ↦* Γ →
+  Σ ;; Ξ | Γ ⊢ u ↦ v →
+  Σ ;; Ξ | Δ ⊢ u ↦* v.
+Proof.
+  intros hctx h.
+  induction h in Δ, hctx using red1_ind_alt.
+  all: try solve [ apply rt_step ; econstructor ; eauto ].
+  - admit.
+  - (* Is it worth the trouble? I guess I can weaken results below *)
+Abort.
+
 (** * Injectivity of Π
 
   The key component to subject reduction.
