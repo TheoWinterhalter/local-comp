@@ -398,9 +398,18 @@ Qed.
 
   The key component to subject reduction.
   To prove it, we need more constraints about computation rules.
-  If they can a Π we lose.
+  If they can have a Π on the left-hand side we lose.
 
 **)
+
+Definition no_pi_lhs (Σ : gctx) Ξ :=
+  ∀ M E ξ' Ξ' Δ R n rule σ A B,
+    ectx_get Ξ M = Some (E, ξ') →
+    Σ E = Some (Ext Ξ' Δ R) →
+    nth_error R n = Some rule →
+    let δ := length Δ in
+    let lhs := rlhs M ξ' δ rule in
+    Pi A B ≠ lhs <[ σ ].
 
 #[export] Instance Reflexive_red Σ Ξ Γ :
   Reflexive (red Σ Ξ Γ).
@@ -409,25 +418,6 @@ Proof.
 Qed.
 
 Derive Signature for red1.
-
-Lemma red1_pi_inv Σ Ξ Γ A B T :
-  Σ ;; Ξ | Γ ⊢ Pi A B ↦ T →
-  ∃ A' B',
-    T = Pi A' B' ∧
-    Σ ;; Ξ | Γ ⊢ A ↦* A' ∧
-    Σ ;; Ξ | Γ ,, A ⊢ B ↦* B'.
-Proof.
-  intros h.
-  depelim h.
-  - (* Should disallow *) admit.
-  - eexists _, _. intuition eauto.
-    + apply rt_step. assumption.
-    + reflexivity.
-  - eexists _, _. intuition eauto.
-    + reflexivity.
-    + apply rt_step. assumption.
-Admitted.
-
 Derive Signature for clos_refl_trans.
 
 #[export] Instance Transitive_red Σ Ξ Γ :
@@ -436,37 +426,61 @@ Proof.
   intros u v w. eapply rt_trans.
 Qed.
 
-Lemma red_pi_inv Σ Ξ Γ A B T :
-  Σ ;; Ξ | Γ ⊢ Pi A B ↦* T →
-  ∃ A' B',
-    T = Pi A' B' ∧
-    Σ ;; Ξ | Γ ⊢ A ↦* A' ∧
-    Σ ;; Ξ | Γ ,, A ⊢ B ↦* B'.
-Proof.
-  intros h.
-  dependent induction h.
-  - cbn in *. eapply red1_pi_inv. assumption.
-  - eexists _,_. intuition eauto. all: reflexivity.
-  - destruct IHh1 as (A' & B' & -> & hA & hB).
-    specialize IHh2 with (1 := eq_refl).
-    destruct IHh2 as (A'' & B'' & -> & hA' & hB').
-    eexists _,_. intuition eauto.
-    + etransitivity. all: eassumption.
-    + etransitivity. 1: eassumption.
-      (* Would need context conversion *)
-Admitted.
+Section Injectivity.
 
-Lemma join_pi_inv Σ Ξ Γ A B A' B' :
-  Σ ;; Ξ | Γ ⊢ Pi A B ⋈ Pi A' B' →
-  Σ ;; Ξ | Γ ⊢ A ⋈ A' ∧
-  Σ ;; Ξ | Γ ,, A ⊢ B ⋈ B'.
-Proof.
-  intros (T & h & h').
-  eapply red_pi_inv in h as (A1 & B1 & -> & hA1 & hB1), h' as (?&?&e&hA2&hB2).
-  noconf e.
-  split.
-  - exists A1. intuition assumption.
-  - exists B1. intuition auto.
-    (* Context conversion too *)
-    admit.
-Admitted.
+  Context Σ Ξ (hnopi : no_pi_lhs Σ Ξ).
+
+  Lemma red1_pi_inv Γ A B T :
+    Σ ;; Ξ | Γ ⊢ Pi A B ↦ T →
+    ∃ A' B',
+      T = Pi A' B' ∧
+      Σ ;; Ξ | Γ ⊢ A ↦* A' ∧
+      Σ ;; Ξ | Γ ,, A ⊢ B ↦* B'.
+  Proof.
+    intros h.
+    depelim h.
+    - exfalso. eapply hnopi. all: eassumption.
+    - eexists _, _. intuition eauto.
+      + apply rt_step. assumption.
+      + reflexivity.
+    - eexists _, _. intuition eauto.
+      + reflexivity.
+      + apply rt_step. assumption.
+  Qed.
+
+  Lemma red_pi_inv Γ A B T :
+    Σ ;; Ξ | Γ ⊢ Pi A B ↦* T →
+    ∃ A' B',
+      T = Pi A' B' ∧
+      Σ ;; Ξ | Γ ⊢ A ↦* A' ∧
+      Σ ;; Ξ | Γ ,, A ⊢ B ↦* B'.
+  Proof.
+    intros h.
+    dependent induction h.
+    - cbn in *. eapply red1_pi_inv. all: assumption.
+    - eexists _,_. intuition eauto. all: reflexivity.
+    - destruct IHh1 as (A' & B' & -> & hA & hB).
+      specialize IHh2 with (1 := eq_refl).
+      destruct IHh2 as (A'' & B'' & -> & hA' & hB').
+      eexists _,_. intuition eauto.
+      + etransitivity. all: eassumption.
+      + etransitivity. 1: eassumption.
+        (* Would need context conversion *)
+  Admitted.
+
+  Lemma join_pi_inv Γ A B A' B' :
+    Σ ;; Ξ | Γ ⊢ Pi A B ⋈ Pi A' B' →
+    Σ ;; Ξ | Γ ⊢ A ⋈ A' ∧
+    Σ ;; Ξ | Γ ,, A ⊢ B ⋈ B'.
+  Proof.
+    intros (T & h & h').
+    eapply red_pi_inv in h as (A1 & B1 & -> & hA1 & hB1), h' as (?&?&e&hA2&hB2).
+    noconf e.
+    split.
+    - exists A1. intuition assumption.
+    - exists B1. intuition auto.
+      (* Context conversion too *)
+      admit.
+  Admitted.
+
+End Injectivity.
