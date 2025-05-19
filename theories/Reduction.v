@@ -185,6 +185,15 @@ Proof.
   eapply rst_trans. all: eassumption.
 Qed.
 
+Lemma red_ind Σ Ξ Γ Δ f x y :
+  (∀ x y, Σ ;; Ξ | Δ ⊢ x ↦ y → Σ ;; Ξ | Γ ⊢ f x ↦* f y) →
+  Σ ;; Ξ | Δ ⊢ x ↦* y →
+  Σ ;; Ξ | Γ ⊢ f x ↦* f y.
+Proof.
+  intros hred h.
+  eapply rt_step_ind. all: eauto.
+Qed.
+
 Lemma equiv_red_ind Σ Ξ Γ Δ f x y :
   (∀ x y, Σ ;; Ξ | Δ ⊢ x ↦ y → Σ ;; Ξ | Γ ⊢ f x ↮ f y) →
   Σ ;; Ξ | Δ ⊢ x ↮ y →
@@ -415,8 +424,26 @@ Proof.
   intros hctx h.
   induction h in Δ, hctx using red1_ind_alt.
   all: try solve [ apply rt_step ; econstructor ; eauto ].
+  - apply rt_step. econstructor. all: eauto.
+    intros ?.
+    (* This would require context conversion for conversion *)
+    (* So it might be all worthless in the end *)
+    admit.
+  - eapply red_ind with (f := λ x, Pi x _). 2: eauto.
+    intros. apply rt_step. econstructor. assumption.
+  - eapply red_ind.
+    2:{ eapply IHh. econstructor. 1: eassumption. apply rt_refl. }
+    intros. apply rt_step. econstructor. assumption.
+  - eapply red_ind with (f := λ x, lam x _). 2: eauto.
+    intros. apply rt_step. econstructor. assumption.
+  - eapply red_ind.
+    2:{ eapply IHh. econstructor. 1: eassumption. apply rt_refl. }
+    intros. apply rt_step. econstructor. assumption.
+  - eapply red_ind with (f := λ x, app x _). 2: eauto.
+    intros. apply rt_step. econstructor. assumption.
+  - eapply red_ind. 2: eauto.
+    intros. apply rt_step. econstructor. assumption.
   - admit.
-  - (* Is it worth the trouble? I guess I can weaken results below *)
 Abort.
 
 (** * Injectivity of Π

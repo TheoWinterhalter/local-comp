@@ -52,6 +52,18 @@ Ltac wlog_iff :=
 
 (** Relations **)
 
+Lemma rt_step_ind A B R R' f x y :
+  (∀ x y, R x y → clos_refl_trans B R' (f x) (f y)) →
+  clos_refl_trans A R x y →
+  clos_refl_trans B R' (f x) (f y).
+Proof.
+  intros hstep h.
+  induction h.
+  - eauto.
+  - apply rt_refl.
+  - eapply rt_trans. all: eassumption.
+Qed.
+
 Lemma rst_step_ind A B R R' f x y :
   (∀ x y, R x y → clos_refl_sym_trans B R' (f x) (f y)) →
   clos_refl_sym_trans A R x y →
