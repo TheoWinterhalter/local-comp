@@ -45,6 +45,16 @@ Definition get_rule (Σ : gctx) Ξ M n : option crule :=
   | _ => None
   end.
 
+Lemma get_get_rule (Σ : gctx) Ξ M n E ξ' Ξ' Δ R rl :
+  ectx_get Ξ M = Some (E, ξ') →
+  Σ E = Some (Ext Ξ' Δ R) →
+  nth_error R n = Some rl →
+  get_rule Σ Ξ M n = Some rl.
+Proof.
+  intros hM hE hn.
+  unfold get_rule. rewrite hM, hE. assumption.
+Qed.
+
 Definition pattern_rules Σ Ξ :=
   ∀ M n rl,
     get_rule Σ Ξ M n = Some rl →
@@ -218,6 +228,14 @@ Section Red.
     | _ => false
     end.
 
+  Lemma is_lam_inv t :
+    is_lam t = true →
+    ∃ A b, t = lam A b.
+  Proof.
+    destruct t. all: try discriminate.
+    intros _. eexists _,_. reflexivity.
+  Qed.
+
   Reserved Notation "Γ ⊢ u ⇒ᵨ v"
     (at level 80, u, v at next level).
 
@@ -229,9 +247,7 @@ Section Red.
 
   | pred_max_unfold c ξ Ξ' A t ξ' t' :
       Σ c = Some (Def Ξ' A t) →
-      inst_equations Σ Ξ Γ ξ Ξ' →
-      closed t = true →
-      ∙ ⊢ t ⇒ t' →
+      ∙ ⊢ t ⇒ᵨ t' →
       Forall2 (Forall2 (pred_max Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ᵨ einst ξ' t'
 
@@ -242,9 +258,6 @@ Section Red.
       let δ := length Δ in
       let lhs := rlhs M ξ' δ rule in
       let rhs := rrhs M ξ' δ rule in
-      let k := length rule.(cr_env) in
-      scoped k lhs = true →
-      scoped k rhs = true →
       (∀ m, Γ ⊢ σ m ⇒ᵨ σ' m) →
       Γ ⊢ lhs <[ σ ] ⇒ᵨ rhs <[ σ' ]
 
@@ -272,6 +285,28 @@ Section Red.
 
   where "Γ ⊢ u ⇒ᵨ v" := (pred_max Γ u v).
 
+  Context (hpr : pattern_rules Σ Ξ).
+
+  Lemma pattern_rules_lhs_no_lam M E ξ' Ξ' Δ R n rl σ A b :
+    ectx_get Ξ M = Some (E, ξ') →
+    Σ E = Some (Ext Ξ' Δ R) →
+    nth_error R n = Some rl →
+    let δ := length Δ in
+    let lhs := rlhs M ξ' δ rl in
+    lhs <[ σ ] ≠ lam A b.
+  Proof.
+    intros hM hE hn δ lhs e.
+    eapply get_get_rule in hn. 2,3: eassumption.
+    eapply hpr in hn as [p ep].
+    subst lhs. unfold rlhs in e.
+    set (t := rl.(cr_pat)) in *. clearbody t. subst t.
+    unfold rule_tm in e.
+    destruct p. cbn in e.
+    (* Problem here: there is no guarantee ξ' won't instantiate the pattern
+      We should probably enforce it somehow.
+    *)
+  Abort.
+
   Lemma triangle Γ t u :
     Γ ⊢ t ⇒ u →
     ∃ tᵨ, Γ ⊢ t ⇒ᵨ tᵨ ∧ Γ ⊢ u ⇒ tᵨ.
@@ -282,7 +317,7 @@ Section Red.
     | ????????????????????? ih
     | ?????? ihA ? ihB
     | ?????? ihA ? iht
-    | ?????? ihu ? ihv
+    | ? u ???? ihu ? ihv
     | ???? ih
     ] using pred_ind_alt.
     - destruct iht as [tr [ht1 ht2]], ihu as [ur [hu1 hu2]].
@@ -308,11 +343,17 @@ Section Red.
       + econstructor. all: eassumption.
       + econstructor. all: eauto. admit.
     - destruct ihu as [ur [hu1 hu2]], ihv as [vr [hv1 hv2]].
-      eexists. split.
-      + econstructor. all: eauto.
-        (* Maybe this approach is not the best in the end? *)
-        admit.
-      + econstructor. all: eassumption.
+      destruct (is_lam u) eqn: eu.
+      + eapply is_lam_inv in eu as (A & b & ->).
+        inversion hu1.
+        1:{ exfalso. admit. }
+        subst.
+        eexists. split.
+        * econstructor. all: eassumption.
+        * admit.
+      + eexists. split.
+        * econstructor. all: eassumption.
+        * econstructor. all: assumption.
     - admit.
   Admitted.
 
