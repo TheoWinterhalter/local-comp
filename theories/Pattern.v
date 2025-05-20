@@ -304,6 +304,15 @@ Section Red.
     destruct p. cbn in e.
     (* Problem here: there is no guarantee ξ' won't instantiate the pattern
       We should probably enforce it somehow.
+
+
+      In fact, the problem is more complex: with the current setting, we can
+      never refer to symbols from other interfaces because they will always be
+      instantiated, so there is no telling what they become after ξ' has been
+      applied. In other words, my definition doesn't actually offer interleaving
+      or layering as I had intended.
+
+      A major change is likely needed.
     *)
   Abort.
 
