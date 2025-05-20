@@ -326,7 +326,7 @@ Section Red.
     | ????????????????????? ih
     | ?????? ihA ? ihB
     | ?????? ihA ? iht
-    | ? u ???? ihu ? ihv
+    | ? u ??? hu ihu ? ihv
     | ???? ih
     ] using pred_ind_alt.
     - destruct iht as [tr [ht1 ht2]], ihu as [ur [hu1 hu2]].
@@ -359,7 +359,10 @@ Section Red.
         subst.
         eexists. split.
         * econstructor. all: eassumption.
-        * admit.
+        * inversion hu. 1: admit.
+          subst. econstructor. 2: assumption.
+          inversion hu2. 1: admit.
+          subst. assumption.
       + eexists. split.
         * econstructor. all: eassumption.
         * econstructor. all: assumption.
@@ -371,6 +374,32 @@ Section Red.
     Γ ⊢ t ⇒ᵨ v →
     u = v.
   Proof.
+    intros hu hv.
+    induction hu in v, hv |- *.
+    - inversion hv.
+      2:{ admit. }
+      2:{ discriminate. }
+      subst. f_equal. 1: f_equal. all: eauto.
+    - inversion hv.
+      2: admit.
+      2:{ (* Wrong, need a check *) admit. }
+      subst. f_equal.
+      + admit.
+      + eqtwice. subst. eauto.
+    - admit.
+    - inversion hv. 1: admit.
+      subst. f_equal. all: eauto.
+    - inversion hv. 1: admit.
+      subst. f_equal. all: eauto.
+    - inversion hv.
+      1:{ subst. discriminate. }
+      1: admit.
+      subst. f_equal. all: eauto.
+    - inversion hv.
+      1:{ (* Same, make sure we have constraints *) admit. }
+      1: admit.
+      subst. f_equal.
+      admit.
   Admitted.
 
   Lemma diamond Γ t u v :
