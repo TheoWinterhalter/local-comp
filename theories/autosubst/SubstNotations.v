@@ -2,7 +2,7 @@
 
   They replace those of Autosubst that are incompatible with list notation.
 
-**)
+*)
 
 From Stdlib Require Import Utf8 List.
 From LocalComp.autosubst Require Import core unscoped RAsimpl AST.

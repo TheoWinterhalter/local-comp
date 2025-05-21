@@ -5,7 +5,7 @@
 
   The definition is in [Typing] for dependency reasons.
 
-**)
+*)
 
 From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
@@ -21,7 +21,7 @@ Set Default Goal Selector "!".
 Lemma inst_typing_gscope_ih Σ Ξ Γ ξ Ξ' :
   inst_typing Σ Ξ Γ ξ Ξ' →
   inst_typing_ Σ Ξ (λ _ t _, gscope Σ t) Γ ξ Ξ' →
-  gscope_eargs Σ ξ.
+  gscope_instance Σ ξ.
 Proof.
   intros h ih.
   rewrite Forall_forall. intros σ hσ.
@@ -29,9 +29,9 @@ Proof.
   eapply In_nth_error in hσ as [M hM].
   eapply In_nth_error in hu as [x hx].
   destruct ih as [_ [ih e]]. red in ih. specialize (ih M).
-  destruct (ectx_get Ξ' M) as [[E ξ'] |] eqn:e'.
+  destruct (ictx_get Ξ' M) as [[E ξ'] |] eqn:e'.
   2:{
-    unfold ectx_get in e'. destruct (_ <=? _) eqn: e1.
+    unfold ictx_get in e'. destruct (_ <=? _) eqn: e1.
     - rewrite Nat.leb_le in e1. rewrite <- e in e1.
       rewrite <- nth_error_None in e1. congruence.
     - rewrite nth_error_None in e'.
@@ -46,7 +46,7 @@ Proof.
     rewrite <- nth_error_None in eΔ. congruence.
   }
   specialize ih with (1 := eΔ).
-  unfold eget in ih. rewrite hM, hx in ih.
+  unfold iget in ih. rewrite hM, hx in ih.
   assumption.
 Qed.
 
@@ -63,7 +63,7 @@ Qed.
 
 Lemma inst_typing_gscope Σ Ξ Γ ξ Ξ' :
   inst_typing Σ Ξ Γ ξ Ξ' →
-  gscope_eargs Σ ξ.
+  gscope_instance Σ ξ.
 Proof.
   intros h.
   eapply inst_typing_gscope_ih. 1: eassumption.
@@ -76,7 +76,7 @@ Proof.
     eexists _,_,_. split. 1 : eassumption.
     split. 1: assumption.
     intros x A hx. specialize ht with (1 := hx).
-    unfold eget in *. destruct (nth_error ξ _) as [σ |] eqn:e1. 2: constructor.
+    unfold iget in *. destruct (nth_error ξ _) as [σ |] eqn:e1. 2: constructor.
     destruct (nth_error σ _) eqn:e2. 2: constructor.
     eapply typing_gscope. eassumption.
   - assumption.

@@ -11,7 +11,7 @@
   By doing this, we get more than by going through ETT: typically we don't need
   any form of UIP or funext, or even of equality!
 
-**)
+*)
 
 From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
@@ -30,8 +30,8 @@ Set Default Goal Selector "!".
 Section Inline.
 
   Context (Σ : gctx).
-  Context (κ : ginst). (** A map from references to their translated def. **)
-  Context (Σᵗ : gctx). (** The translation of [Σ] **)
+  Context (κ : ginst). (** A map from references to their translated def. *)
+  Context (Σᵗ : gctx). (** The translation of [Σ] *)
 
   Reserved Notation "⟦ t ⟧" (at level 0).
   Reserved Notation "⟦ k ⟧×" (at level 0).
@@ -43,7 +43,7 @@ Section Inline.
     | Pi A B => Pi ⟦ A ⟧ ⟦ B ⟧
     | lam A t => lam ⟦ A ⟧ ⟦ t ⟧
     | app u v => app ⟦ u ⟧ ⟦ v ⟧
-    | const c ξ => einst ⟦ ξ ⟧× (κ c)
+    | const c ξ => inst ⟦ ξ ⟧× (κ c)
     | assm M x => assm M x
     end
 
@@ -103,40 +103,40 @@ Section Inline.
       cbn. auto.
   Qed.
 
-  Lemma inline_eget ξ M x :
-    ⟦ eget ξ M x ⟧ = eget ⟦ ξ ⟧× M x.
+  Lemma inline_iget ξ M x :
+    ⟦ iget ξ M x ⟧ = iget ⟦ ξ ⟧× M x.
   Proof.
-    unfold eget. rewrite nth_error_map.
+    unfold iget. rewrite nth_error_map.
     destruct nth_error as [σ |] eqn: e1. 2: reflexivity.
     cbn. rewrite nth_error_map.
     destruct (nth_error σ _) as [t|] eqn:e2. 2: reflexivity.
     cbn. reflexivity.
   Qed.
 
-  Lemma inline_ren_eargs ρ ξ :
-    ⟦ ren_eargs ρ ξ ⟧× = ren_eargs ρ ⟦ ξ ⟧×.
+  Lemma inline_ren_instance ρ ξ :
+    ⟦ ren_instance ρ ξ ⟧× = ren_instance ρ ⟦ ξ ⟧×.
   Proof.
     rewrite !map_map. apply map_ext. intro.
     rewrite !map_map. apply map_ext. intro.
     apply inline_ren.
   Qed.
 
-  Lemma inline_einst ξ t :
-    ⟦ einst ξ t ⟧ = einst ⟦ ξ ⟧× ⟦ t ⟧.
+  Lemma inline_inst ξ t :
+    ⟦ inst ξ t ⟧ = inst ⟦ ξ ⟧× ⟦ t ⟧.
   Proof.
     induction t in ξ |- * using term_rect.
     all: try solve [ cbn ; f_equal ; eauto ].
     - cbn. f_equal. 1: eauto.
-      rewrite IHt2. rewrite inline_ren_eargs. reflexivity.
+      rewrite IHt2. rewrite inline_ren_instance. reflexivity.
     - cbn. f_equal. 1: eauto.
-      rewrite IHt2. rewrite inline_ren_eargs. reflexivity.
-    - cbn. rewrite einst_einst. f_equal.
+      rewrite IHt2. rewrite inline_ren_instance. reflexivity.
+    - cbn. rewrite inst_inst. f_equal.
       rewrite !map_map. apply map_ext_All.
       eapply All_impl. 2: eassumption.
       intros σ hσ. rewrite !map_map. apply map_ext_All.
       eapply All_impl. 2: eassumption.
       auto.
-    - cbn. apply inline_eget.
+    - cbn. apply inline_iget.
   Qed.
 
   Definition g_conv_unfold :=
@@ -146,9 +146,9 @@ Section Inline.
 
   Context (h_conv_unfold : g_conv_unfold).
 
-  Lemma conv_ren_einst Ξ Γ Δ ρ ξ ξ' :
+  Lemma conv_ren_inst Ξ Γ Δ ρ ξ ξ' :
     Forall2 (Forall2 (conversion Σ Ξ Δ)) ξ ξ' →
-    Forall2 (Forall2 (conversion Σ Ξ Γ)) (ren_eargs ρ ξ) (ren_eargs ρ ξ').
+    Forall2 (Forall2 (conversion Σ Ξ Γ)) (ren_instance ρ ξ) (ren_instance ρ ξ').
   Proof.
     intros h.
     apply Forall2_map_l, Forall2_map_r.
@@ -180,11 +180,11 @@ Section Inline.
 
   Context (hext : trans_gctx_ext).
 
-  Lemma ectx_get_inline Ξ M E ξ' :
-    ectx_get Ξ M = Some (E, ξ') →
-    ectx_get ⟦ Ξ ⟧e M = Some (E, ⟦ ξ' ⟧×).
+  Lemma ictx_get_inline Ξ M E ξ' :
+    ictx_get Ξ M = Some (E, ξ') →
+    ictx_get ⟦ Ξ ⟧e M = Some (E, ⟦ ξ' ⟧×).
   Proof.
-    unfold ectx_get. intro h.
+    unfold ictx_get. intro h.
     rewrite length_map. destruct (_ <=? _) eqn:e. 1: discriminate.
     rewrite nth_error_map.
     destruct nth_error eqn:e'. 2: discriminate.
@@ -192,11 +192,11 @@ Section Inline.
     cbn. reflexivity.
   Qed.
 
-  Lemma ectx_get_map Ξ M f :
-    ectx_get (map (λ '(E, ξ), (E, f ξ)) Ξ) M =
-    option_map (λ '(E, ξ), (E, f ξ)) (ectx_get Ξ M).
+  Lemma ictx_get_map Ξ M f :
+    ictx_get (map (λ '(E, ξ), (E, f ξ)) Ξ) M =
+    option_map (λ '(E, ξ), (E, f ξ)) (ictx_get Ξ M).
   Proof.
-    unfold ectx_get. rewrite length_map.
+    unfold ictx_get. rewrite length_map.
     rewrite nth_error_map.
     destruct (_ <=? _). all: reflexivity.
   Qed.
@@ -205,8 +205,8 @@ Section Inline.
     ⟦ rule_tm M ξ δ k t ⟧ = rule_tm M ⟦ ξ ⟧× δ k ⟦ t ⟧.
   Proof.
     unfold rule_tm. unfold delocal_lift.
-    rewrite inline_subst. rewrite inline_einst.
-    rewrite inline_ren_eargs. apply ext_term.
+    rewrite inline_subst. rewrite inline_inst.
+    rewrite inline_ren_instance. apply ext_term.
     intros n. unfold core.funcomp.
     destruct (lt_dec n k).
     - rewrite ups_below. 2: assumption.
@@ -229,10 +229,10 @@ Section Inline.
     rewrite length_map. reflexivity.
   Qed.
 
-  Lemma scoped_eargs_inline_ih k ξ :
+  Lemma scoped_instance_inline_ih k ξ :
     All (All (λ t, ∀ k, scoped k t = true → scoped k ⟦ t ⟧ = true)) ξ →
-    scoped_eargs k ξ = true →
-    scoped_eargs k ⟦ ξ ⟧× = true.
+    scoped_instance k ξ = true →
+    scoped_instance k ⟦ ξ ⟧× = true.
   Proof.
     intros ih h.
     apply forallb_All in h. move h at top.
@@ -257,29 +257,29 @@ Section Inline.
       cbn in * ; rewrite Bool.andb_true_iff in * ;
       intuition eauto
     ].
-    cbn in h |- *. eapply scoped_einst_closed.
-    - eapply scoped_eargs_inline_ih. all: assumption.
+    cbn in h |- *. eapply scoped_inst_closed.
+    - eapply scoped_instance_inline_ih. all: assumption.
     - apply hclosed.
   Qed.
 
-  Lemma scoped_eargs_inline k ξ :
-    scoped_eargs k ξ = true →
-    scoped_eargs k ⟦ ξ ⟧× = true.
+  Lemma scoped_instance_inline k ξ :
+    scoped_instance k ξ = true →
+    scoped_instance k ⟦ ξ ⟧× = true.
   Proof.
     intros h.
-    eapply scoped_eargs_inline_ih. 2: assumption.
+    eapply scoped_instance_inline_ih. 2: assumption.
     eapply forall_All. intros.
     eapply forall_All. intros.
     eapply scoped_inline. assumption.
   Qed.
 
-  Lemma inline_ctx_einst ξ Γ :
-    ⟦ ctx_einst ξ Γ ⟧* = ctx_einst ⟦ ξ ⟧× ⟦ Γ ⟧*.
+  Lemma inline_ctx_inst ξ Γ :
+    ⟦ ctx_inst ξ Γ ⟧* = ctx_inst ⟦ ξ ⟧× ⟦ Γ ⟧*.
   Proof.
     induction Γ as [| A Γ ih] in ξ |- *.
     - reflexivity.
-    - cbn. rewrite ih. rewrite inline_einst.
-      rewrite inline_ren_eargs. rewrite length_map. reflexivity.
+    - cbn. rewrite ih. rewrite inline_inst.
+      rewrite inline_ren_instance. rewrite length_map. reflexivity.
   Qed.
 
   Lemma inst_equations_inline_ih Ξ Ξ' Γ ξ :
@@ -288,8 +288,8 @@ Section Inline.
   Proof.
     intros ih.
     intros E M ξ' hM.
-    rewrite ectx_get_map in hM.
-    destruct ectx_get as [[E' ξ'']|] eqn:hM'. 2: discriminate.
+    rewrite ictx_get_map in hM.
+    destruct ictx_get as [[E' ξ'']|] eqn:hM'. 2: discriminate.
     cbn in hM. inversion hM. subst. clear hM.
     specialize (ih _ _ _ hM') as (Ξ'' & Δ' & R & e & ih).
     eexists _,_,_. split. 1: eauto.
@@ -302,8 +302,8 @@ Section Inline.
     subst m lhs0 rhs0 δ.
     cbn - [ rlhs rrhs]. rewrite !length_map.
     rewrite <- inline_rrhs, <- inline_rlhs.
-    rewrite map_app in ih. rewrite !inline_ctx_einst in ih.
-    rewrite !inline_einst in ih. rewrite !inline_ren_eargs in ih.
+    rewrite map_app in ih. rewrite !inline_ctx_inst in ih.
+    rewrite !inline_inst in ih. rewrite !inline_ren_instance in ih.
     intuition eauto using scoped_inline.
   Qed.
 
@@ -316,7 +316,7 @@ Section Inline.
     all: try solve [ cbn ; ttconv ].
     - cbn. rewrite inline_subst. eapply meta_conv_trans_r. 1: econstructor.
       apply ext_term. intros []. all: reflexivity.
-    - cbn. rewrite inline_einst. eapply conv_einst_closed.
+    - cbn. rewrite inline_inst. eapply conv_inst_closed.
       + eapply inst_equations_inline_ih. eassumption.
       + eapply h_conv_unfold. eassumption.
     - rewrite !inline_subst. subst lhs rhs.
@@ -324,13 +324,13 @@ Section Inline.
       replace δ with (length ⟦ Δ ⟧*). 2:{ apply length_map. }
       eapply conv_red.
       + eapply hext. eassumption.
-      + apply ectx_get_inline. assumption.
+      + apply ictx_get_inline. assumption.
       + rewrite nth_error_map. rewrite H1. reflexivity.
       + rewrite <- inline_rlhs. eapply scoped_inline.
         cbn. rewrite 2!length_map. assumption.
       + rewrite <- inline_rrhs. eapply scoped_inline.
         cbn. rewrite 2!length_map. assumption.
-    - cbn. eapply conv_einsts.
+    - cbn. eapply conv_insts.
       apply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
       intros. apply Forall2_map_l, Forall2_map_r.
@@ -362,11 +362,11 @@ Section Inline.
     split. 2: split.
     - eauto using inst_equations_inline_ih, inst_equations_prop, conv_inline.
     - intros M E ξ' eM.
-      rewrite ectx_get_map in eM.
-      destruct ectx_get as [[E' ξ'']|] eqn:eM'. 2: discriminate.
+      rewrite ictx_get_map in eM.
+      destruct ictx_get as [[E' ξ'']|] eqn:eM'. 2: discriminate.
       cbn in eM. inversion eM. subst. clear eM.
       specialize (ih _ _ _ eM') as (? & Ξ'' & Δ & R & eE & ho & ih).
-      split. 1:{ apply scoped_eargs_inline. assumption. }
+      split. 1:{ apply scoped_instance_inline. assumption. }
       eexists _,_,_. split. 1: eauto.
       split.
       1:{
@@ -378,8 +378,8 @@ Section Inline.
       destruct (nth_error Δ x) as [B|] eqn: eB. 2: discriminate.
       cbn in hx. inversion hx. subst. clear hx.
       specialize ih with (1 := eB).
-      rewrite inline_eget, inline_einst, inline_delocal in ih.
-      rewrite inline_einst, inline_ren in ih.
+      rewrite inline_iget, inline_inst, inline_delocal in ih.
+      rewrite inline_inst, inline_ren in ih.
       assumption.
     - rewrite 2!length_map. assumption.
   Qed.
@@ -397,15 +397,15 @@ Section Inline.
     - cbn in *. eapply meta_conv.
       + tttype.
       + rewrite inline_subst. apply ext_term. intros []. all: reflexivity.
-    - cbn. rewrite inline_einst. eapply typing_einst_closed.
+    - cbn. rewrite inline_inst. eapply typing_inst_closed.
       + eapply inst_typing_inline. eassumption.
       + eapply h_type. all: eassumption.
-    - cbn. rewrite inline_delocal. rewrite inline_einst. rewrite inline_ren.
+    - cbn. rewrite inline_delocal. rewrite inline_inst. rewrite inline_ren.
       econstructor.
-      + eapply ectx_get_inline. eassumption.
+      + eapply ictx_get_inline. eassumption.
       + eauto.
       + rewrite nth_error_map. rewrite H1. reflexivity.
-      + eapply scoped_eargs_inline. assumption.
+      + eapply scoped_instance_inline. assumption.
     - econstructor. 1,3: eassumption.
       apply conv_inline. assumption.
   Qed.
@@ -482,8 +482,8 @@ Proof.
   eapply he. eassumption.
 Qed.
 
-Lemma inline_eargs_ext Σ (ξ : eargs) κ κ' :
-  gscope_eargs Σ ξ →
+Lemma inline_instance_ext Σ (ξ : instance) κ κ' :
+  gscope_instance Σ ξ →
   eq_gscope Σ κ κ' →
   ⟦ ξ ⟧×⟨ κ ⟩ = ⟦ ξ ⟧×⟨ κ' ⟩.
 Proof.
@@ -493,7 +493,7 @@ Proof.
   intros. eapply inline_ext. all: eassumption.
 Qed.
 
-Lemma inline_ectx_ext Σ Ξ κ κ' :
+Lemma inline_ictx_ext Σ Ξ κ κ' :
   ewf Σ Ξ →
   eq_gscope Σ κ κ' →
   ⟦ Ξ ⟧e⟨ κ ⟩ = ⟦ Ξ ⟧e⟨ κ' ⟩.
@@ -503,7 +503,7 @@ Proof.
   induction hΞ as [| Ξ E ξ' Ξ' Δ R hΞ ih e hξ' ]. 1: constructor.
   econstructor. 2: eauto.
   f_equal.
-  eapply inline_eargs_ext. 2: eassumption.
+  eapply inline_instance_ext. 2: eassumption.
   eapply inst_typing_gscope. eassumption.
 Qed.
 
@@ -619,14 +619,14 @@ Proof.
   - cbn in *. destruct (c =? c')%string eqn:e.
     + inversion ec. subst. clear ec.
       rewrite gcons_eq. 2: assumption.
-      erewrite <- inline_ectx_ext. 2,3: eauto using eq_gscope_gcons.
+      erewrite <- inline_ictx_ext. 2,3: eauto using eq_gscope_gcons.
       apply meta_conv_refl.
       eapply inline_ext.
       all: eauto using eq_gscope_gcons, typing_gscope.
     + rewrite gcons_neq. 2: assumption.
       eapply valid_def in ec as h'. 2: assumption.
       destruct h' as (hΞ' & [j hB] & ht).
-      erewrite <- inline_ectx_ext. 2,3: eauto using eq_gscope_gcons.
+      erewrite <- inline_ictx_ext. 2,3: eauto using eq_gscope_gcons.
       erewrite <- inline_ext with (t := t).
       2,3: eauto using eq_gscope_gcons, typing_gscope.
       eauto.
@@ -649,7 +649,7 @@ Proof.
     eapply valid_ext in eE as h'. 2: assumption.
     destruct h' as (hΞ' & hΔ & hR & hE).
     f_equal. f_equal.
-    + eapply inline_ectx_ext. all: eassumption.
+    + eapply inline_ictx_ext. all: eassumption.
     + eapply inline_ctx_ext. all: eassumption.
     + eapply inline_crules_ext. all: eassumption.
 Qed.
@@ -669,7 +669,7 @@ Proof.
   - cbn in *. destruct (c =? c')%string eqn:e.
     + inversion ec. subst. clear ec.
       rewrite gcons_eq. 2: assumption.
-      erewrite <- inline_ectx_ext. 2,3: eauto using eq_gscope_gcons.
+      erewrite <- inline_ictx_ext. 2,3: eauto using eq_gscope_gcons.
       erewrite <- inline_ext with (t := B).
       2,3: eauto using eq_gscope_gcons, typing_gscope.
       eapply typing_inline with (Γ := ∙).
@@ -682,7 +682,7 @@ Proof.
     + rewrite gcons_neq. 2: assumption.
       eapply valid_def in ec as h'. 2: assumption.
       destruct h' as (hΞ' & [j hB] & ht).
-      erewrite <- inline_ectx_ext. 2,3: eauto using eq_gscope_gcons.
+      erewrite <- inline_ictx_ext. 2,3: eauto using eq_gscope_gcons.
       erewrite <- inline_ext with (t := B).
       2,3: eauto using eq_gscope_gcons, typing_gscope.
       eauto.
@@ -704,7 +704,7 @@ Proof.
   - assumption.
 Qed.
 
-(** Conservativity **)
+(** Conservativity *)
 
 Lemma inline_nil_id t κ :
   gscope [] t →

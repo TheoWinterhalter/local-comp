@@ -9,7 +9,7 @@
   - Check that reduction as defined below is suitable for the usual proofs of
     confluence.
 
-**)
+*)
 
 From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
@@ -32,11 +32,11 @@ Section Red.
   Reserved Notation "Γ ⊢ u ↦ v"
     (at level 80, u, v at next level).
 
-  Context (Σ : gctx) (Ξ : ectx).
+  Context (Σ : gctx) (Ξ : ictx).
 
   Inductive red1 (Γ : ctx) : term → term → Prop :=
 
-  (** Computation rules **)
+  (** Computation rules *)
 
   | red_beta A t u : Γ ⊢ app (lam A t) u ↦ t <[ u .. ]
 
@@ -44,11 +44,11 @@ Section Red.
       Σ c = Some (Def Ξ' A t) →
       inst_equations Σ Ξ Γ ξ Ξ' →
       closed t = true →
-      Γ ⊢ const c ξ ↦ einst ξ t
+      Γ ⊢ const c ξ ↦ inst ξ t
 
   | red_rule E Ξ' Δ R M ξ' n rule σ :
       Σ E = Some (Ext Ξ' Δ R) →
-      ectx_get Ξ M = Some (E, ξ') →
+      ictx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
       let δ := length Δ in
       let lhs := rlhs M ξ' δ rule in
@@ -58,7 +58,7 @@ Section Red.
       scoped k rhs = true →
       Γ ⊢ lhs <[ σ ] ↦ rhs <[ σ ]
 
-  (** Congruence rules **)
+  (** Congruence rules *)
 
   | red_Pi_dom A B A' :
       Γ ⊢ A ↦ A' →
@@ -97,11 +97,11 @@ Section Red.
         Σ c = Some (Def Ξ' A t) →
         inst_equations Σ Ξ Γ ξ Ξ' →
         closed t = true →
-        P Γ (const c ξ) (einst ξ t)
+        P Γ (const c ξ) (inst ξ t)
       ) →
       (∀ Γ E Ξ' Δ R M ξ' n rule σ,
         Σ E = Some (Ext Ξ' Δ R) →
-        ectx_get Ξ M = Some (E, ξ') →
+        ictx_get Ξ M = Some (E, ξ') →
         nth_error R n = Some rule →
         let δ := Datatypes.length Δ in
         let lhs := rlhs M ξ' δ rule in
@@ -151,7 +151,7 @@ Notation "Σ ;; Ξ | Γ ⊢ u ↦ v" :=
   (red1 Σ Ξ Γ u v)
   (at level 80, u, v at next level).
 
-(** Reflexive transitive closure **)
+(** Reflexive transitive closure *)
 
 Definition red Σ Ξ Γ := clos_refl_trans _ (λ u v, Σ ;; Ξ | Γ ⊢ u ↦ v).
 
@@ -159,7 +159,7 @@ Notation "Σ ;; Ξ | Γ ⊢ u ↦* v" :=
   (red Σ Ξ Γ u v)
   (at level 80, u, v at next level).
 
-(** Equivalence **)
+(** Equivalence *)
 
 Definition equiv Σ Ξ Γ := clos_refl_sym_trans _ (λ u v, Σ ;; Ξ | Γ ⊢ u ↦ v).
 
@@ -203,7 +203,7 @@ Proof.
   eapply rst_step_ind. all: eauto.
 Qed.
 
-(** Notion of confluence **)
+(** Notion of confluence *)
 
 Definition red_confluent Σ Ξ :=
   ∀ Γ t u v,
@@ -213,7 +213,7 @@ Definition red_confluent Σ Ξ :=
       Σ ;; Ξ | Γ ⊢ u ↦* w ∧
       Σ ;; Ξ | Γ ⊢ v ↦* w.
 
-(** Joinability **)
+(** Joinability *)
 
 Definition joinable Σ Ξ Γ u v :=
   ∃ w,
@@ -224,7 +224,7 @@ Notation "Σ ;; Ξ | Γ ⊢ u ⋈ v" :=
   (joinable Σ Ξ Γ u v)
   (at level 80, u, v at next level).
 
-(** Assuming confluence, equivalence is the same as joinability **)
+(** Assuming confluence, equivalence is the same as joinability *)
 
 Lemma equiv_join Σ Ξ Γ u v :
   red_confluent Σ Ξ →
@@ -246,7 +246,7 @@ Proof.
     + eapply rt_trans. all: eassumption.
 Qed.
 
-(** Conversion is included in the congruence closure of reduction **)
+(** Conversion is included in the congruence closure of reduction *)
 
 Lemma equiv_Pi Σ Ξ Γ A A' B B' :
   Σ ;; Ξ | Γ ⊢ A ↮ A' →
@@ -318,7 +318,7 @@ Proof.
   - eapply equiv_const. assumption.
 Qed.
 
-(** One-step reduction embeds in conversion **)
+(** One-step reduction embeds in conversion *)
 
 #[export] Instance Reflexive_conversion Σ Ξ Γ :
   Reflexive (conversion Σ Ξ Γ).
@@ -335,10 +335,10 @@ Proof.
   rewrite Forall_forall. intros t ht.
   apply In_nth_error in hσ as [n hn].
   apply In_nth_error in ht as [m hm].
-  unfold inst_eget in h.
+  unfold inst_iget in h.
   specialize (h n).
-  destruct ectx_get as [[E ξ']|] eqn: eg.
-  2:{ unfold ectx_get in eg. destruct (_ <=? _) eqn: en.
+  destruct ictx_get as [[E ξ']|] eqn: eg.
+  2:{ unfold ictx_get in eg. destruct (_ <=? _) eqn: en.
     - rewrite Nat.leb_le in en.
       rewrite <- e in en.
       rewrite <- nth_error_None in en.
@@ -353,13 +353,13 @@ Proof.
   destruct (nth_error Δ m) eqn: em.
   2:{ rewrite nth_error_None in em. apply nth_error_Some_alt in hm. lia. }
   specialize h with (1 := em).
-  unfold eget in h. rewrite hn, hm in h.
+  unfold iget in h. rewrite hn, hm in h.
   eexists. eassumption.
 Qed.
 
 (* Definition factor_rules (Σ : gctx) Ξ :=
   ∀ M E ξ' Ξ' Δ R n rule σ Γ A,
-    ectx_get Ξ M = Some (E, ξ') →
+    ictx_get Ξ M = Some (E, ξ') →
     Σ E = Some (Ext Ξ' Δ R) →
     nth_error R n = Some rule →
     let δ := length Δ in
@@ -407,7 +407,7 @@ Qed.
 
 Reserved Notation "Σ ;; Ξ | Γ ↦* Δ" (at level 80).
 
-Inductive red_ctx (Σ : gctx) (Ξ : ectx) : ctx → ctx → Prop :=
+Inductive red_ctx (Σ : gctx) (Ξ : ictx) : ctx → ctx → Prop :=
 | red_nil : Σ ;; Ξ | ∙ ↦* ∙
 | red_cons Γ Δ A B :
     Σ ;; Ξ | Γ ↦* Δ →
@@ -452,11 +452,11 @@ Abort.
   To prove it, we need more constraints about computation rules.
   If they can have a Π on the left-hand side we lose.
 
-**)
+*)
 
 Definition no_pi_lhs (Σ : gctx) Ξ :=
   ∀ M E ξ' Ξ' Δ R n rule σ A B,
-    ectx_get Ξ M = Some (E, ξ') →
+    ictx_get Ξ M = Some (E, ξ') →
     Σ E = Some (Ext Ξ' Δ R) →
     nth_error R n = Some rule →
     let δ := length Δ in

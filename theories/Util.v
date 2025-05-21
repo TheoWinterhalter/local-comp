@@ -50,7 +50,7 @@ Ltac wlog_iff_using tac :=
 Ltac wlog_iff :=
   wlog_iff_using firstorder.
 
-(** Relations **)
+(** Relations *)
 
 Lemma rt_step_ind A B R R' f x y :
   (∀ x y, R x y → clos_refl_trans B R' (f x) (f y)) →
@@ -93,7 +93,7 @@ Proof.
   auto.
 Qed.
 
-(** [All] predicate **)
+(** [All] predicate *)
 
 Inductive All {A} (P : A → Type) : list A → Type :=
 | All_nil : All P []
@@ -241,7 +241,7 @@ Proof.
   apply Forall2_diag. rewrite Forall_forall. auto.
 Qed.
 
-(** [OnOne2] predicate **)
+(** [OnOne2] predicate *)
 
 Inductive OnOne2 {A} (R : A → A → Prop) : list A → list A → Prop :=
 | OnOne2_hd a a' l : R a a' → OnOne2 R (a :: l) (a' :: l)
@@ -317,7 +317,7 @@ Proof.
   - constructor. inversion hf. intuition auto.
 Qed.
 
-(** Some mini [congruence] **)
+(** Some mini [congruence] *)
 
 Ltac eqtwice :=
   match goal with
@@ -325,7 +325,7 @@ Ltac eqtwice :=
     rewrite e2 in e1 ; inversion e1 ; clear e1
   end.
 
-(** On [nth_error] **)
+(** On [nth_error] *)
 
 Lemma nth_error_Some_alt A (l : list A) n x :
   nth_error l n = Some x →
@@ -335,7 +335,7 @@ Proof.
   rewrite <- nth_error_Some. congruence.
 Qed.
 
-(** [option] util **)
+(** [option] util *)
 
 Definition onSome [A] (P : A → Prop) (o : option A) : Prop :=
   match o with
@@ -360,7 +360,29 @@ Proof.
   - cbn. reflexivity.
 Qed.
 
-(** [fold_left] util **)
+Definition onSomeb [A] (P : A → bool) (o : option A) : bool :=
+  match o with
+  | Some a => P a
+  | None => true
+  end.
+
+Inductive OnSome [A] (P : A → Prop) : option A → Prop :=
+| OnSome_None : OnSome P None
+| OnSome_Some a : P a → OnSome P (Some a).
+
+Lemma OnSome_onSome A P o :
+  @OnSome A P o ↔ onSome P o.
+Proof.
+  split.
+  - destruct 1. all: cbn. all: auto.
+  - destruct o. all: cbn. all: intros ; constructor ; auto.
+Qed.
+
+Inductive option_rel [A] (R : A → A → Prop) : option A → option A → Prop :=
+| option_none : option_rel R None None
+| option_some x y : R x y → option_rel R (Some x) (Some y).
+
+(** [fold_left] util *)
 
 Lemma fold_left_map A B C (f : A → B → A) l a g :
   fold_left f (map g l) a = fold_left (λ a (c : C), f a (g c)) l a.

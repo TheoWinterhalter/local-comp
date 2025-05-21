@@ -1,4 +1,4 @@
-(** Typing **)
+(** * Typing *)
 
 From Stdlib Require Import Utf8 List Arith Bool.
 From LocalComp.autosubst
@@ -13,7 +13,7 @@ Set Default Goal Selector "!".
 
 Open Scope subst_scope.
 
-(** Closedness property **)
+(** ** Closedness property *)
 
 Fixpoint scoped n t :=
   match t with
@@ -22,19 +22,19 @@ Fixpoint scoped n t :=
   | Pi A B => scoped n A && scoped (S n) B
   | lam A t => scoped n A && scoped (S n) t
   | app u v => scoped n u && scoped n v
-  | const c ξ => forallb (forallb (scoped n)) ξ
-  | assm M x => true
+  | const c ξ => forallb (onSomeb (scoped n)) ξ
+  | assm x => true
   end.
 
 Notation closed t := (scoped 0 t).
 
-Notation scoped_eargs k ξ :=
-  (forallb (forallb (λ t, scoped k t)) ξ).
+Notation scoped_instance k ξ :=
+  (forallb (λ t, onSomeb (scoped k) t) ξ).
 
-Notation closed_eargs ξ :=
-  (scoped_eargs 0 ξ).
+Notation closed_instance ξ :=
+  (scoped_instance 0 ξ).
 
-(** Global scoping (see GScope) **)
+(** ** Global scoping (see GScope) *)
 
 Inductive gscope (Σ : gctx) : term → Prop :=
 | gscope_var x : gscope Σ (var x)
@@ -44,11 +44,11 @@ Inductive gscope (Σ : gctx) : term → Prop :=
 | gscope_app u v : gscope Σ u → gscope Σ v → gscope Σ (app u v)
 | gscope_const c ξ Ξ' A t :
     Σ c = Some (Def Ξ' A t) →
-    Forall (Forall (gscope Σ)) ξ →
+    Forall (OnSome (gscope Σ)) ξ →
     gscope Σ (const c ξ)
-| gscope_assm M x : gscope Σ (assm M x).
+| gscope_assm x : gscope Σ (assm x).
 
-Notation gscope_eargs Σ ξ := (Forall (Forall (gscope Σ)) ξ).
+Notation gscope_instance Σ ξ := (Forall (OnSome (gscope Σ)) ξ).
 
 Definition gscope_crule Σ rule :=
   Forall (gscope Σ) rule.(cr_env) ∧
@@ -64,38 +64,31 @@ Reserved Notation "Γ ⊢ t : A"
 Reserved Notation "Γ ⊢ u ≡ v"
   (at level 80, u, v at next level).
 
-Context (Σ : gctx) (Ξ : ectx).
+Context (Σ : gctx) (Ξ : ictx).
 
-(** Checking that an instance verifies the necessary equations **)
+(** Checking that an instance verifies the necessary equations *)
 Section Equations.
 
   Context (conversion : ctx → term → term → Prop).
 
   Notation "Γ ⊢ u ≡ v" := (conversion Γ u v).
 
-  Definition inst_equations_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
-    ∀ E M ξ',
-      ectx_get Ξ' M = Some (E, ξ') →
-      ∃ Ξ'' Δ R,
-        Σ E = Some (Ext Ξ'' Δ R) ∧
-        ∀ n rl,
-          nth_error R n = Some rl →
-          let m := length rl.(cr_env) in
-          let δ := length Δ in
-          let Θ := ctx_einst ξ (ctx_einst ξ' rl.(cr_env)) in
-          let lhs0 := rlhs M ξ' δ rl in
-          let rhs0 := rrhs M ξ' δ rl in
-          let lhs := einst (liftn m ξ) lhs0 in
-          let rhs := einst (liftn m ξ) rhs0 in
-          scoped m lhs0 = true ∧
-          scoped m rhs0 = true ∧
-          Γ ,,, Θ ⊢ lhs ≡ rhs.
+  Definition inst_equations_ (Γ : ctx) (ξ : instance) (Ξ' : ictx) :=
+    ∀ x rl,
+      ictx_get Ξ' x = Some (Comp rl) →
+      let m := length rl.(cr_env) in
+      let Θ := ctx_inst ξ rl.(cr_env) in
+      let lhs := inst (liftn m ξ) rl.(cr_pat) in
+      let rhs := inst (liftn m ξ) rl.(cr_rep) in
+      scoped m lhs = true ∧
+      scoped m rhs = true ∧
+      Γ ,,, Θ ⊢ lhs ≡ rhs.
 
 End Equations.
 
 Inductive conversion (Γ : ctx) : term → term → Prop :=
 
-(** Computation rules **)
+(** Computation rules *)
 
 | conv_beta :
     ∀ A t u,
@@ -106,22 +99,20 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
       Σ c = Some (Def Ξ' A t) →
       inst_equations_ conversion Γ ξ Ξ' →
       closed t = true →
-      Γ ⊢ const c ξ ≡ einst ξ t
+      Γ ⊢ const c ξ ≡ inst ξ t
 
 | conv_red :
-    ∀ E Ξ' Δ R M ξ' n rl σ,
-      Σ E = Some (Ext Ξ' Δ R) →
-      ectx_get Ξ M = Some (E, ξ') →
-      nth_error R n = Some rl →
-      let δ := length Δ in
-      let lhs := rlhs M ξ' δ rl in
-      let rhs := rrhs M ξ' δ rl in
-      let k := length rl.(cr_env) in
+    ∀ n rl σ,
+      ictx_get Ξ n = Some (Comp rl) →
+      let Θ := rl.(cr_env) in
+      let k := length Θ in
+      let lhs := rl.(cr_pat) in
+      let rhs := rl.(cr_rep) in
       scoped k lhs = true →
       scoped k rhs = true →
       Γ ⊢ lhs <[ σ ] ≡ rhs <[ σ ]
 
-(** Congruence rules **)
+(** Congruence rules *)
 
 | cong_Pi :
     ∀ A A' B B',
@@ -143,10 +134,10 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
 
 | cong_const :
     ∀ c ξ ξ',
-      Forall2 (Forall2 (conversion Γ)) ξ ξ' →
+      Forall2 (option_rel (conversion Γ)) ξ ξ' →
       Γ ⊢ const c ξ ≡ const c ξ'
 
-(** Structural rules **)
+(** Structural rules *)
 
 | conv_refl :
     ∀ u,
@@ -167,36 +158,20 @@ where "Γ ⊢ u ≡ v" := (conversion Γ u v).
 
 Notation inst_equations := (inst_equations_ conversion).
 
-(** Turn list into parallel substitution **)
-
-Definition dummy := (Sort 0).
-
-Fixpoint slist (l : list term) :=
-  match l with
-  | [] => λ _, dummy
-  | u :: l => u .: slist l
-  end.
-
-(** Instance typing **)
+(** ** Instance typing *)
 Section Inst.
 
   Context (typing : ctx → term → term → Prop).
 
   Notation "Γ ⊢ u : A" := (typing Γ u A).
 
-  Definition inst_eget_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
-    ∀ M E ξ',
-      ectx_get Ξ' M = Some (E, ξ') →
-      closed_eargs ξ' = true ∧
-      ∃ Ξ'' Δ R,
-        Σ E = Some (Ext Ξ'' Δ R) ∧
-        onSome (λ σ, length σ = length Δ) (nth_error ξ M) ∧
-        ∀ x A,
-          nth_error Δ x = Some A →
-          Γ ⊢ eget ξ M x : einst ξ (delocal M (einst ξ' (plus (S x) ⋅ A))).
+  Definition inst_iget_ (Γ : ctx) (ξ : instance) (Ξ' : ictx) :=
+    ∀ n A,
+      ictx_get Ξ n = Some (Assm A) →
+      Γ ⊢ iget ξ n : inst ξ A.
 
-  Definition inst_typing_ (Γ : ctx) (ξ : eargs) (Ξ' : ectx) :=
-    inst_equations Γ ξ Ξ' ∧ inst_eget_ Γ ξ Ξ' ∧ length ξ = length Ξ'.
+  Definition inst_typing_ (Γ : ctx) (ξ : instance) (Ξ' : ictx) :=
+    inst_equations Γ ξ Ξ' ∧ inst_iget_ Γ ξ Ξ' ∧ length ξ = length Ξ'.
 
 End Inst.
 
@@ -237,15 +212,12 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
       Σ c = Some (Def Ξ' A t) →
       inst_typing_ typing Γ ξ Ξ' →
       closed A = true →
-      Γ ⊢ const c ξ : einst ξ A
+      Γ ⊢ const c ξ : inst ξ A
 
 | type_assm :
-    ∀ M x E ξ Ξ' Δ R A,
-      ectx_get Ξ M = Some (E, ξ) →
-      Σ E = Some (Ext Ξ' Δ R) →
-      nth_error Δ x = Some A →
-      closed_eargs ξ = true →
-      Γ ⊢ assm M x : delocal M (einst ξ ((plus (S x)) ⋅ A))
+    ∀ x A,
+      ictx_get Ξ x = Some (Assm A) →
+      Γ ⊢ assm x : A
 
 | type_conv :
     ∀ i A B t,
@@ -256,7 +228,7 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
 
 where "Γ ⊢ t : A" := (typing Γ t A).
 
-(** Context formation **)
+(** ** Context formation *)
 
 Inductive wf : ctx → Prop :=
 | wf_nil : wf ∙
@@ -276,9 +248,9 @@ Notation "Σ ;; Ξ | Γ ⊢ t : A" :=
   (typing Σ Ξ Γ t A)
   (at level 80, t, A at next level, format "Σ  ;;  Ξ  |  Γ  ⊢  t  :  A").
 
-(** Extension context typing **)
+(** ** Interface typing *)
 
-Inductive ewf (Σ : gctx) : ectx → Prop :=
+Inductive ewf (Σ : gctx) : ictx → Prop :=
 | ewf_nil : ewf Σ []
 | ewf_cons Ξ E ξ' Ξ' Δ R :
     ewf Σ Ξ →
@@ -286,7 +258,7 @@ Inductive ewf (Σ : gctx) : ectx → Prop :=
     inst_typing_ Σ Ξ (typing Σ Ξ) ∙ ξ' Ξ' →
     ewf Σ ((E, ξ') :: Ξ).
 
-(** Equation typing **)
+(** Equation typing *)
 
 Definition equation_typing Σ Ξ Δ ε :=
   let k := length ε.(eq_env) in
@@ -295,7 +267,7 @@ Definition equation_typing Σ Ξ Δ ε :=
   Σ ;; Ξ | Δ ,,, ε.(eq_env) ⊢ ε.(eq_lhs) : ε.(eq_typ) ∧
   Σ ;; Ξ | Δ ,,, ε.(eq_env) ⊢ ε.(eq_rhs) : ε.(eq_typ).
 
-(** Global environment typing **)
+(** Global environment typing *)
 
 Inductive gwf : gctx → Prop :=
 | gwf_nil : gwf []
@@ -317,7 +289,7 @@ Inductive gwf : gctx → Prop :=
     Σ ;; Ξ | ∙ ⊢ t : A →
     gwf ((c, Def Ξ A t) :: Σ).
 
-(** Automation **)
+(** Automation *)
 
 Create HintDb conv discriminated.
 Create HintDb type discriminated.
@@ -335,7 +307,7 @@ Ltac ttconv :=
 Ltac tttype :=
   unshelve typeclasses eauto with type shelvedb ; shelve_unifiable.
 
-(** Util **)
+(** Util *)
 
 Lemma meta_conv :
   ∀ Σ Ξ Γ t A B,
@@ -372,6 +344,6 @@ Proof.
   intros Σ Ξ Γ u ? <-. ttconv.
 Qed.
 
-Notation inst_eget Σ Ξ := (inst_eget_ Σ (typing Σ Ξ)).
+Notation inst_iget Σ Ξ := (inst_iget_ Σ (typing Σ Ξ)).
 Notation inst_equations Σ Ξ := (inst_equations_ Σ (conversion Σ Ξ)).
 Notation inst_typing Σ Ξ := (inst_typing_ Σ Ξ (typing Σ Ξ)).

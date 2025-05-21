@@ -1,4 +1,4 @@
-(** Inversion of typing **)
+(** Inversion of typing *)
 
 From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
@@ -98,7 +98,7 @@ Lemma type_const_inv Σ Ξ Γ c ξ T :
     Σ c = Some (Def Ξ' A t) ∧
     inst_typing Σ Ξ Γ ξ Ξ' ∧
     closed A = true ∧
-    Σ ;; Ξ | Γ ⊢ einst ξ A ≡ T.
+    Σ ;; Ξ | Γ ⊢ inst ξ A ≡ T.
 Proof.
   intros h. invtac h.
 Qed.
@@ -106,11 +106,11 @@ Qed.
 Lemma type_assm_inv Σ Ξ Γ M x T :
   Σ ;; Ξ | Γ ⊢ assm M x : T →
   ∃ E ξ Ξ' Δ R A,
-    ectx_get Ξ M = Some (E, ξ) ∧
+    ictx_get Ξ M = Some (E, ξ) ∧
     Σ E = Some (Ext Ξ' Δ R) ∧
     nth_error Δ x = Some A ∧
-    closed_eargs ξ = true ∧
-    Σ ;; Ξ | Γ ⊢ delocal M (einst ξ (plus (S x) ⋅ A)) ≡ T.
+    closed_instance ξ = true ∧
+    Σ ;; Ξ | Γ ⊢ delocal M (inst ξ (plus (S x) ⋅ A)) ≡ T.
 Proof.
   intros h. invtac h.
 Qed.

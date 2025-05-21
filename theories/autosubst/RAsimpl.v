@@ -6,7 +6,7 @@
   - shift could be shiftn instead, as we often need those, better than using
     addn manually, and the tactic could handle those easily.
 
-**)
+*)
 
 From Stdlib Require Import Utf8 List.
 From LocalComp.autosubst Require Import core unscoped.
@@ -41,7 +41,7 @@ Fixpoint unquote_ren q :=
   | qren_shift => S
   end.
 
-(** Evaluation **)
+(** Evaluation *)
 
 Fixpoint apply_ren (r : quoted_ren) (n : quoted_nat) : quoted_nat :=
   match r, n with
@@ -102,7 +102,7 @@ Definition test_qren_id r : qren_id_view r :=
   | r => not_qren_id r
   end.
 
-(** Correctness **)
+(** Correctness *)
 
 Lemma apply_ren_sound :
   ∀ r n,
@@ -175,7 +175,7 @@ Proof.
       assumption.
 Qed.
 
-(** Quoting **)
+(** Quoting *)
 
 Ltac quote_nat n :=
   lazymatch n with
@@ -215,7 +215,7 @@ Ltac quote_ren r :=
 
   To make it user-extensible, we rely on type classes.
 
-**)
+*)
 
 Create HintDb asimpl_unfold.
 
@@ -267,7 +267,7 @@ Hint Mode RenSimplification + - : typeclass_instances.
   strategy while substitution and renaming simplification performed using the
   the outermost one. We thus use an extra database for the latter.
 
-**)
+*)
 
 Create HintDb asimpl.
 Create HintDb asimpl_outermost.

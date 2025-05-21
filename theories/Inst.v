@@ -1,4 +1,4 @@
-(** Extension and pattern instantiation **)
+(** * Interface instantiation *)
 
 From Stdlib Require Import Utf8 List.
 From LocalComp.autosubst Require Import AST SubstNotations RAsimpl AST_rasimpl.
@@ -9,48 +9,52 @@ Set Default Goal Selector "!".
 
 Open Scope subst_scope.
 
-(** Extension instantiation **)
+Definition dummy := (Sort 0).
 
-Definition eget (ξ : eargs) M x :=
-  let default := Sort 0 in
-  match nth_error ξ M with
-  | Some σ =>
-    match nth_error σ x with
-    | Some t => t
-    | None => default
-    end
-  | None => default
+Definition iget (ξ : instance) x :=
+  match nth_error ξ x with
+  | Some (Some t) => t
+  | _ => dummy
   end.
 
-Notation ren_eargs ρ ξ :=
-  (map (map (ren_term ρ)) ξ).
+Notation map_instance f ξ :=
+  (map (option_map f) ξ).
 
-Notation lift_eargs ξ := (ren_eargs S ξ).
+Notation ren_instance ρ ξ :=
+  (map_instance (ren_term ρ) ξ).
 
-Notation liftn n ξ := (ren_eargs (plus n) ξ).
+Notation lift_instance ξ := (ren_instance S ξ).
 
-Fixpoint einst (ξ : eargs) (t : term) :=
+Notation liftn n ξ := (ren_instance (plus n) ξ).
+
+Fixpoint inst (ξ : instance) (t : term) :=
   match t with
   | var n => var n
   | Sort i => Sort i
-  | Pi A B => Pi (einst ξ A) (einst (lift_eargs ξ) B)
-  | lam A t => lam (einst ξ A) (einst (lift_eargs ξ) t)
-  | app u v => app (einst ξ u) (einst ξ v)
-  | const c ξ' => const c (map (map (einst ξ)) ξ')
-  | assm M x => eget ξ M x
+  | Pi A B => Pi (inst ξ A) (inst (lift_instance ξ) B)
+  | lam A t => lam (inst ξ A) (inst (lift_instance ξ) t)
+  | app u v => app (inst ξ u) (inst ξ v)
+  | const c ξ' => const c (map_instance (inst ξ) ξ')
+  | assm x => iget ξ x
   end.
 
-Notation einst_eargs ξ ξ' := (map (map (einst ξ)) ξ').
+Notation inst_instance ξ ξ' := (map_instance (inst ξ) ξ').
 
-(** Instance for a context **)
+(** Instance for a context *)
 
-Fixpoint ctx_einst (ξ : eargs) (Γ : ctx) : ctx :=
+Fixpoint ctx_inst (ξ : instance) (Γ : ctx) : ctx :=
   match Γ with
   | [] => []
-  | A :: Γ => ctx_einst ξ Γ ,, einst (liftn (length Γ) ξ) A
+  | A :: Γ => ctx_inst ξ Γ ,, inst (liftn (length Γ) ξ) A
   end.
 
-(** n-ary application **)
+(** ** Unrelated utility
+
+  TODO MOVE
+
+*)
+
+(** n-ary application *)
 
 Fixpoint apps (u : term) (l : list term) :=
   match l with
@@ -58,50 +62,10 @@ Fixpoint apps (u : term) (l : list term) :=
   | v :: l => apps (app u v) l
   end.
 
-(** Substitution lifting **)
+(** Substitution lifting *)
 
 Fixpoint ups n σ :=
   match n with
   | 0 => σ
   | S n => up_term (ups n σ)
   end.
-
-(** Delocalising a term
-
-  That is replacing all local variables x by M.x.
-  In some cases, we want to do it only for certain variables, so we use [ups].
-
-**)
-
-Definition delocal M t :=
-  t <[ assm M ].
-
-Definition delocal_lift M k t :=
-  t <[ ups k (assm M) ].
-
-(** Rules lhs and rhs
-
-  We have two versions, depending on whether we see the rule as a reduction
-  rule (rlhs/rrhs) or an equation (elhs/erhs).
-
-  For conversion, we would ideally use the equation version which morally
-  doesn't care about stuff like linearity and just presents two terms.
-  As a technicality we will however use the reduction version and only show
-  at a later time, that the equation version suffices.
-
-**)
-
-Definition rule_tm M ξ δ k t :=
-  delocal_lift M k (einst (liftn (δ + k) ξ) t).
-
-Definition elhs M ξ δ ε :=
-  rule_tm M ξ δ (length ε.(eq_env)) ε.(eq_lhs).
-
-Definition erhs M ξ δ ε :=
-  rule_tm M ξ δ (length ε.(eq_env)) ε.(eq_lhs).
-
-Definition rlhs M ξ δ r :=
-  rule_tm M ξ δ (length r.(cr_env)) r.(cr_pat).
-
-Definition rrhs M ξ δ r :=
-  rule_tm M ξ δ (length r.(cr_env)) r.(cr_rep).

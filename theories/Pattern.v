@@ -7,7 +7,7 @@
   symbol as a left-hand side to a rule.
   TODO: Improve
 
-**)
+*)
 
 From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
@@ -35,7 +35,7 @@ Definition pat_to_term p :=
 
 (* TODO UPSTREAM *)
 Definition get_rule (Σ : gctx) Ξ M n : option crule :=
-  match ectx_get Ξ M with
+  match ictx_get Ξ M with
   | Some (E, ξ') =>
     match Σ E with
     | Some (Ext Ξ' Δ R) =>
@@ -46,7 +46,7 @@ Definition get_rule (Σ : gctx) Ξ M n : option crule :=
   end.
 
 Lemma get_get_rule (Σ : gctx) Ξ M n E ξ' Ξ' Δ R rl :
-  ectx_get Ξ M = Some (E, ξ') →
+  ictx_get Ξ M = Some (E, ξ') →
   Σ E = Some (Ext Ξ' Δ R) →
   nth_error R n = Some rl →
   get_rule Σ Ξ M n = Some rl.
@@ -74,11 +74,11 @@ Section Red.
   Reserved Notation "Γ ⊢ u ⇒ v"
     (at level 80, u, v at next level).
 
-  Context (Σ : gctx) (Ξ : ectx).
+  Context (Σ : gctx) (Ξ : ictx).
 
   Inductive pred (Γ : ctx) : term → term → Prop :=
 
-  (** Computation rules **)
+  (** Computation rules *)
 
   | pred_beta A t t' u u' :
       Γ ,, A ⊢ t ⇒ t' →
@@ -91,11 +91,11 @@ Section Red.
       closed t = true →
       ∙ ⊢ t ⇒ t' →
       Forall2 (Forall2 (pred Γ)) ξ ξ' →
-      Γ ⊢ const c ξ ⇒ einst ξ' t'
+      Γ ⊢ const c ξ ⇒ inst ξ' t'
 
   | pred_rule E Ξ' Δ R M ξ' n rule σ σ' :
       Σ E = Some (Ext Ξ' Δ R) →
-      ectx_get Ξ M = Some (E, ξ') →
+      ictx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
       let δ := length Δ in
       let lhs := rlhs M ξ' δ rule in
@@ -106,7 +106,7 @@ Section Red.
       (∀ m, Γ ⊢ σ m ⇒ σ' m) →
       Γ ⊢ lhs <[ σ ] ⇒ rhs <[ σ' ]
 
-  (** Congruence rules **)
+  (** Congruence rules *)
 
   | pred_Pi A B A' B' :
       Γ ⊢ A ⇒ A' →
@@ -146,11 +146,11 @@ Section Red.
         P ∙ t t' →
         Forall2 (Forall2 (pred Γ)) ξ ξ' →
         Forall2 (Forall2 (P Γ)) ξ ξ' →
-        P Γ (const c ξ) (einst ξ' t')
+        P Γ (const c ξ) (inst ξ' t')
       ) →
       (∀ Γ E Ξ' Δ R M ξ' n rule σ σ',
         Σ E = Some (Ext Ξ' Δ R) →
-        ectx_get Ξ M = Some (E, ξ') →
+        ictx_get Ξ M = Some (E, ξ') →
         nth_error R n = Some rule →
         let δ := Datatypes.length Δ in
         let lhs := rlhs M ξ' δ rule in
@@ -249,11 +249,11 @@ Section Red.
       Σ c = Some (Def Ξ' A t) →
       ∙ ⊢ t ⇒ᵨ t' →
       Forall2 (Forall2 (pred_max Γ)) ξ ξ' →
-      Γ ⊢ const c ξ ⇒ᵨ einst ξ' t'
+      Γ ⊢ const c ξ ⇒ᵨ inst ξ' t'
 
   | pred_max_rule E Ξ' Δ R M ξ' n rule σ σ' :
       Σ E = Some (Ext Ξ' Δ R) →
-      ectx_get Ξ M = Some (E, ξ') →
+      ictx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rule →
       let δ := length Δ in
       let lhs := rlhs M ξ' δ rule in
@@ -261,7 +261,7 @@ Section Red.
       (∀ m, Γ ⊢ σ m ⇒ᵨ σ' m) →
       Γ ⊢ lhs <[ σ ] ⇒ᵨ rhs <[ σ' ]
 
-  (** Congruence rules **)
+  (** Congruence rules *)
 
   | pred_max_Pi A B A' B' :
       Γ ⊢ A ⇒ᵨ A' →
@@ -288,7 +288,7 @@ Section Red.
   Context (hpr : pattern_rules Σ Ξ).
 
   Lemma pattern_rules_lhs_no_lam M E ξ' Ξ' Δ R n rl σ A b :
-    ectx_get Ξ M = Some (E, ξ') →
+    ictx_get Ξ M = Some (E, ξ') →
     Σ E = Some (Ext Ξ' Δ R) →
     nth_error R n = Some rl →
     let δ := length Δ in

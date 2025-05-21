@@ -1,4 +1,4 @@
-(** Basic meta-theory **)
+(** Basic meta-theory *)
 
 From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
@@ -11,7 +11,7 @@ Import CombineNotations.
 
 Set Default Goal Selector "!".
 
-(** Better induction principle for [term] **)
+(** Better induction principle for [term] *)
 
 Lemma term_rect :
    ∀ (P : term → Type),
@@ -20,7 +20,7 @@ Lemma term_rect :
     (∀ A, P A → ∀ B, P B → P (Pi A B)) →
     (∀ A, P A → ∀ t, P t → P (lam A t)) →
     (∀ u, P u → ∀ v, P v → P (app u v)) →
-    (∀ (c : gref) (ξ : eargs), All (All P) ξ → P (const c ξ)) →
+    (∀ (c : gref) (ξ : instance), All (All P) ξ → P (const c ξ)) →
     (∀ (M : eref) (x : aref), P (assm M x)) →
     ∀ t, P t.
 Proof.
@@ -40,7 +40,7 @@ Proof.
   all: eauto.
 Defined.
 
-(** Better induction principle for [gscope] **)
+(** Better induction principle for [gscope] *)
 
 Lemma gscope_ind :
   ∀ Σ (P : term → Prop),
@@ -51,7 +51,7 @@ Lemma gscope_ind :
   (∀ u v, gscope Σ u → P u → gscope Σ v → P v → P (app u v)) →
   (∀ c ξ Ξ' A t,
     Σ c = Some (Def Ξ' A t) →
-    gscope_eargs Σ ξ →
+    gscope_instance Σ ξ →
     Forall (Forall P) ξ →
     P (const c ξ)
   ) →
@@ -75,7 +75,7 @@ Proof.
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
 
-(** Better induction principle for [conversion] **)
+(** Better induction principle for [conversion] *)
 
 Lemma conversion_ind :
   ∀ (Σ : gctx) Ξ (P : ctx → term → term → Prop),
@@ -85,11 +85,11 @@ Lemma conversion_ind :
       inst_equations Σ Ξ Γ ξ Ξ' →
       inst_equations_ Σ P Γ ξ Ξ' →
       closed t = true →
-      P Γ (const c ξ) (einst ξ t)
+      P Γ (const c ξ) (inst ξ t)
     ) →
     (∀ Γ E Ξ' Δ R M ξ' n rl σ,
       Σ E = Some (Ext Ξ' Δ R) →
-      ectx_get Ξ M = Some (E, ξ') →
+      ictx_get Ξ M = Some (E, ξ') →
       nth_error R n = Some rl →
       let δ := length Δ in
       let lhs := rlhs M ξ' δ rl in
@@ -160,7 +160,7 @@ Proof.
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
 
-(** Better induction principle for [typing] **)
+(** Better induction principle for [typing] *)
 
 Lemma typing_ind :
   ∀ Σ Ξ (P : ctx → term → term → Prop),
@@ -195,14 +195,14 @@ Lemma typing_ind :
       inst_typing Σ Ξ Γ ξ Ξ' →
       inst_typing_ Σ Ξ P Γ ξ Ξ' →
       closed A = true →
-      P Γ (const c ξ) (einst ξ A)
+      P Γ (const c ξ) (inst ξ A)
     ) →
     (∀ Γ M x E ξ Ξ' Δ R A,
-      ectx_get Ξ M = Some (E, ξ) →
+      ictx_get Ξ M = Some (E, ξ) →
       Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
-      closed_eargs ξ = true →
-      P Γ (assm M x) (delocal M (einst ξ ((plus (S x)) ⋅ A)))
+      closed_instance ξ = true →
+      P Γ (assm M x) (delocal M (inst ξ ((plus (S x)) ⋅ A)))
     ) →
     (∀ Γ i A B t,
       Σ ;; Ξ | Γ ⊢ t : A →
@@ -229,7 +229,7 @@ Proof.
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
 
-(** Typing implies scoping **)
+(** Typing implies scoping *)
 
 Lemma typing_scoped Σ Ξ Γ t A :
   Σ ;; Ξ | Γ ⊢ t : A →
@@ -249,9 +249,9 @@ Proof.
     eapply In_nth_error in hσ as [M hM].
     eapply In_nth_error in hu as [x hx].
     destruct H1 as [_ [ih e]]. red in ih. specialize (ih M).
-    destruct (ectx_get Ξ' M) as [[E ξ'] |] eqn:e'.
+    destruct (ictx_get Ξ' M) as [[E ξ'] |] eqn:e'.
     2:{
-      unfold ectx_get in e'. destruct (_ <=? _) eqn: e1.
+      unfold ictx_get in e'. destruct (_ <=? _) eqn: e1.
       - rewrite Nat.leb_le in e1. rewrite <- e in e1.
         rewrite <- nth_error_None in e1. congruence.
       - rewrite nth_error_None in e'.
@@ -266,7 +266,7 @@ Proof.
       rewrite <- nth_error_None in eΔ. congruence.
     }
     specialize ih with (1 := eΔ).
-    unfold eget in ih. rewrite hM, hx in ih.
+    unfold iget in ih. rewrite hM, hx in ih.
     assumption.
 Qed.
 
@@ -284,7 +284,7 @@ Qed.
   A bit silly, but it might be better to stick to it in case we want to add more
   data.
 
-**)
+*)
 
 Lemma conv_ctx_irr Σ Ξ Γ Δ u v :
   Σ ;; Ξ | Γ ⊢ u ≡ v →
@@ -303,7 +303,7 @@ Proof.
     auto.
 Qed.
 
-(** Renaming preserves typing **)
+(** Renaming preserves typing *)
 
 Definition rtyping (Γ : ctx) (ρ : nat → nat) (Δ : ctx) : Prop :=
   ∀ x A,
@@ -391,9 +391,9 @@ Proof.
   - apply extRen_term. intro. core.unfold_funcomp. lia.
 Qed.
 
-Lemma ren_eargs_comp :
+Lemma ren_instance_comp :
   ∀ ρ ρ' ξ,
-    ren_eargs ρ (ren_eargs ρ' ξ) = ren_eargs (ρ' >> ρ) ξ.
+    ren_instance ρ (ren_instance ρ' ξ) = ren_instance (ρ' >> ρ) ξ.
 Proof.
   intros ρ ρ' ξ.
   rewrite map_map.
@@ -403,17 +403,17 @@ Proof.
   rasimpl. reflexivity.
 Qed.
 
-Lemma lift_ren_eargs :
+Lemma lift_ren_instance :
   ∀ ρ ξ,
-    lift_eargs (ren_eargs ρ ξ) = ren_eargs (upRen_term_term ρ) (lift_eargs ξ).
+    lift_instance (ren_instance ρ ξ) = ren_instance (upRen_term_term ρ) (lift_instance ξ).
 Proof.
   intros ρ ξ.
-  rewrite !ren_eargs_comp. reflexivity.
+  rewrite !ren_instance_comp. reflexivity.
 Qed.
 
-Lemma ren_eargs_ext ρ ζ ξ :
+Lemma ren_instance_ext ρ ζ ξ :
   (∀ n, ρ n = ζ n) →
-  ren_eargs ρ ξ = ren_eargs ζ ξ.
+  ren_instance ρ ξ = ren_instance ζ ξ.
 Proof.
   intros h.
   apply map_ext. intro.
@@ -424,8 +424,8 @@ Qed.
 Lemma liftn_liftn n m ξ :
   liftn n (liftn m ξ) = liftn (n + m) ξ.
 Proof.
-  rewrite ren_eargs_comp.
-  apply ren_eargs_ext. unfold core.funcomp. intro. lia.
+  rewrite ren_instance_comp.
+  apply ren_instance_ext. unfold core.funcomp. intro. lia.
 Qed.
 
 Fixpoint uprens k (ρ : nat → nat) :=
@@ -434,10 +434,10 @@ Fixpoint uprens k (ρ : nat → nat) :=
   | S k => upRen_term_term (uprens k ρ)
   end.
 
-Lemma liftn_ren_eargs n ρ ξ :
-  liftn n (ren_eargs ρ ξ) = ren_eargs (uprens n ρ) (liftn n ξ).
+Lemma liftn_ren_instance n ρ ξ :
+  liftn n (ren_instance ρ ξ) = ren_instance (uprens n ρ) (liftn n ξ).
 Proof.
-  rewrite 2!ren_eargs_comp. apply ren_eargs_ext.
+  rewrite 2!ren_instance_comp. apply ren_instance_ext.
   intros m. unfold core.funcomp.
   induction n as [| n ih] in m, ρ |- *.
   - reflexivity.
@@ -447,11 +447,11 @@ Qed.
 
 Lemma ren_inst :
   ∀ ρ ξ t,
-    ρ ⋅ (einst ξ t) = einst (ren_eargs ρ ξ) (ρ ⋅ t).
+    ρ ⋅ (inst ξ t) = inst (ren_instance ρ ξ) (ρ ⋅ t).
 Proof.
   intros ρ ξ t.
   induction t using term_rect in ρ, ξ |- *.
-  all: try solve [ cbn ; rewrite ?lift_ren_eargs ; f_equal ; eauto ].
+  all: try solve [ cbn ; rewrite ?lift_ren_instance ; f_equal ; eauto ].
   - cbn. f_equal.
     rewrite !map_map. apply map_ext_All.
     eapply All_impl. 2: eassumption.
@@ -459,7 +459,7 @@ Proof.
     rewrite !map_map. apply map_ext_All.
     eapply All_impl. 2: eassumption.
     cbn. intros t ht. auto.
-  - cbn. unfold eget.
+  - cbn. unfold iget.
     rewrite nth_error_map.
     destruct (nth_error ξ _) as [σ |]. 2: reflexivity.
     cbn. rewrite nth_error_map.
@@ -512,30 +512,30 @@ Proof.
   eapply scoped_ren in h. eauto.
 Qed.
 
-Lemma ren_eargs_id ξ :
-  ren_eargs id ξ = ξ .
+Lemma ren_instance_id ξ :
+  ren_instance id ξ = ξ .
 Proof.
   rewrite <- map_id. apply map_ext. intro.
   rewrite <- map_id. apply map_ext. intro.
   rasimpl. reflexivity.
 Qed.
 
-Lemma ren_eargs_id_ext ρ ξ :
+Lemma ren_instance_id_ext ρ ξ :
   (∀ n, ρ n = n) →
-  ren_eargs ρ ξ = ξ.
+  ren_instance ρ ξ = ξ.
 Proof.
   intro h.
-  etransitivity. 2: eapply ren_eargs_id.
-  apply ren_eargs_ext. assumption.
+  etransitivity. 2: eapply ren_instance_id.
+  apply ren_instance_ext. assumption.
 Qed.
 
-Corollary closed_ren_eargs ρ ξ :
-  closed_eargs ξ = true →
-  ren_eargs ρ ξ = ξ.
+Corollary closed_ren_instance ρ ξ :
+  closed_instance ξ = true →
+  ren_instance ρ ξ = ξ.
 Proof.
   intros h.
-  etransitivity. 2: apply ren_eargs_id.
-  unfold closed_eargs in h.
+  etransitivity. 2: apply ren_instance_id.
+  unfold closed_instance in h.
   apply map_ext_All. eapply All_impl.
   2:{ apply forallb_All. eassumption. }
   cbn. intros σ hσ%forallb_All.
@@ -546,7 +546,7 @@ Qed.
 Lemma inst_equations_ren_ih Σ Ξ Γ Δ ρ ξ Ξ' :
   inst_equations Σ Ξ Γ ξ Ξ' →
   inst_equations_ Σ (λ _ u v, ∀ Δ ρ, Σ ;; Ξ | Δ ⊢ ρ ⋅ u ≡ ρ ⋅ v) Γ ξ Ξ' →
-  inst_equations Σ Ξ Δ (ren_eargs ρ ξ) Ξ'.
+  inst_equations Σ Ξ Δ (ren_instance ρ ξ) Ξ'.
 Proof.
   intros h ih.
   intros E M ξ' hM.
@@ -560,11 +560,11 @@ Proof.
   specialize ih with (ρ := uprens m ρ).
   (* 2:{
     eapply rtyping_uprens_eq. 1: eassumption.
-    rewrite 2!length_ctx_einst. reflexivity.
+    rewrite 2!length_ctx_inst. reflexivity.
   } *)
   rewrite 2!ren_inst in ih.
   rewrite 2!scoped_ren in ih. 2,3: eassumption.
-  rewrite liftn_ren_eargs.
+  rewrite liftn_ren_instance.
   eauto.
 Qed.
 
@@ -628,10 +628,10 @@ Proof.
     + cbn. rewrite IHσ. reflexivity.
 Qed.
 
-Lemma eget_ren ξ M x ρ :
-  eget (ren_eargs ρ ξ) M x = ρ ⋅ (eget ξ M x).
+Lemma iget_ren ξ M x ρ :
+  iget (ren_instance ρ ξ) M x = ρ ⋅ (iget ξ M x).
 Proof.
-  unfold eget.
+  unfold iget.
   rewrite nth_error_map.
   destruct (nth_error ξ M). 2: reflexivity.
   cbn. rewrite nth_error_map.
@@ -683,23 +683,23 @@ Proof.
   apply scoped_delocal with (k := 0).
 Qed.
 
-Lemma length_ctx_einst ξ Γ :
-  length (ctx_einst ξ Γ) = length Γ.
+Lemma length_ctx_inst ξ Γ :
+  length (ctx_inst ξ Γ) = length Γ.
 Proof.
   induction Γ in ξ |- *.
   - reflexivity.
   - cbn. eauto.
 Qed.
 
-Lemma ren_ctx_einst ρ ξ Γ :
-  ren_ctx ρ (ctx_einst ξ Γ) = ctx_einst (ren_eargs ρ ξ) Γ.
+Lemma ren_ctx_inst ρ ξ Γ :
+  ren_ctx ρ (ctx_inst ξ Γ) = ctx_inst (ren_instance ρ ξ) Γ.
 Proof.
   induction Γ as [| A Γ ih] in ρ, ξ |- *.
   - reflexivity.
   - cbn. rewrite ih. f_equal.
-    rewrite length_ctx_einst.
+    rewrite length_ctx_inst.
     rewrite ren_inst.
-    rewrite <- liftn_ren_eargs. f_equal.
+    rewrite <- liftn_ren_instance. f_equal.
     apply scoped_ren.
     (* Would need the context to be closed *)
 Abort.
@@ -724,7 +724,7 @@ Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
   inst_typing_ Σ Ξ (λ Γ t A,
     ∀ Δ ρ, rtyping Δ ρ Γ → Σ ;; Ξ | Δ ⊢ ρ ⋅ t : ρ ⋅ A
   ) Γ ξ Ξ' →
-  inst_typing Σ Ξ Δ (ren_eargs ρ ξ) Ξ'.
+  inst_typing Σ Ξ Δ (ren_instance ρ ξ) Ξ'.
 Proof.
   intros hρ [h1 [h2 h3]] [ih1 [ih2 ih3]].
   split. 2: split.
@@ -737,7 +737,7 @@ Proof.
       rewrite nth_error_map, onSome_map. setoid_rewrite length_map. assumption.
     }
     intros ?? h.
-    rewrite eget_ren. eapply meta_conv.
+    rewrite iget_ren. eapply meta_conv.
     + eauto.
     + rewrite !ren_inst. f_equal.
       apply closed_ren. apply closed_delocal.
@@ -773,7 +773,7 @@ Proof.
     eapply conv_ren. all: eassumption.
 Qed.
 
-(** Reproving [ext_term] but with scoping assumption **)
+(** Reproving [ext_term] but with scoping assumption *)
 
 Definition eq_subst_on k (σ θ : nat → term) :=
   ∀ x, x < k → σ x = θ x.
@@ -821,7 +821,7 @@ Qed.
   The latter has the advantage that it verifies the condition for
   [subst_inst] later.
 
-**)
+*)
 
 Fixpoint listify k (σ : nat → term) :=
   match k with
@@ -863,7 +863,7 @@ Proof.
   - cbn. apply ih.
 Qed.
 
-(** Substitution preserves typing **)
+(** Substitution preserves typing *)
 
 Inductive styping Σ Ξ (Γ : ctx) (σ : nat → term) : ctx → Prop :=
 | type_nil : styping Σ Ξ Γ σ ∙
@@ -925,9 +925,9 @@ Proof.
 Qed.
 
 Lemma lift_liftn n ξ :
-  lift_eargs (liftn n ξ) = liftn (S n) ξ.
+  lift_instance (liftn n ξ) = liftn (S n) ξ.
 Proof.
-  rewrite ren_eargs_comp. reflexivity.
+  rewrite ren_instance_comp. reflexivity.
 Qed.
 
 (**
@@ -936,12 +936,12 @@ Qed.
   for any [m]. The fact that we're free to choose [m] suggests there is a better
   lemma to be had.
 
-**)
+*)
 
 Lemma subst_inst σ ξ t n m :
   (∀ k, σ (m + k) = var (n + k)) →
-  einst (liftn n ξ) (t <[ σ ]) =
-  (einst (liftn m ξ) t) <[ σ >> einst (liftn n ξ) ].
+  inst (liftn n ξ) (t <[ σ ]) =
+  (inst (liftn m ξ) t) <[ σ >> inst (liftn n ξ) ].
 Proof.
   intro hσ.
   induction t using term_rect in n, m, σ, hσ, ξ |- *.
@@ -975,20 +975,20 @@ Proof.
     rewrite !map_map. apply map_ext_All.
     eapply All_impl. 2: eassumption.
     eauto.
-  - cbn. rewrite !eget_ren. rasimpl.
+  - cbn. rewrite !iget_ren. rasimpl.
     rewrite rinstInst'_term.
     apply ext_term. intro k.
     unfold core.funcomp.
     rewrite hσ. cbn. reflexivity.
 Qed.
 
-Notation subst_eargs σ ξ :=
+Notation subst_instance σ ξ :=
   (map (map (subst_term σ)) ξ).
 
-Lemma eget_subst σ ξ M x :
-  eget (subst_eargs σ ξ) M x = (eget ξ M x) <[ σ ].
+Lemma iget_subst σ ξ M x :
+  iget (subst_instance σ ξ) M x = (iget ξ M x) <[ σ ].
 Proof.
-  unfold eget.
+  unfold iget.
   rewrite nth_error_map. destruct nth_error. 2: reflexivity.
   cbn. rewrite nth_error_map. destruct nth_error. 2: reflexivity.
   cbn. reflexivity.
@@ -997,7 +997,7 @@ Qed.
 Lemma subst_inst_scoped σ ξ t k :
   scoped k t = true →
   (∀ n, n < k → σ n = var n) →
-  (einst ξ t) <[ σ ] = einst (subst_eargs σ ξ) t.
+  (inst ξ t) <[ σ ] = inst (subst_instance σ ξ) t.
 Proof.
   intros h hσ.
   induction t using term_rect in k, h, σ, hσ, ξ |- *.
@@ -1040,12 +1040,12 @@ Proof.
     eapply All_prod in h1. 2: eassumption.
     eapply All_impl. 2: eassumption. clear - hσ.
     cbn. intros t [h1 h2]. eauto.
-  - cbn. symmetry. apply eget_subst.
+  - cbn. symmetry. apply iget_subst.
 Qed.
 
 Corollary subst_inst_closed σ ξ t :
   closed t = true →
-  (einst ξ t) <[ σ ] = einst (subst_eargs σ ξ) t.
+  (inst ξ t) <[ σ ] = inst (subst_instance σ ξ) t.
 Proof.
   intro h.
   eapply subst_inst_scoped.
@@ -1055,7 +1055,7 @@ Qed.
 
 Corollary subst_inst_ups σ ξ t k :
   scoped k t = true →
-  (einst ξ t) <[ ups k σ ] = einst (subst_eargs (ups k σ) ξ) t.
+  (inst ξ t) <[ ups k σ ] = inst (subst_instance (ups k σ) ξ) t.
 Proof.
   intros h.
   eapply subst_inst_scoped. 1: eassumption.
@@ -1067,9 +1067,9 @@ Proof.
     reflexivity.
 Qed.
 
-Lemma subst_eargs_ext σ θ ξ :
+Lemma subst_instance_ext σ θ ξ :
   (∀ n, σ n = θ n) →
-  subst_eargs σ ξ = subst_eargs θ ξ.
+  subst_instance σ ξ = subst_instance θ ξ.
 Proof.
   intros h.
   apply map_ext. intro.
@@ -1077,27 +1077,27 @@ Proof.
   apply ext_term. assumption.
 Qed.
 
-Lemma ren_subst_eargs ρ σ ξ :
-  ren_eargs ρ (subst_eargs σ ξ) = subst_eargs (σ >> (ren_term ρ)) ξ.
+Lemma ren_subst_instance ρ σ ξ :
+  ren_instance ρ (subst_instance σ ξ) = subst_instance (σ >> (ren_term ρ)) ξ.
 Proof.
   rewrite map_map. apply map_ext. intro.
   rewrite map_map. apply map_ext. intro.
   rasimpl. reflexivity.
 Qed.
 
-Lemma subst_ren_eargs ρ σ ξ :
-  subst_eargs σ (ren_eargs ρ ξ) = subst_eargs (ρ >> σ) ξ.
+Lemma subst_ren_instance ρ σ ξ :
+  subst_instance σ (ren_instance ρ ξ) = subst_instance (ρ >> σ) ξ.
 Proof.
   rewrite map_map. apply map_ext. intro.
   rewrite map_map. apply map_ext. intro.
   rasimpl. reflexivity.
 Qed.
 
-Corollary liftn_subst_eargs n σ ξ :
-  liftn n (subst_eargs σ ξ) = subst_eargs (ups n σ) (liftn n ξ).
+Corollary liftn_subst_instance n σ ξ :
+  liftn n (subst_instance σ ξ) = subst_instance (ups n σ) (liftn n ξ).
 Proof.
-  rewrite subst_ren_eargs. rewrite ren_subst_eargs.
-  apply subst_eargs_ext. intro m.
+  rewrite subst_ren_instance. rewrite ren_subst_instance.
+  apply subst_instance_ext. intro m.
   unfold core.funcomp.
   induction n as [| n ih] in m, σ |- *.
   - cbn. rasimpl. reflexivity.
@@ -1108,14 +1108,14 @@ Qed.
 Lemma inst_equations_subst_ih Σ Ξ Γ Δ σ ξ Ξ' :
   inst_equations Σ Ξ Γ ξ Ξ' →
   inst_equations_ Σ (λ _ u v, ∀ Δ σ, Σ ;; Ξ | Δ ⊢ u <[ σ ] ≡ v <[ σ ]) Γ ξ Ξ' →
-  inst_equations Σ Ξ Δ (subst_eargs σ ξ) Ξ'.
+  inst_equations Σ Ξ Δ (subst_instance σ ξ) Ξ'.
 Proof.
   intros h ih.
   intros E M ξ' hM.
   specialize (ih _ _ _ hM) as (Ξ'' & Δ' & R & e & ih).
   eexists _,_,_. split. 1: eauto.
   intros n ε hn m δ Θ lhs0 rhs0. cbn.
-  rewrite liftn_subst_eargs.
+  rewrite liftn_subst_instance.
   (* forward *)
   specialize ih with (1 := hn). cbn in ih.
   fold m δ lhs0 rhs0 in ih.
@@ -1129,7 +1129,7 @@ Qed.
 
   It is a bit silly because the context is ignored for conversion (for now).
 
-**)
+*)
 Lemma conv_subst Σ Ξ Γ Δ σ u v :
   Σ ;; Ξ | Δ ⊢ u ≡ v →
   Σ ;; Ξ | Γ ⊢ u <[ σ ] ≡ v <[ σ ].
@@ -1189,21 +1189,21 @@ Proof.
   eapply scoped_subst in h. eauto.
 Qed.
 
-Lemma subst_eargs_id ξ :
-  subst_eargs ids ξ = ξ.
+Lemma subst_instance_id ξ :
+  subst_instance ids ξ = ξ.
 Proof.
   rewrite <- map_id. apply map_ext. intro.
   rewrite <- map_id. apply map_ext. intro.
   rasimpl. reflexivity.
 Qed.
 
-Lemma closed_subst_eargs σ ξ :
-  closed_eargs ξ = true →
-  subst_eargs σ ξ = ξ.
+Lemma closed_subst_instance σ ξ :
+  closed_instance ξ = true →
+  subst_instance σ ξ = ξ.
 Proof.
   intros h.
-  etransitivity. 2: apply subst_eargs_id.
-  unfold closed_eargs in h.
+  etransitivity. 2: apply subst_instance_id.
+  unfold closed_instance in h.
   apply map_ext_All. eapply All_impl.
   2:{ apply forallb_All. eassumption. }
   cbn. intros ? hσ%forallb_All.
@@ -1211,12 +1211,12 @@ Proof.
   cbn. rasimpl. apply closed_subst.
 Qed.
 
-Lemma closed_lift_eargs ξ :
-  closed_eargs ξ = true →
-  closed_eargs (lift_eargs ξ) = true.
+Lemma closed_lift_instance ξ :
+  closed_instance ξ = true →
+  closed_instance (lift_instance ξ) = true.
 Proof.
   intro h.
-  rewrite closed_ren_eargs. all: assumption.
+  rewrite closed_ren_instance. all: assumption.
 Qed.
 
 Lemma scoped_upwards k l t :
@@ -1311,10 +1311,10 @@ Proof.
   assumption.
 Qed.
 
-Lemma scoped_einst k l ξ t :
-  scoped_eargs l ξ = true →
+Lemma scoped_inst k l ξ t :
+  scoped_instance l ξ = true →
   scoped k t = true →
-  scoped (k + l) (einst (liftn k ξ) t) = true.
+  scoped (k + l) (inst (liftn k ξ) t) = true.
 Proof.
   intros hξ ht.
   induction t using term_rect in k, l, ξ, ht, hξ |- *.
@@ -1342,7 +1342,7 @@ Proof.
     eapply All_prod in h1. 2: eassumption.
     eapply All_impl. 2: eassumption. clear - hξ.
     cbn. intros t [h1 h2]. eauto.
-  - cbn. rewrite eget_ren. unfold eget.
+  - cbn. rewrite iget_ren. unfold iget.
     destruct nth_error as [σ |] eqn: eM. 2: reflexivity.
     destruct (nth_error σ _) eqn: ex. 2: reflexivity.
     apply nth_error_In in eM, ex.
@@ -1351,23 +1351,23 @@ Proof.
     eapply scoped_lift. assumption.
 Qed.
 
-Corollary scoped_einst_closed k ξ t :
-  scoped_eargs k ξ = true →
+Corollary scoped_inst_closed k ξ t :
+  scoped_instance k ξ = true →
   closed t = true →
-  scoped k (einst ξ t) = true.
+  scoped k (inst ξ t) = true.
 Proof.
   intros hξ ht.
-  eapply scoped_einst in hξ. 2: eassumption.
-  cbn in hξ. rewrite ren_eargs_id in hξ. assumption.
+  eapply scoped_inst in hξ. 2: eassumption.
+  cbn in hξ. rewrite ren_instance_id in hξ. assumption.
 Qed.
 
-Corollary closed_einst ξ t :
-  closed_eargs ξ = true →
+Corollary closed_inst ξ t :
+  closed_instance ξ = true →
   closed t = true →
-  closed (einst ξ t) = true.
+  closed (inst ξ t) = true.
 Proof.
   intros hξ ht.
-  apply scoped_einst_closed. all: assumption.
+  apply scoped_inst_closed. all: assumption.
 Qed.
 
 Lemma inst_typing_subst Σ Ξ Δ Γ σ ξ Ξ' :
@@ -1376,7 +1376,7 @@ Lemma inst_typing_subst Σ Ξ Δ Γ σ ξ Ξ' :
   inst_typing_ Σ Ξ (λ Γ t A,
     ∀ Δ σ, styping Σ Ξ Δ σ Γ → Σ ;; Ξ | Δ ⊢ t <[ σ ] : A <[ σ ]
   ) Γ ξ Ξ' →
-  inst_typing Σ Ξ Δ (subst_eargs σ ξ) Ξ'.
+  inst_typing Σ Ξ Δ (subst_instance σ ξ) Ξ'.
 Proof.
   intros hσ [h1 [h2 h3]] [ih1 [ih2 ih3]].
   split. 2: split.
@@ -1389,7 +1389,7 @@ Proof.
       rewrite nth_error_map, onSome_map. setoid_rewrite length_map. assumption.
     }
     intros ?? h.
-    rewrite eget_subst. eapply meta_conv.
+    rewrite iget_subst. eapply meta_conv.
     + eauto.
     + apply subst_inst_closed. apply closed_delocal.
   - rewrite length_map. assumption.
@@ -1421,11 +1421,11 @@ Proof.
     eapply conv_subst. eassumption.
 Qed.
 
-(** Instances preserve conversion and typing **)
+(** Instances preserve conversion and typing *)
 
-Lemma nth_error_ctx_einst ξ Γ x :
-  nth_error (ctx_einst ξ Γ) x =
-  option_map (einst (ren_eargs (plus (length Γ - S x)) ξ)) (nth_error Γ x).
+Lemma nth_error_ctx_inst ξ Γ x :
+  nth_error (ctx_inst ξ Γ) x =
+  option_map (inst (ren_instance (plus (length Γ - S x)) ξ)) (nth_error Γ x).
 Proof.
   induction Γ in ξ, x |- *.
   - cbn. rewrite nth_error_nil. reflexivity.
@@ -1435,8 +1435,8 @@ Proof.
     + cbn. eauto.
 Qed.
 
-Lemma ctx_einst_app ξ Γ Δ :
-  ctx_einst ξ (Γ ,,, Δ) = ctx_einst ξ Γ ,,, ctx_einst (liftn (length Γ) ξ) Δ.
+Lemma ctx_inst_app ξ Γ Δ :
+  ctx_inst ξ (Γ ,,, Δ) = ctx_inst ξ Γ ,,, ctx_inst (liftn (length Γ) ξ) Δ.
 Proof.
   induction Δ as [| A Δ ih] in Γ |- *.
   - reflexivity.
@@ -1444,18 +1444,18 @@ Proof.
     rewrite liftn_liftn. rewrite length_app. reflexivity.
 Qed.
 
-Lemma einst_eget ξ ξ' M x :
-  einst ξ (eget ξ' M x) = eget (einst_eargs ξ ξ') M x.
+Lemma inst_iget ξ ξ' M x :
+  inst ξ (iget ξ' M x) = iget (inst_instance ξ ξ') M x.
 Proof.
-  unfold eget. rewrite nth_error_map.
+  unfold iget. rewrite nth_error_map.
   destruct nth_error. 2: reflexivity.
   cbn. rewrite nth_error_map.
   destruct nth_error. 2: reflexivity.
   reflexivity.
 Qed.
 
-Lemma einst_einst ξ ξ' t :
-  einst ξ (einst ξ' t) = einst (einst_eargs ξ ξ') t.
+Lemma inst_inst ξ ξ' t :
+  inst ξ (inst ξ' t) = inst (inst_instance ξ ξ') t.
 Proof.
   induction t using term_rect in ξ, ξ' |- *.
   all: try solve [ cbn ; f_equal ; eauto ].
@@ -1476,41 +1476,41 @@ Proof.
     rewrite !map_map. apply map_ext_All.
     eapply All_impl. 2: eassumption.
     auto.
-  - cbn. apply einst_eget.
+  - cbn. apply inst_iget.
 Qed.
 
 Lemma liftn_map_map n ξ ξ' :
-  liftn n (einst_eargs ξ ξ') = einst_eargs (liftn n ξ) (liftn n ξ').
+  liftn n (inst_instance ξ ξ') = inst_instance (liftn n ξ) (liftn n ξ').
 Proof.
   rewrite !map_map. apply map_ext. intro.
   rewrite !map_map. apply map_ext. intro.
   rewrite ren_inst. reflexivity.
 Qed.
 
-Lemma ctx_einst_comp ξ ξ' Γ :
-  ctx_einst ξ (ctx_einst ξ' Γ) = ctx_einst (einst_eargs ξ ξ') Γ.
+Lemma ctx_inst_comp ξ ξ' Γ :
+  ctx_inst ξ (ctx_inst ξ' Γ) = ctx_inst (inst_instance ξ ξ') Γ.
 Proof.
   induction Γ as [| A Γ ih].
   - reflexivity.
-  - cbn. rewrite ih. f_equal. rewrite einst_einst. f_equal.
-    rewrite length_ctx_einst.
+  - cbn. rewrite ih. f_equal. rewrite inst_inst. f_equal.
+    rewrite length_ctx_inst.
     rewrite liftn_map_map. reflexivity.
 Qed.
 
 Lemma conv_equations Σ Ξ Ξ' Γ ξ M E ξ' Ξ'' Δ R n rl :
   inst_equations Σ Ξ Γ ξ Ξ' →
-  ectx_get Ξ' M = Some (E, ξ') →
+  ictx_get Ξ' M = Some (E, ξ') →
   Σ E = Some (Ext Ξ'' Δ R) →
   nth_error R n = Some rl →
   let m := length rl.(cr_env) in
   let δ := length Δ in
-  let Θ := ctx_einst ξ (ctx_einst ξ' rl.(cr_env)) in
+  let Θ := ctx_inst ξ (ctx_inst ξ' rl.(cr_env)) in
   let lhs0 := rlhs M ξ' δ rl in
   let rhs0 := rrhs M ξ' δ rl in
   (* scoped m lhs0 = true →
   scoped m rhs0 = true → *)
-  let lhs := einst (liftn m ξ) lhs0 in
-  let rhs := einst (liftn m ξ) rhs0 in
+  let lhs := inst (liftn m ξ) lhs0 in
+  let rhs := inst (liftn m ξ) rhs0 in
   Σ ;; Ξ | Γ ,,, Θ ⊢ lhs ≡ rhs.
 Proof.
   intros hξ hM hE hn m δ Θ lhs0 rhs0 (* hl hr *).
@@ -1519,15 +1519,15 @@ Proof.
   eapply h. eassumption.
 Qed.
 
-Lemma inst_equations_einst_ih Σ Ξ Ξ' Ξ'' Γ Δ ξ ξ' :
+Lemma inst_equations_inst_ih Σ Ξ Ξ' Ξ'' Γ Δ ξ ξ' :
   inst_equations Σ Ξ Δ ξ Ξ' →
   inst_equations Σ Ξ' Γ ξ' Ξ'' →
   inst_equations_ Σ (λ Γ u v,
     ∀ Ξ Δ ξ,
       inst_equations Σ Ξ Δ ξ Ξ' →
-      Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst (liftn (length Γ) ξ) u ≡ einst (liftn (length Γ) ξ) v
+      Σ ;; Ξ | Δ ,,, ctx_inst ξ Γ ⊢ inst (liftn (length Γ) ξ) u ≡ inst (liftn (length Γ) ξ) v
   ) Γ ξ' Ξ'' →
-  inst_equations Σ Ξ (Δ ,,, ctx_einst ξ Γ) (einst_eargs (liftn (length Γ) ξ) ξ') Ξ''.
+  inst_equations Σ Ξ (Δ ,,, ctx_inst ξ Γ) (inst_instance (liftn (length Γ) ξ) ξ') Ξ''.
 Proof.
   intros hξ h ih.
   intros E M ξ'' hM.
@@ -1538,21 +1538,21 @@ Proof.
   fold m δ Θ lhs0 rhs0 in ih.
   destruct ih as (? & ? & ih).
   specialize ih with (1 := hξ).
-  rewrite ctx_einst_app in ih. rewrite <- app_assoc in ih.
-  rewrite ctx_einst_comp in ih.
-  rewrite !length_app in ih. rewrite !length_ctx_einst in ih.
+  rewrite ctx_inst_app in ih. rewrite <- app_assoc in ih.
+  rewrite ctx_inst_comp in ih.
+  rewrite !length_app in ih. rewrite !length_ctx_inst in ih.
   fold δ m in ih.
-  rewrite !einst_einst in ih.
+  rewrite !inst_inst in ih.
   rewrite liftn_map_map.
   rewrite liftn_liftn.
   eauto.
 Qed.
 
-Lemma conv_einst Σ Ξ Ξ' Γ Δ u v ξ :
+Lemma conv_inst Σ Ξ Ξ' Γ Δ u v ξ :
   inst_equations Σ Ξ Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ u ≡ v →
   let rξ := liftn (length Γ) ξ in
-  Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst rξ u ≡ einst rξ v.
+  Σ ;; Ξ | Δ ,,, ctx_inst ξ Γ ⊢ inst rξ u ≡ inst rξ v.
 Proof.
   intros hξ h. cbn.
   induction h using conversion_ind in Ξ, Δ, ξ, hξ |- *.
@@ -1563,9 +1563,9 @@ Proof.
   - cbn. eapply meta_conv_trans_r.
     1:{
       eapply conv_unfold. 1,3: eassumption.
-      eauto using inst_equations_einst_ih.
+      eauto using inst_equations_inst_ih.
     }
-    rewrite einst_einst. reflexivity.
+    rewrite inst_inst. reflexivity.
   - erewrite ext_term_scoped. 3: eapply eq_subst_trunc. 2: eassumption.
     erewrite (ext_term_scoped _ rhs).
     3: eapply eq_subst_trunc. 2: eassumption.
@@ -1587,23 +1587,23 @@ Proof.
     cbn. auto.
 Qed.
 
-Corollary conv_einst_closed Σ Ξ Ξ' Δ u v ξ :
+Corollary conv_inst_closed Σ Ξ Ξ' Δ u v ξ :
   inst_equations Σ Ξ Δ ξ Ξ' →
   Σ ;; Ξ' | ∙ ⊢ u ≡ v →
-  Σ ;; Ξ | Δ ⊢ einst ξ u ≡ einst ξ v.
+  Σ ;; Ξ | Δ ⊢ inst ξ u ≡ inst ξ v.
 Proof.
   intros hξ h.
-  eapply conv_einst in h. 2: eassumption.
-  cbn in h. rewrite ren_eargs_id_ext in h. 2: auto.
+  eapply conv_inst in h. 2: eassumption.
+  cbn in h. rewrite ren_instance_id_ext in h. 2: auto.
   assumption.
 Qed.
 
-Lemma type_eget Σ Ξ Ξ' Γ ξ M x E ξ' Ξ'' Δ R A :
-  inst_eget Σ Ξ Γ ξ Ξ' →
-  ectx_get Ξ' M = Some (E, ξ') →
+Lemma type_iget Σ Ξ Ξ' Γ ξ M x E ξ' Ξ'' Δ R A :
+  inst_iget Σ Ξ Γ ξ Ξ' →
+  ictx_get Ξ' M = Some (E, ξ') →
   Σ E = Some (Ext Ξ'' Δ R) →
   nth_error Δ x = Some A →
-  Σ ;; Ξ | Γ ⊢ eget ξ M x : einst ξ (delocal M (einst ξ' (plus (S x) ⋅ A))).
+  Σ ;; Ξ | Γ ⊢ iget ξ M x : inst ξ (delocal M (inst ξ' (plus (S x) ⋅ A))).
 Proof.
   intros hξ hM hE hx.
   specialize (hξ _ _ _ hM) as [? [? [? [? [e hξ]]]]].
@@ -1611,35 +1611,35 @@ Proof.
   intuition eauto.
 Qed.
 
-Lemma typing_einst Σ Ξ Ξ' Γ Δ t A ξ :
+Lemma typing_inst Σ Ξ Ξ' Γ Δ t A ξ :
   inst_typing Σ Ξ Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ t : A →
   let rξ := liftn (length Γ) ξ in
-  Σ ;; Ξ | Δ ,,, ctx_einst ξ Γ ⊢ einst rξ t : einst rξ A.
+  Σ ;; Ξ | Δ ,,, ctx_inst ξ Γ ⊢ inst rξ t : inst rξ A.
 Proof.
   intros hξ ht rξ.
   induction ht using typing_ind in Ξ, Δ, ξ, rξ, hξ |- *.
   all: try solve [ cbn ; econstructor ; eauto ].
   - cbn. eapply meta_conv.
     + econstructor. rewrite nth_error_app1.
-      2:{ rewrite length_ctx_einst. eapply nth_error_Some. congruence. }
-      rewrite nth_error_ctx_einst.
+      2:{ rewrite length_ctx_inst. eapply nth_error_Some. congruence. }
+      rewrite nth_error_ctx_inst.
       rewrite H. cbn. reflexivity.
     + rewrite ren_inst. f_equal.
       rewrite liftn_liftn.
-      apply ren_eargs_ext.
+      apply ren_instance_ext.
       cbn. intro.
       pose proof (nth_error_Some Γ x) as e%proj1.
       forward e by congruence.
       lia.
   - cbn. constructor. 1: eauto.
-    subst rξ. rewrite ren_eargs_comp. apply IHht2. assumption.
+    subst rξ. rewrite ren_instance_comp. apply IHht2. assumption.
   - cbn. econstructor. 1: eauto.
-    + subst rξ. rewrite ren_eargs_comp. apply IHht2. assumption.
-    + subst rξ. rewrite ren_eargs_comp. apply IHht3. assumption.
+    + subst rξ. rewrite ren_instance_comp. apply IHht2. assumption.
+    + subst rξ. rewrite ren_instance_comp. apply IHht3. assumption.
   - cbn. eapply meta_conv.
     + cbn in *. econstructor. all: eauto.
-      subst rξ. rewrite ren_eargs_comp. apply IHht4. assumption.
+      subst rξ. rewrite ren_instance_comp. apply IHht4. assumption.
     + rasimpl.
       subst rξ. erewrite subst_inst with (m := S (length Γ)).
       2:{ cbn. auto. }
@@ -1650,7 +1650,7 @@ Proof.
       destruct H1 as [? [? ?]].
       split. 2: split.
       * destruct hξ as (? & ? & ?).
-        eauto using inst_equations_einst_ih, inst_equations_prop, conv_einst.
+        eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst.
       * rename H3 into ih2.
         intros M E ξ' e.
         specialize (ih2 _ _ _ e) as [? [? [? [? [? [? ih2]]]]]].
@@ -1662,38 +1662,38 @@ Proof.
           assumption.
         }
         intros ?? h.
-        rewrite <- einst_eget. rewrite <- einst_einst.
+        rewrite <- inst_iget. rewrite <- inst_inst.
         eauto.
       * rewrite length_map. assumption.
-    + rewrite einst_einst. reflexivity.
-  - cbn. subst rξ. rewrite eget_ren.
+    + rewrite inst_inst. reflexivity.
+  - cbn. subst rξ. rewrite iget_ren.
     eapply meta_conv.
     + eapply typing_ren.
-      1:{ erewrite <- length_ctx_einst. eapply rtyping_add. }
-      eapply type_eget. 2-4: eassumption.
+      1:{ erewrite <- length_ctx_inst. eapply rtyping_add. }
+      eapply type_iget. 2-4: eassumption.
       apply hξ.
     + rewrite ren_inst. f_equal.
       apply closed_ren. apply closed_delocal.
   - econstructor. 1,3: eauto.
-    eapply conv_einst. 2: eassumption.
+    eapply conv_inst. 2: eassumption.
     apply hξ.
 Qed.
 
-Corollary typing_einst_closed Σ Ξ Ξ' Γ t A ξ :
+Corollary typing_inst_closed Σ Ξ Ξ' Γ t A ξ :
   inst_typing Σ Ξ Γ ξ Ξ' →
   Σ ;; Ξ' | ∙ ⊢ t : A →
-  Σ ;; Ξ | Γ ⊢ einst ξ t : einst ξ A.
+  Σ ;; Ξ | Γ ⊢ inst ξ t : inst ξ A.
 Proof.
   intros hξ h.
-  eapply typing_einst in h. 2: eassumption.
+  eapply typing_inst in h. 2: eassumption.
   cbn in h.
-  rewrite ren_eargs_id_ext in h. 2: auto.
+  rewrite ren_instance_id_ext in h. 2: auto.
   assumption.
 Qed.
 
-Lemma conv_einsts Σ Ξ Γ t ξ ξ' :
+Lemma conv_insts Σ Ξ Γ t ξ ξ' :
   Forall2 (Forall2 (conversion Σ Ξ Γ)) ξ ξ' →
-  Σ ;; Ξ | Γ ⊢ einst ξ t ≡ einst ξ' t.
+  Σ ;; Ξ | Γ ⊢ inst ξ t ≡ inst ξ' t.
 Proof.
   intros hξ.
   induction t using term_rect in Γ, ξ, ξ', hξ |- *.
@@ -1721,7 +1721,7 @@ Proof.
     eapply Forall2_diag. eapply All_Forall.
     eapply All_impl. 2: eassumption.
     cbn. intros. eauto.
-  - cbn. unfold eget. destruct (nth_error ξ _) as [σ1 |] eqn:e1.
+  - cbn. unfold iget. destruct (nth_error ξ _) as [σ1 |] eqn:e1.
     2:{
       destruct (nth_error ξ' _) eqn:e2.
       1:{
@@ -1746,25 +1746,25 @@ Proof.
     assumption.
 Qed.
 
-Lemma cong_einst Σ Ξ Γ u v ξ ξ' Ξ' :
+Lemma cong_inst Σ Ξ Γ u v ξ ξ' Ξ' :
   inst_equations Σ Ξ Γ ξ Ξ' →
   Σ ;; Ξ' | ∙ ⊢ u ≡ v →
   Forall2 (Forall2 (conversion Σ Ξ Γ)) ξ ξ' →
-  Σ ;; Ξ | Γ ⊢ einst ξ u ≡ einst ξ' v.
+  Σ ;; Ξ | Γ ⊢ inst ξ u ≡ inst ξ' v.
 Proof.
   intros hξ h hh.
   eapply conv_trans.
-  - eapply conv_einst_closed. all: eassumption.
-  - eapply conv_einsts. assumption.
+  - eapply conv_inst_closed. all: eassumption.
+  - eapply conv_insts. assumption.
 Qed.
 
-(** Extension environement weakening **)
+(** Extension environement weakening *)
 
-Lemma ectx_get_weak d Ξ M i :
-  ectx_get Ξ M = Some i →
-  ectx_get (d :: Ξ) M = Some i.
+Lemma ictx_get_weak d Ξ M i :
+  ictx_get Ξ M = Some i →
+  ictx_get (d :: Ξ) M = Some i.
 Proof.
-  unfold ectx_get. cbn - ["<=?"].
+  unfold ictx_get. cbn - ["<=?"].
   destruct (_ <=? _) eqn: e. 1: congruence.
   rewrite Nat.leb_gt in e.
   intro h.
@@ -1780,7 +1780,7 @@ Proof.
   intros h. induction h using conversion_ind.
   all: try solve [ econstructor ; eauto ].
   econstructor. 1,3-5: eauto.
-  apply ectx_get_weak. eassumption.
+  apply ictx_get_weak. eassumption.
 Qed.
 
 Lemma inst_equations_eweak Σ Ξ d Γ ξ Ξ' :
@@ -1797,10 +1797,10 @@ Proof.
   eauto using conv_eweak.
 Qed.
 
-Lemma inst_eget_eweak Σ Ξ d Γ ξ Ξ' :
-  inst_eget Σ Ξ Γ ξ Ξ' →
-  inst_eget_ Σ (λ Γ t A, Σ ;; d :: Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
-  inst_eget Σ (d :: Ξ) Γ ξ Ξ'.
+Lemma inst_iget_eweak Σ Ξ d Γ ξ Ξ' :
+  inst_iget Σ Ξ Γ ξ Ξ' →
+  inst_iget_ Σ (λ Γ t A, Σ ;; d :: Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
+  inst_iget Σ (d :: Ξ) Γ ξ Ξ'.
 Proof.
   intros h ih.
   intros M E ξ' e. specialize (ih _ _ _ e) as [? [? [? [? [? ih]]]]].
@@ -1817,7 +1817,7 @@ Proof.
   intros [h1 [h2 h3]] [ih1 [ih2 ih3]].
   split. 2: split.
   - eapply inst_equations_eweak. all: eassumption.
-  - eapply inst_eget_eweak. all: eassumption.
+  - eapply inst_iget_eweak. all: eassumption.
   - assumption.
 Qed.
 
@@ -1830,7 +1830,7 @@ Proof.
   - econstructor. 1,3: eauto.
     eapply inst_typing_eweak_. all: eassumption.
   - econstructor. 2-4: eauto.
-    eapply ectx_get_weak. assumption.
+    eapply ictx_get_weak. assumption.
   - econstructor. 1,3: eassumption.
     eapply conv_eweak. all: eauto.
 Qed.
@@ -1851,7 +1851,7 @@ Proof.
   - assumption.
 Qed.
 
-(** Global environment weakening **)
+(** Global environment weakening *)
 
 Lemma inst_equations_gweak_ih Σ Σ' Ξ Γ ξ Ξ' :
   Σ ⊑ Σ' →
@@ -1883,11 +1883,11 @@ Proof.
   eauto using inst_equations_gweak_ih, inst_equations_prop, conv_gweak.
 Qed.
 
-Lemma inst_eget_gweak Σ Σ' Ξ Γ ξ Ξ' :
-  inst_eget Σ Ξ Γ ξ Ξ' →
-  inst_eget_ Σ (λ Γ t A, Σ' ;; Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
+Lemma inst_iget_gweak Σ Σ' Ξ Γ ξ Ξ' :
+  inst_iget Σ Ξ Γ ξ Ξ' →
+  inst_iget_ Σ (λ Γ t A, Σ' ;; Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
   Σ ⊑ Σ' →
-  inst_eget Σ' Ξ Γ ξ Ξ'.
+  inst_iget Σ' Ξ Γ ξ Ξ'.
 Proof.
   intros h ih hle.
   intros M E ξ' e. specialize (ih _ _ _ e) as [? [? [? [? [? ih]]]]].
@@ -1906,7 +1906,7 @@ Proof.
   intros [h1 [h2 h3]] [ih1 [ih2 ih3]] hle.
   split. 2: split.
   - eapply inst_equations_gweak. all: eassumption.
-  - eapply inst_eget_gweak. all: eassumption.
+  - eapply inst_iget_gweak. all: eassumption.
   - assumption.
 Qed.
 
@@ -2002,7 +2002,7 @@ Proof.
   all: intuition eauto using Forall_impl, gscope_gweak.
 Qed.
 
-(** Validity (or presupposition) **)
+(** Validity (or presupposition) *)
 
 Lemma styping_ids Σ Ξ Γ :
   styping Σ Ξ Γ ids Γ.
@@ -2047,12 +2047,12 @@ Proof.
     rasimpl in h. eassumption.
 Qed.
 
-Lemma ectx_get_case d Ξ M i :
-  ectx_get (d :: Ξ) M = Some i →
-  (M = length Ξ ∧ d = i) ∨ (ectx_get Ξ M = Some i).
+Lemma ictx_get_case d Ξ M i :
+  ictx_get (d :: Ξ) M = Some i →
+  (M = length Ξ ∧ d = i) ∨ (ictx_get Ξ M = Some i).
 Proof.
   intro h.
-  unfold ectx_get in h.
+  unfold ictx_get in h.
   destruct (_ <=? _) eqn: e. 1: discriminate.
   rewrite Nat.leb_gt in e. cbn in e.
   cbn in h.
@@ -2060,7 +2060,7 @@ Proof.
   - left. cbn in h. inversion h.
     intuition lia.
   - right. cbn in h.
-    unfold ectx_get.
+    unfold ictx_get.
     destruct (_ <=? _) eqn: e2.
     1:{ rewrite Nat.leb_le in e2. lia. }
     rewrite <- h. f_equal. lia.
@@ -2068,7 +2068,7 @@ Qed.
 
 Lemma valid_ewf Σ Ξ M E ξ :
   ewf Σ Ξ →
-  ectx_get Ξ M = Some (E, ξ) →
+  ictx_get Ξ M = Some (E, ξ) →
   ∃ Ξ' Δ R,
     Σ E = Some (Ext Ξ' Δ R) ∧
     inst_typing Σ Ξ ∙ ξ Ξ'.
@@ -2076,7 +2076,7 @@ Proof.
   intros hΞ e.
   induction hΞ as [ | Ξ E' ξ' Ξ' Δ R h ih he hξ ].
   1:{ destruct M. all: discriminate. }
-  eapply ectx_get_case in e as eh. destruct eh as [[-> eh] | eh].
+  eapply ictx_get_case in e as eh. destruct eh as [[-> eh] | eh].
   - inversion eh. subst.
     eexists _,_,_. split. 1: eassumption.
     eapply inst_typing_eweak. assumption.
@@ -2087,7 +2087,7 @@ Qed.
 
 Corollary valid_ewf_alt Σ Ξ M E ξ Ξ' Δ R :
   ewf Σ Ξ →
-  ectx_get Ξ M = Some (E, ξ) →
+  ictx_get Ξ M = Some (E, ξ) →
   Σ E = Some (Ext Ξ' Δ R) →
   inst_typing Σ Ξ ∙ ξ Ξ'.
 Proof.
@@ -2221,7 +2221,7 @@ Proof.
   - eapply valid_def in hΣ as h. 2: eassumption.
     destruct h as [? [[i ?]]].
     exists i. eapply meta_conv.
-    + eapply typing_einst_closed. all: eassumption.
+    + eapply typing_inst_closed. all: eassumption.
     + reflexivity.
   - eapply valid_ext in hΣ as h. 2: eassumption.
     destruct h as (hΞ' & hΔ & hR).
@@ -2230,26 +2230,26 @@ Proof.
     exists i. eapply typing_lift_closed.
     2: reflexivity.
     eapply valid_ewf_alt in hΞ as hξ. 2,3: eassumption.
-    eapply typing_einst in hA. 2: eassumption.
+    eapply typing_inst in hA. 2: eassumption.
     cbn in hA. rewrite app_nil_r in hA.
-    rewrite closed_ren_eargs in hA. 2: assumption.
+    rewrite closed_ren_instance in hA. 2: assumption.
     unfold delocal. eapply meta_conv.
     + eapply typing_subst. 2: eassumption.
       rewrite styping_alt_equiv. intros y B e.
-      rewrite nth_error_ctx_einst in e.
+      rewrite nth_error_ctx_inst in e.
       destruct (nth_error Δ y) eqn:e2. 2: discriminate.
       cbn in e. inversion e. subst. clear e.
       eapply meta_conv.
       * econstructor. all: eassumption.
-      * rewrite closed_ren_eargs. 2: assumption.
+      * rewrite closed_ren_instance. 2: assumption.
         rewrite ren_inst.
-        rewrite closed_ren_eargs. 2: assumption.
+        rewrite closed_ren_instance. 2: assumption.
         reflexivity.
     + reflexivity.
   - eexists. eassumption.
 Qed.
 
-(** Induction principle for [typing], threading [wf] **)
+(** Induction principle for [typing], threading [wf] *)
 
 Lemma typing_ind_wf :
   ∀ Σ Ξ (P : ctx → term → term → Prop),
@@ -2292,15 +2292,15 @@ Lemma typing_ind_wf :
       inst_typing Σ Ξ Γ ξ Ξ' →
       inst_typing_ Σ Ξ (λ Γ t A, wf Σ Ξ Γ → P Γ t A) Γ ξ Ξ' →
       closed A = true →
-      P Γ (const c ξ) (einst ξ A)
+      P Γ (const c ξ) (inst ξ A)
     ) →
     (∀ Γ M x E ξ Ξ' Δ R A,
       wf Σ Ξ Γ →
-      ectx_get Ξ M = Some (E, ξ) →
+      ictx_get Ξ M = Some (E, ξ) →
       Σ E = Some (Ext Ξ' Δ R) →
       nth_error Δ x = Some A →
-      closed_eargs ξ = true →
-      P Γ (assm M x) (delocal M (einst ξ ((plus (S x)) ⋅ A)))
+      closed_instance ξ = true →
+      P Γ (assm M x) (delocal M (inst ξ ((plus (S x)) ⋅ A)))
     ) →
     (∀ Γ i A B t,
       wf Σ Ξ Γ →
