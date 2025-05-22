@@ -20,8 +20,8 @@ Lemma term_rect :
     (∀ A, P A → ∀ B, P B → P (Pi A B)) →
     (∀ A, P A → ∀ t, P t → P (lam A t)) →
     (∀ u, P u → ∀ v, P v → P (app u v)) →
-    (∀ (c : gref) (ξ : instance), All (All P) ξ → P (const c ξ)) →
-    (∀ (M : eref) (x : aref), P (assm M x)) →
+    (∀ (c : gref) (ξ : instance), All (onSomeT P) ξ → P (const c ξ)) →
+    (∀ (x : aref), P (assm x)) →
     ∀ t, P t.
 Proof.
   intros P hvar hsort hpi hlam happ hconst hassm.
@@ -30,11 +30,10 @@ Proof.
   6:{
     eapply hconst.
     revert l. fix aux1 1.
-    intro ξ. destruct ξ as [| σ ξ]. 1: constructor.
+    intro ξ. destruct ξ as [| t ξ]. 1: constructor.
     constructor. 2: eauto.
-    revert σ. fix aux2 1.
-    intro σ. destruct σ. 1: constructor.
-    constructor. all: eauto.
+    destruct t. 2: constructor.
+    cbn. auto.
   }
   all: match goal with h : _ |- _ => eapply h end.
   all: eauto.
@@ -52,25 +51,25 @@ Lemma gscope_ind :
   (∀ c ξ Ξ' A t,
     Σ c = Some (Def Ξ' A t) →
     gscope_instance Σ ξ →
-    Forall (Forall P) ξ →
+    Forall (OnSome P) ξ →
     P (const c ξ)
   ) →
-  (∀ M x, P (assm M x)) →
+  (∀ x, P (assm x)) →
   ∀ t, gscope Σ t → P t.
 Proof.
   intros Σ P hvar hsort hpi hlam happ hconst hassm.
   fix aux 2. move aux at top.
-  intros t h. destruct h as [| | | | | ????? hc h |].
+  intros t h. destruct h as [| | | | | c ξ ??? hc h |].
   6:{
     eapply hconst. 1,2: eassumption.
     revert ξ h.
     fix aux1 2.
-    intros ξ h. destruct h as [| σ ξ hσ hξ].
+    intros ξ h. destruct h as [| u ξ hu hξ].
     - constructor.
     - constructor. 2: eauto.
-      revert σ hσ. fix aux2 2. intros σ hσ.
-      destruct hσ as [| u σ h hσ]. 1: constructor.
-      constructor. all: eauto.
+      destruct hu.
+      + constructor.
+      + constructor. eauto.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
@@ -83,18 +82,16 @@ Lemma conversion_ind :
     (∀ Γ c ξ Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
       inst_equations Σ Ξ Γ ξ Ξ' →
-      inst_equations_ Σ P Γ ξ Ξ' →
+      inst_equations_ P Γ ξ Ξ' →
       closed t = true →
       P Γ (const c ξ) (inst ξ t)
     ) →
-    (∀ Γ E Ξ' Δ R M ξ' n rl σ,
-      Σ E = Some (Ext Ξ' Δ R) →
-      ictx_get Ξ M = Some (E, ξ') →
-      nth_error R n = Some rl →
-      let δ := length Δ in
-      let lhs := rlhs M ξ' δ rl in
-      let rhs := rrhs M ξ' δ rl in
-      let k := length rl.(cr_env) in
+    (∀ Γ n rl σ,
+      ictx_get Ξ n = Some (Comp rl) →
+      let Θ := rl.(cr_env) in
+      let k := length Θ in
+      let lhs := rl.(cr_pat) in
+      let rhs := rl.(cr_rep) in
       scoped k lhs = true →
       scoped k rhs = true →
       P Γ (lhs <[ σ ]) (rhs <[ σ ])
@@ -121,8 +118,8 @@ Lemma conversion_ind :
       P Γ (app u v) (app u' v')
     ) →
     (∀ Γ c ξ ξ',
-      Forall2 (Forall2 (conversion Σ Ξ Γ)) ξ ξ' →
-      Forall2 (Forall2 (P Γ)) ξ ξ' →
+      Forall2 (option_rel (conversion Σ Ξ Γ)) ξ ξ' →
+      Forall2 (option_rel (P Γ)) ξ ξ' →
       P Γ (const c ξ) (const c ξ')
     ) →
     (∀ Γ u, P Γ u u) →
@@ -143,18 +140,15 @@ Proof.
     eapply hconst. 1: assumption.
     revert ξ ξ' H.
     fix aux1 3.
-    intros ξ ξ' h. destruct h as [| σ σ' ξ ξ' hσ hξ].
+    intros ξ ξ' h. destruct h as [| u u' ξ ξ' hu hξ].
     - constructor.
     - constructor. 2: eauto.
-      revert σ σ' hσ. fix aux2 3. intros σ σ' hσ.
-      destruct hσ as [| t t' σ σ' ht hσ]. 1: constructor.
-      constructor. all: eauto.
+      destruct hu. 1: constructor.
+      constructor. eauto.
   }
   2:{
     eapply hunfold. 1,2,4: eassumption.
-    intros E M ξ' eM. specialize (H0 _ _ _ eM) as (Ξ'' & Δ & R & eE & h).
-    eexists _,_,_. split. 1: eassumption.
-    intros n rule hr. specialize h with (1 := hr). cbn in h.
+    intros x rl hx. specialize (H0 _ _ hx) as (? & ? & ?).
     intuition eauto.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
@@ -197,12 +191,9 @@ Lemma typing_ind :
       closed A = true →
       P Γ (const c ξ) (inst ξ A)
     ) →
-    (∀ Γ M x E ξ Ξ' Δ R A,
-      ictx_get Ξ M = Some (E, ξ) →
-      Σ E = Some (Ext Ξ' Δ R) →
-      nth_error Δ x = Some A →
-      closed_instance ξ = true →
-      P Γ (assm M x) (delocal M (inst ξ ((plus (S x)) ⋅ A)))
+    (∀ Γ x A,
+      ictx_get Ξ x = Some (Assm A) →
+      P Γ (assm x) A
     ) →
     (∀ Γ i A B t,
       Σ ;; Ξ | Γ ⊢ t : A →
@@ -222,9 +213,8 @@ Proof.
     destruct h as [h1 [h2 h3]].
     split. 1: assumption.
     split. 2: assumption.
-    intros M E ξ' hM. specialize (h2 _ _ _ hM).
-    destruct h2 as [? [? [? [? h2]]]]. split. 1: assumption.
-    eexists _,_,_. intuition eauto.
+    intros n B hn. specialize (h2 _ _ hn).
+    eauto.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
@@ -244,12 +234,11 @@ Proof.
     intuition eauto
   ].
   - cbn - ["<?"]. rewrite Nat.ltb_lt. eapply nth_error_Some. congruence.
-  - cbn. eapply forallb_forall. intros σ hσ.
-    eapply forallb_forall. intros u hu.
-    eapply In_nth_error in hσ as [M hM].
-    eapply In_nth_error in hu as [x hx].
-    destruct H1 as [_ [ih e]]. red in ih. specialize (ih M).
-    destruct (ictx_get Ξ' M) as [[E ξ'] |] eqn:e'.
+  - cbn. eapply forallb_forall. intros u hu.
+    eapply In_nth_error in hu as [n hn].
+    destruct H1 as [_ [ih e]]. red in ih. specialize (ih n).
+    (* TODO Length equality isn't enough *)
+    destruct (ictx_get Ξ' n) as [[] |] eqn:e'.
     2:{
       unfold ictx_get in e'. destruct (_ <=? _) eqn: e1.
       - rewrite Nat.leb_le in e1. rewrite <- e in e1.
@@ -1939,10 +1928,10 @@ Proof.
   - assumption.
 Qed.
 
-Lemma ewf_gweak Σ Σ' Ξ :
-  ewf Σ Ξ →
+Lemma iwf_gweak Σ Σ' Ξ :
+  iwf Σ Ξ →
   Σ ⊑ Σ' →
-  ewf Σ' Ξ.
+  iwf Σ' Ξ.
 Proof.
   intros h hle. induction h.
   - constructor.
@@ -2066,8 +2055,8 @@ Proof.
     rewrite <- h. f_equal. lia.
 Qed.
 
-Lemma valid_ewf Σ Ξ M E ξ :
-  ewf Σ Ξ →
+Lemma valid_iwf Σ Ξ M E ξ :
+  iwf Σ Ξ →
   ictx_get Ξ M = Some (E, ξ) →
   ∃ Ξ' Δ R,
     Σ E = Some (Ext Ξ' Δ R) ∧
@@ -2085,14 +2074,14 @@ Proof.
     eapply inst_typing_eweak. assumption.
 Qed.
 
-Corollary valid_ewf_alt Σ Ξ M E ξ Ξ' Δ R :
-  ewf Σ Ξ →
+Corollary valid_iwf_alt Σ Ξ M E ξ Ξ' Δ R :
+  iwf Σ Ξ →
   ictx_get Ξ M = Some (E, ξ) →
   Σ E = Some (Ext Ξ' Δ R) →
   inst_typing Σ Ξ ∙ ξ Ξ'.
 Proof.
   intros hΞ hM hE.
-  eapply valid_ewf in hM. 2: eassumption.
+  eapply valid_iwf in hM. 2: eassumption.
   destruct hM as [? [? [? [e ?]]]].
   rewrite e in hE. inversion hE. subst.
   assumption.
@@ -2117,7 +2106,7 @@ Qed.
 Lemma valid_def Σ c Ξ A t :
   gwf Σ →
   Σ c = Some (Def Ξ A t) →
-  ewf Σ Ξ ∧
+  iwf Σ Ξ ∧
   (∃ i, Σ ;; Ξ | ∙ ⊢ A : Sort i) ∧
   Σ ;; Ξ | ∙ ⊢ t : A.
 Proof.
@@ -2127,20 +2116,20 @@ Proof.
   - cbn in hc. destruct (c =? c')%string. 1: discriminate.
     specialize ih with (1 := hc) as [? [[i ?] ?]].
     split. 2: split.
-    + eapply ewf_gweak. all: eauto using extends_gcons.
+    + eapply iwf_gweak. all: eauto using extends_gcons.
     + eexists. eapply typing_gweak. all: eauto using extends_gcons.
     + eapply typing_gweak. all: eauto using extends_gcons.
   - cbn in hc. destruct (c =? c')%string.
     + inversion hc. subst.
-      intuition eauto using ewf_gweak, typing_gweak, extends_gcons.
+      intuition eauto using iwf_gweak, typing_gweak, extends_gcons.
     + specialize ih with (1 := hc) as [? [[j ?] ?]].
-      intuition eauto using ewf_gweak, typing_gweak, extends_gcons.
+      intuition eauto using iwf_gweak, typing_gweak, extends_gcons.
 Qed.
 
 Lemma valid_ext Σ c Ξ Δ R :
   gwf Σ →
   Σ c = Some (Ext Ξ Δ R) →
-  ewf Σ Ξ ∧
+  iwf Σ Ξ ∧
   wf Σ Ξ Δ ∧
   Forall (gscope_crule Σ) R ∧
   Forall (equation_typing Σ Ξ Δ) (map crule_eq R).
@@ -2151,14 +2140,14 @@ Proof.
   - cbn in hc. destruct (c =? c')%string.
     + inversion hc. subst.
       intuition eauto
-      using wf_gweak, ewf_gweak, typing_gweak, extends_gcons, wf_rules_gweak, Forall_impl, gscope_crule_gweak.
+      using wf_gweak, iwf_gweak, typing_gweak, extends_gcons, wf_rules_gweak, Forall_impl, gscope_crule_gweak.
     + specialize ih with (1 := hc) as [? ?].
       intuition eauto
-      using wf_gweak, ewf_gweak, typing_gweak, extends_gcons, wf_rules_gweak, Forall_impl, gscope_crule_gweak.
+      using wf_gweak, iwf_gweak, typing_gweak, extends_gcons, wf_rules_gweak, Forall_impl, gscope_crule_gweak.
   - cbn in hc. destruct (c =? c')%string. 1: discriminate.
     specialize ih with (1 := hc) as [? ?].
     intuition eauto
-    using wf_gweak, ewf_gweak, typing_gweak, extends_gcons, wf_rules_gweak, Forall_impl, gscope_crule_gweak.
+    using wf_gweak, iwf_gweak, typing_gweak, extends_gcons, wf_rules_gweak, Forall_impl, gscope_crule_gweak.
 Qed.
 
 Definition styping_alt Σ Ξ (Γ : ctx) (σ : nat → term) (Δ : ctx) :=
@@ -2204,7 +2193,7 @@ Qed.
 
 Lemma validity Σ Ξ Γ t A :
   gwf Σ →
-  ewf Σ Ξ →
+  iwf Σ Ξ →
   wf Σ Ξ Γ →
   Σ ;; Ξ | Γ ⊢ t : A →
   ∃ i, Σ ;; Ξ | Γ ⊢ A : Sort i.
@@ -2229,7 +2218,7 @@ Proof.
     destruct hA as [i hA].
     exists i. eapply typing_lift_closed.
     2: reflexivity.
-    eapply valid_ewf_alt in hΞ as hξ. 2,3: eassumption.
+    eapply valid_iwf_alt in hΞ as hξ. 2,3: eassumption.
     eapply typing_inst in hA. 2: eassumption.
     cbn in hA. rewrite app_nil_r in hA.
     rewrite closed_ren_instance in hA. 2: assumption.

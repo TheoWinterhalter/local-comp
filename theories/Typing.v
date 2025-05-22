@@ -167,7 +167,7 @@ Section Inst.
 
   Definition inst_iget_ (Γ : ctx) (ξ : instance) (Ξ' : ictx) :=
     ∀ n A,
-      ictx_get Ξ n = Some (Assm A) →
+      ictx_get Ξ' n = Some (Assm A) →
       Γ ⊢ iget ξ n : inst ξ A.
 
   Definition inst_typing_ (Γ : ctx) (ξ : instance) (Ξ' : ictx) :=
@@ -248,43 +248,40 @@ Notation "Σ ;; Ξ | Γ ⊢ t : A" :=
   (typing Σ Ξ Γ t A)
   (at level 80, t, A at next level, format "Σ  ;;  Ξ  |  Γ  ⊢  t  :  A").
 
+(** ** Equation typing *)
+
+Definition equation_typing Σ Ξ ε :=
+  let k := length ε.(eq_env) in
+  wf Σ Ξ ε.(eq_env) ∧
+  (∃ i, Σ ;; Ξ | ε.(eq_env) ⊢ ε.(eq_typ) : Sort i) ∧
+  Σ ;; Ξ | ε.(eq_env) ⊢ ε.(eq_lhs) : ε.(eq_typ) ∧
+  Σ ;; Ξ | ε.(eq_env) ⊢ ε.(eq_rhs) : ε.(eq_typ).
+
 (** ** Interface typing *)
 
-Inductive ewf (Σ : gctx) : ictx → Prop :=
-| ewf_nil : ewf Σ []
-| ewf_cons Ξ E ξ' Ξ' Δ R :
-    ewf Σ Ξ →
-    Σ E = Some (Ext Ξ' Δ R) →
-    inst_typing_ Σ Ξ (typing Σ Ξ) ∙ ξ' Ξ' →
-    ewf Σ ((E, ξ') :: Ξ).
+Inductive iwf (Σ : gctx) : ictx → Prop :=
+| iwf_nil : iwf Σ []
 
-(** Equation typing *)
+| iwf_assm A Ξ i :
+    iwf Σ Ξ →
+    Σ ;; Ξ | ∙ ⊢ A : Sort i →
+    iwf Σ (Assm A :: Ξ)
 
-Definition equation_typing Σ Ξ Δ ε :=
-  let k := length ε.(eq_env) in
-  wf Σ Ξ (Δ ,,, ε.(eq_env)) ∧
-  (∃ i, Σ ;; Ξ | Δ ,,, ε.(eq_env) ⊢ ε.(eq_typ) : Sort i) ∧
-  Σ ;; Ξ | Δ ,,, ε.(eq_env) ⊢ ε.(eq_lhs) : ε.(eq_typ) ∧
-  Σ ;; Ξ | Δ ,,, ε.(eq_env) ⊢ ε.(eq_rhs) : ε.(eq_typ).
+| iwf_comp rl Ξ :
+    iwf Σ Ξ →
+    gscope_crule Σ rl →
+    equation_typing Σ Ξ (crule_eq rl) →
+    iwf Σ (Comp rl :: Ξ).
 
-(** Global environment typing *)
+(** ** Global environment typing *)
 
 Inductive gwf : gctx → Prop :=
 | gwf_nil : gwf []
 
-| gwf_ext c (Σ : gctx) Ξ Δ R :
-    Σ c = None → (* freshness *)
-    gwf Σ →
-    ewf Σ Ξ →
-    wf Σ Ξ Δ →
-    Forall (gscope_crule Σ) R →
-    Forall (equation_typing Σ Ξ Δ) (map crule_eq R) →
-    gwf ((c, Ext Ξ Δ R) :: Σ)
-
 | gwf_def c (Σ : gctx) Ξ A t i :
     Σ c = None → (* freshness *)
     gwf Σ →
-    ewf Σ Ξ →
+    iwf Σ Ξ →
     Σ ;; Ξ | ∙ ⊢ A : Sort i → (* Redundant, makes proofs easier *)
     Σ ;; Ξ | ∙ ⊢ t : A →
     gwf ((c, Def Ξ A t) :: Σ).
@@ -344,6 +341,6 @@ Proof.
   intros Σ Ξ Γ u ? <-. ttconv.
 Qed.
 
+Notation inst_equations Σ Ξ := (inst_equations_ (conversion Σ Ξ)).
 Notation inst_iget Σ Ξ := (inst_iget_ Σ (typing Σ Ξ)).
-Notation inst_equations Σ Ξ := (inst_equations_ Σ (conversion Σ Ξ)).
 Notation inst_typing Σ Ξ := (inst_typing_ Σ Ξ (typing Σ Ξ)).

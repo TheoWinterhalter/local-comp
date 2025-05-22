@@ -494,7 +494,7 @@ Proof.
 Qed.
 
 Lemma inline_ictx_ext Σ Ξ κ κ' :
-  ewf Σ Ξ →
+  iwf Σ Ξ →
   eq_gscope Σ κ κ' →
   ⟦ Ξ ⟧e⟨ κ ⟩ = ⟦ Ξ ⟧e⟨ κ' ⟩.
 Proof.

@@ -378,6 +378,12 @@ Proof.
   - destruct o. all: cbn. all: intros ; constructor ; auto.
 Qed.
 
+Definition onSomeT [A] (P : A → Type) (o : option A) : Type :=
+  match o with
+  | Some a => P a
+  | None => unit
+  end.
+
 Inductive option_rel [A] (R : A → A → Prop) : option A → option A → Prop :=
 | option_none : option_rel R None None
 | option_some x y : R x y → option_rel R (Some x) (Some y).
