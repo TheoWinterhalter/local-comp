@@ -80,8 +80,9 @@ Section Equations.
       let Θ := ctx_inst ξ rl.(cr_env) in
       let lhs := inst (liftn m ξ) rl.(cr_pat) in
       let rhs := inst (liftn m ξ) rl.(cr_rep) in
-      scoped m lhs = true ∧
-      scoped m rhs = true ∧
+      nth_error ξ x = None ∧
+      scoped m rl.(cr_pat) = true ∧
+      scoped m rl.(cr_rep) = true ∧
       Γ ,,, Θ ⊢ lhs ≡ rhs.
 
 End Equations.

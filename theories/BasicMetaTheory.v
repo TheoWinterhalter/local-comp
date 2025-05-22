@@ -236,27 +236,22 @@ Proof.
   - cbn - ["<?"]. rewrite Nat.ltb_lt. eapply nth_error_Some. congruence.
   - cbn. eapply forallb_forall. intros u hu.
     eapply In_nth_error in hu as [n hn].
-    destruct H1 as [_ [ih e]]. red in ih. specialize (ih n).
-    (* TODO Length equality isn't enough *)
+    destruct H1 as [heq [ih e]]. red in ih. specialize (ih n).
     destruct (ictx_get Ξ' n) as [[] |] eqn:e'.
-    2:{
+    3:{
       unfold ictx_get in e'. destruct (_ <=? _) eqn: e1.
       - rewrite Nat.leb_le in e1. rewrite <- e in e1.
         rewrite <- nth_error_None in e1. congruence.
       - rewrite nth_error_None in e'.
         rewrite Nat.leb_gt in e1. lia.
     }
-    specialize ih with (1 := eq_refl).
-    destruct ih as (hξ' & Ξ'' & Δ & R & hE & eM & ih).
-    rewrite hM in eM. cbn in eM.
-    destruct (nth_error Δ x) eqn: eΔ.
     2:{
-      rewrite nth_error_None in eΔ. rewrite <- eM in eΔ.
-      rewrite <- nth_error_None in eΔ. congruence.
+      specialize (heq _ _ e'). cbn in heq. intuition congruence.
     }
-    specialize ih with (1 := eΔ).
-    unfold iget in ih. rewrite hM, hx in ih.
-    assumption.
+    specialize ih with (1 := eq_refl).
+    unfold iget in ih. rewrite hn in ih. destruct u.
+    2:{ reflexivity. }
+    cbn. assumption.
 Qed.
 
 Lemma typing_closed Σ Ξ t A :
@@ -283,13 +278,10 @@ Proof.
   all: try solve [ ttconv ].
   all: try solve [ econstructor ; eauto ].
   - econstructor. 1,3: eassumption.
-    intros E M ξ' eM. specialize (H1 _ _ _ eM) as (Ξ'' & Δ' & R & eE & h).
-    eexists _,_,_. split. 1: eassumption.
-    intros n rule hr. specialize h with (1 := hr).
-    cbn in h. intuition eauto.
+    intros x rl hx. specialize (H1 _ _ hx). cbn in *. intuition eauto.
   - econstructor. eapply Forall2_impl. 2: eassumption.
-    intros. eapply Forall2_impl. 2: eassumption.
-    auto.
+    intros. eapply option_rel_impl. 2: eassumption.
+    intros ??. auto.
 Qed.
 
 (** Renaming preserves typing *)
@@ -386,15 +378,16 @@ Lemma ren_instance_comp :
 Proof.
   intros ρ ρ' ξ.
   rewrite map_map.
-  apply map_ext. intro σ.
-  rewrite map_map.
-  apply map_ext. intro t.
+  apply map_ext. intro u.
+  rewrite option_map_option_map.
+  apply option_map_ext. intro t.
   rasimpl. reflexivity.
 Qed.
 
 Lemma lift_ren_instance :
   ∀ ρ ξ,
-    lift_instance (ren_instance ρ ξ) = ren_instance (upRen_term_term ρ) (lift_instance ξ).
+    lift_instance (ren_instance ρ ξ) = 
+    ren_instance (upRen_term_term ρ) (lift_instance ξ).
 Proof.
   intros ρ ξ.
   rewrite !ren_instance_comp. reflexivity.
@@ -406,7 +399,7 @@ Lemma ren_instance_ext ρ ζ ξ :
 Proof.
   intros h.
   apply map_ext. intro.
-  apply map_ext. intro.
+  apply option_map_ext. intro.
   apply extRen_term. assumption.
 Qed.
 
@@ -434,6 +427,14 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma iget_ren ξ x ρ :
+  iget (ren_instance ρ ξ) x = ρ ⋅ (iget ξ x).
+Proof.
+  unfold iget.
+  rewrite nth_error_map.
+  destruct (nth_error ξ x) as [[] |]. all: reflexivity.
+Qed.
+
 Lemma ren_inst :
   ∀ ρ ξ t,
     ρ ⋅ (inst ξ t) = inst (ren_instance ρ ξ) (ρ ⋅ t).
@@ -444,16 +445,12 @@ Proof.
   - cbn. f_equal.
     rewrite !map_map. apply map_ext_All.
     eapply All_impl. 2: eassumption.
-    intros σ h.
-    rewrite !map_map. apply map_ext_All.
-    eapply All_impl. 2: eassumption.
+    intros u h.
+    change @core.option_map with @option_map.
+    rewrite !option_map_option_map. apply option_map_ext_onSomeT.
+    eapply onSomeT_impl. 2: eassumption.
     cbn. intros t ht. auto.
-  - cbn. unfold iget.
-    rewrite nth_error_map.
-    destruct (nth_error ξ _) as [σ |]. 2: reflexivity.
-    cbn. rewrite nth_error_map.
-    destruct (nth_error σ _) as [t |]. 2: reflexivity.
-    cbn. reflexivity.
+  - cbn. rewrite iget_ren. reflexivity.
 Qed.
 
 Lemma scoped_ren :
@@ -484,11 +481,12 @@ Proof.
     apply forallb_All in h. move h at top.
     eapply All_prod in h. 2: eassumption.
     eapply All_impl. 2: eassumption. clear.
-    cbn. intros σ [h1 h2].
-    rewrite <- map_id. apply map_ext_All.
-    apply forallb_All in h2.
-    eapply All_prod in h1. 2: eassumption.
-    eapply All_impl. 2: eassumption. clear.
+    cbn. intros o [h1 h2].
+    change @core.option_map with @option_map.
+    apply option_map_id_onSomeT.
+    rewrite onSomeb_onSome in h2. eapply onSome_onSomeT in h2.
+    eapply onSomeT_prod in h1. 2: eassumption.
+    eapply onSomeT_impl. 2: eassumption. clear.
     cbn. intros t [h1 h2]. eauto.
 Qed.
 
@@ -505,7 +503,7 @@ Lemma ren_instance_id ξ :
   ren_instance id ξ = ξ .
 Proof.
   rewrite <- map_id. apply map_ext. intro.
-  rewrite <- map_id. apply map_ext. intro.
+  rewrite <- option_map_id. apply option_map_ext. intro.
   rasimpl. reflexivity.
 Qed.
 
@@ -524,37 +522,33 @@ Corollary closed_ren_instance ρ ξ :
 Proof.
   intros h.
   etransitivity. 2: apply ren_instance_id.
-  unfold closed_instance in h.
   apply map_ext_All. eapply All_impl.
   2:{ apply forallb_All. eassumption. }
-  cbn. intros σ hσ%forallb_All.
-  apply map_ext_All. eapply All_impl. 2: eassumption.
+  cbn. intros o ho%onSomeb_onSome%onSome_onSomeT.
+  apply option_map_ext_onSomeT. eapply onSomeT_impl. 2: eassumption.
   cbn. rasimpl. apply closed_ren.
 Qed.
 
 Lemma inst_equations_ren_ih Σ Ξ Γ Δ ρ ξ Ξ' :
   inst_equations Σ Ξ Γ ξ Ξ' →
-  inst_equations_ Σ (λ _ u v, ∀ Δ ρ, Σ ;; Ξ | Δ ⊢ ρ ⋅ u ≡ ρ ⋅ v) Γ ξ Ξ' →
+  inst_equations_ (λ _ u v, ∀ Δ ρ, Σ ;; Ξ | Δ ⊢ ρ ⋅ u ≡ ρ ⋅ v) Γ ξ Ξ' →
   inst_equations Σ Ξ Δ (ren_instance ρ ξ) Ξ'.
 Proof.
   intros h ih.
-  intros E M ξ' hM.
-  specialize (ih _ _ _ hM) as (Ξ'' & Δ' & R & e & ih).
-  eexists _,_,_. split. 1: eauto.
-  intros n ε hn m δ Θ lhs0 rhs0. cbn.
-  (* forward *)
-  specialize ih with (1 := hn). cbn in ih.
-  fold m δ lhs0 rhs0 in ih.
-  destruct ih as (? & ? & ih).
+  intros x rl hx m Θ. cbn.   
+  rewrite nth_error_map.
+  rewrite liftn_ren_instance.
+  specialize (ih _ _ hx) as (e & hl & hr & ih). 
+  fold m Θ in hl, hr, ih.
   specialize ih with (ρ := uprens m ρ).
   (* 2:{
     eapply rtyping_uprens_eq. 1: eassumption.
     rewrite 2!length_ctx_inst. reflexivity.
   } *)
+  rewrite e. cbn.
   rewrite 2!ren_inst in ih.
   rewrite 2!scoped_ren in ih. 2,3: eassumption.
-  rewrite liftn_ren_instance.
-  eauto.
+  intuition eauto.
 Qed.
 
 Lemma conv_ren Σ Ξ Γ Δ ρ u v :
@@ -615,17 +609,6 @@ Proof.
   - cbn. destruct n.
     + cbn. reflexivity.
     + cbn. rewrite IHσ. reflexivity.
-Qed.
-
-Lemma iget_ren ξ M x ρ :
-  iget (ren_instance ρ ξ) M x = ρ ⋅ (iget ξ M x).
-Proof.
-  unfold iget.
-  rewrite nth_error_map.
-  destruct (nth_error ξ M). 2: reflexivity.
-  cbn. rewrite nth_error_map.
-  destruct (nth_error _ x). 2: reflexivity.
-  cbn. reflexivity.
 Qed.
 
 Lemma ups_below k σ n :

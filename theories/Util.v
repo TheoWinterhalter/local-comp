@@ -384,9 +384,89 @@ Definition onSomeT [A] (P : A → Type) (o : option A) : Type :=
   | None => unit
   end.
 
+Lemma onSomeT_impl A P Q o :
+  (∀ a, P a → Q a) →
+  @onSomeT A P o →
+  onSomeT Q o.
+Proof.
+  intros hPQ h.
+  destruct o. all: cbn in *. all: auto.
+Qed.
+
+Lemma onSomeT_prod A P Q o :
+  @onSomeT A P o →
+  onSomeT Q o →
+  onSomeT (λ x, P x * Q x)%type o.
+Proof.
+  destruct o. all: cbn. all: auto.
+Qed.
+
+Lemma onSomeb_onSome A P o :
+  @onSomeb A P o = true ↔ onSome (λ x, P x = true) o.
+Proof.
+  split. all: destruct o. all: cbn. all: auto.
+Qed.
+
+Lemma onSome_onSomeT A P o :
+  @onSome A P o →
+  onSomeT P o.
+Proof.
+  destruct o. all: cbn.
+  - auto.
+  - intros. constructor.
+Qed.
+
 Inductive option_rel [A] (R : A → A → Prop) : option A → option A → Prop :=
 | option_none : option_rel R None None
 | option_some x y : R x y → option_rel R (Some x) (Some y).
+
+Lemma option_rel_impl [A] (R R' : A → A → Prop) x y :
+  inclusion _ R R' →
+  option_rel R x y →
+  option_rel R' x y.
+Proof.
+  intros hinc h.
+  destruct h.
+  - constructor.
+  - constructor. eauto.
+Qed.
+
+Lemma option_map_option_map [A B C] (f : A → B) (g : B → C) o :
+  option_map g (option_map f o) = option_map (λ x, g (f x)) o.
+Proof.
+  destruct o. all: reflexivity.
+Qed.
+
+Lemma option_map_ext [A B] (f g : A → B) o :
+  (∀ a, f a = g a) →
+  option_map f o = option_map g o.
+Proof.
+  intros e.
+  destruct o. 2: reflexivity.
+  cbn. f_equal. auto.
+Qed.
+
+Lemma option_map_ext_onSomeT [A B] (f g : A → B) o :
+  onSomeT (λ x, f x = g x) o →
+  option_map f o = option_map g o.
+Proof.
+  destruct o. all: cbn. all: congruence.
+Qed.
+
+Lemma option_map_id [A] o :
+  @option_map A A id o = o.
+Proof.
+  destruct o. all: reflexivity.
+Qed.
+
+Lemma option_map_id_onSomeT [A] f (o : option A) :
+  onSomeT (λ x, f x = x) o →
+  option_map f o = o.
+Proof.
+  intro h.
+  rewrite <- option_map_id.
+  apply option_map_ext_onSomeT. assumption.
+Qed.
 
 (** [fold_left] util *)
 
