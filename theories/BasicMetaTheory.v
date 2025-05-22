@@ -568,9 +568,9 @@ Proof.
   - cbn. constructor.
     rewrite Forall2_map_l, Forall2_map_r.
     eapply Forall2_impl. 2: eassumption.
-    intros σ σ' h.
-    rewrite Forall2_map_l, Forall2_map_r.
-    eapply Forall2_impl. 2: eassumption.
+    intros o o' h.
+    rewrite option_rel_map_l, option_rel_map_r.
+    eapply option_rel_impl. 2: eassumption.
     cbn. intros u v ih. eauto.
 Qed.
 
@@ -580,12 +580,11 @@ Fixpoint ren_ctx ρ Γ {struct Γ} :=
   | A :: Γ => (ren_ctx ρ Γ) ,, (uprens (length Γ) ρ ⋅ A)
   end.
 
-Lemma rtyping_uprens :
-  ∀ Γ Δ Θ ρ,
-    rtyping Δ ρ Γ →
-    rtyping (Δ ,,, ren_ctx ρ Θ) (uprens (length Θ) ρ) (Γ ,,, Θ).
+Lemma rtyping_uprens Γ Δ Θ ρ :
+  rtyping Δ ρ Γ →
+  rtyping (Δ ,,, ren_ctx ρ Θ) (uprens (length Θ) ρ) (Γ ,,, Θ).
 Proof.
-  intros Γ Δ Θ ρ h.
+  intros h.
   induction Θ as [| A Θ ih].
   - cbn. assumption.
   - cbn. rewrite app_comm_cons. cbn. eapply rtyping_up. assumption.
@@ -598,17 +597,6 @@ Corollary rtyping_uprens_eq Γ Δ Θ ρ k :
 Proof.
   intros h ->.
   eapply rtyping_uprens. assumption.
-Qed.
-
-Lemma slist_ren σ ρ :
-  pointwise_relation _ eq (slist (map (ren_term ρ) σ)) (slist σ >> ren_term ρ).
-Proof.
-  intro n.
-  induction σ in ρ, n |- *.
-  - cbn. reflexivity.
-  - cbn. destruct n.
-    + cbn. reflexivity.
-    + cbn. rewrite IHσ. reflexivity.
 Qed.
 
 Lemma ups_below k σ n :
@@ -630,29 +618,6 @@ Proof.
   - cbn. rasimpl. reflexivity.
   - cbn. core.unfold_funcomp. rewrite ih.
     rasimpl. reflexivity.
-Qed.
-
-Lemma scoped_delocal M t k :
-  scoped k (t <[ ups k (λ x, assm M x) ]) = true.
-Proof.
-  induction t using term_rect in k |- *.
-  all: try solve [ cbn ; eauto using andb_true_intro ].
-  - cbn. destruct (lt_dec n k).
-    + rewrite ups_below. 2: assumption.
-      cbn - ["<?"]. apply Nat.ltb_lt. assumption.
-    + pose (m := n - k). replace n with (k + m) by lia.
-      rewrite ups_above. reflexivity.
-  - cbn. apply All_forallb. apply All_map.
-    eapply All_impl. 2: eassumption.
-    intros. apply All_forallb. apply All_map.
-    eapply All_impl. 2: eassumption.
-    auto.
-Qed.
-
-Lemma closed_delocal M t :
-  closed (delocal M t) = true.
-Proof.
-  apply scoped_delocal with (k := 0).
 Qed.
 
 Lemma length_ctx_inst ξ Γ :
@@ -680,14 +645,11 @@ Abort.
 Lemma inst_equations_prop Σ Ξ Γ ξ Ξ' P :
   inst_equations Σ Ξ Γ ξ Ξ' →
   (∀ Γ u v, Σ ;; Ξ | Γ ⊢ u ≡ v → P Γ u v) →
-  inst_equations_ Σ P Γ ξ Ξ'.
+  inst_equations_ P Γ ξ Ξ'.
 Proof.
   intros h ih.
-  intros E M ξ' hM.
-  specialize (h _ _ _ hM) as (Ξ'' & Δ & R & hE & h).
-  eexists _,_,_. split. 1: eassumption.
-  intros n rule hr. specialize h with (1 := hr).
-  cbn in h. intuition eauto.
+  intros x rl hx. specialize (h _ _ hx).
+  cbn in *. intuition eauto.
 Qed.
 
 Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
@@ -701,18 +663,11 @@ Proof.
   intros hρ [h1 [h2 h3]] [ih1 [ih2 ih3]].
   split. 2: split.
   - eauto using inst_equations_ren_ih, inst_equations_prop, conv_ren.
-  - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? [? ih2]]]]]].
-    split. 1: assumption.
-    eexists _,_,_. split. 1: eassumption.
-    split.
-    1:{
-      rewrite nth_error_map, onSome_map. setoid_rewrite length_map. assumption.
-    }
-    intros ?? h.
+  - intros x A hx. specialize (ih2 _ _ hx). cbn in ih2.
     rewrite iget_ren. eapply meta_conv.
     + eauto.
     + rewrite !ren_inst. f_equal.
-      apply closed_ren. apply closed_delocal.
+      apply closed_ren. (* assumption. *) admit.
   - rewrite length_map. assumption.
 Qed.
 

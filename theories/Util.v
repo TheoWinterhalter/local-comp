@@ -416,12 +416,12 @@ Proof.
   - intros. constructor.
 Qed.
 
-Inductive option_rel [A] (R : A → A → Prop) : option A → option A → Prop :=
+Inductive option_rel [A B] (R : A → B → Prop) : option A → option B → Prop :=
 | option_none : option_rel R None None
 | option_some x y : R x y → option_rel R (Some x) (Some y).
 
-Lemma option_rel_impl [A] (R R' : A → A → Prop) x y :
-  inclusion _ R R' →
+Lemma option_rel_impl [A B] (R R' : A → B → Prop) x y :
+  (∀ x y, R x y → R' x y) →
   option_rel R x y →
   option_rel R' x y.
 Proof.
@@ -429,6 +429,38 @@ Proof.
   destruct h.
   - constructor.
   - constructor. eauto.
+Qed.
+
+Lemma option_rel_map_l A B C (f : A → B) (R : B → C → Prop) o o' :
+  option_rel R (option_map f o) o' ↔ option_rel (λ x y, R (f x) y) o o'.
+Proof.
+  split.
+  - intro h. remember (option_map f o) as o'' eqn: e.
+    induction h in o, e |- *.
+    + destruct o. 1: discriminate.
+      constructor.
+    + destruct o. 2: discriminate.
+      cbn in e. inversion e. subst.
+      constructor. assumption.
+  - intro h. induction h. 1: constructor.
+    cbn. constructor. assumption.
+Qed.
+
+Lemma option_rel_flip A B R a b :
+  @option_rel A B R a b →
+  option_rel (λ b a, R a b) b a.
+Proof.
+  intro h. induction h. all: constructor ; auto.
+Qed.
+
+Lemma option_rel_map_r A B C (f : A → B) R (o : option C) o' :
+  option_rel R o (option_map f o') ↔ option_rel (λ x y, R x (f y)) o o'.
+Proof.
+  split.
+  - intro h. apply option_rel_flip in h. rewrite option_rel_map_l in h.
+    apply option_rel_flip. assumption.
+  - intro h. apply option_rel_flip in h.
+    apply option_rel_flip. rewrite option_rel_map_l. assumption.
 Qed.
 
 Lemma option_map_option_map [A B C] (f : A → B) (g : B → C) o :
