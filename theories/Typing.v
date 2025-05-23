@@ -169,6 +169,7 @@ Section Inst.
   Definition inst_iget_ (Γ : ctx) (ξ : instance) (Ξ' : ictx) :=
     ∀ n A,
       ictx_get Ξ' n = Some (Assm A) →
+      closed A = true ∧
       Γ ⊢ iget ξ n : inst ξ A.
 
   Definition inst_typing_ (Γ : ctx) (ξ : instance) (Ξ' : ictx) :=
@@ -218,6 +219,7 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
 | type_assm :
     ∀ x A,
       ictx_get Ξ x = Some (Assm A) →
+      closed A = true →
       Γ ⊢ assm x : A
 
 | type_conv :
@@ -343,5 +345,5 @@ Proof.
 Qed.
 
 Notation inst_equations Σ Ξ := (inst_equations_ (conversion Σ Ξ)).
-Notation inst_iget Σ Ξ := (inst_iget_ Σ (typing Σ Ξ)).
+Notation inst_iget Σ Ξ := (inst_iget_ (typing Σ Ξ)).
 Notation inst_typing Σ Ξ := (inst_typing_ Σ Ξ (typing Σ Ξ)).

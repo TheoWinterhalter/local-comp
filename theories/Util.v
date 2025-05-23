@@ -416,6 +416,22 @@ Proof.
   - intros. constructor.
 Qed.
 
+Lemma onSomeT_onSome A (P : _ → Prop) o :
+  @onSomeT A P o →
+  onSome P o.
+Proof.
+  destruct o. all: cbn.
+  - auto.
+  - intros. constructor.
+Qed.
+
+Lemma onSomeT_map [A B] (f : A → B) P o :
+  onSomeT (λ x, P (f x)) o → 
+  onSomeT P (option_map f o).
+Proof.
+  intros h. destruct o. all: cbn in *. all: auto.
+Qed.
+
 Inductive option_rel [A B] (R : A → B → Prop) : option A → option B → Prop :=
 | option_none : option_rel R None None
 | option_some x y : R x y → option_rel R (Some x) (Some y).
@@ -461,6 +477,13 @@ Proof.
     apply option_rel_flip. assumption.
   - intro h. apply option_rel_flip in h.
     apply option_rel_flip. rewrite option_rel_map_l. assumption.
+Qed.
+
+Lemma option_rel_diag [A] (R : A → A → Prop) o :
+  OnSome (λ x, R x x) o →
+  option_rel R o o.
+Proof.
+  intros h. destruct h. all: constructor ; auto.
 Qed.
 
 Lemma option_map_option_map [A B C] (f : A → B) (g : B → C) o :

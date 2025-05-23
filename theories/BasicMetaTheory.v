@@ -193,6 +193,7 @@ Lemma typing_ind :
     ) →
     (∀ Γ x A,
       ictx_get Ξ x = Some (Assm A) →
+      closed A = true →
       P Γ (assm x) A
     ) →
     (∀ Γ i A B t,
@@ -214,7 +215,7 @@ Proof.
     split. 1: assumption.
     split. 2: assumption.
     intros n B hn. specialize (h2 _ _ hn).
-    eauto.
+    intuition eauto.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
@@ -251,7 +252,7 @@ Proof.
     specialize ih with (1 := eq_refl).
     unfold iget in ih. rewrite hn in ih. destruct u.
     2:{ reflexivity. }
-    cbn. assumption.
+    cbn. apply ih.
 Qed.
 
 Lemma typing_closed Σ Ξ t A :
@@ -663,11 +664,12 @@ Proof.
   intros hρ [h1 [h2 h3]] [ih1 [ih2 ih3]].
   split. 2: split.
   - eauto using inst_equations_ren_ih, inst_equations_prop, conv_ren.
-  - intros x A hx. specialize (ih2 _ _ hx). cbn in ih2.
+  - intros x A hx. specialize (ih2 _ _ hx) as [hc ih2]. cbn in ih2.
+    split. 1: assumption.
     rewrite iget_ren. eapply meta_conv.
     + eauto.
     + rewrite !ren_inst. f_equal.
-      apply closed_ren. (* assumption. *) admit.
+      apply closed_ren. assumption.
   - rewrite length_map. assumption.
 Qed.
 
@@ -693,8 +695,8 @@ Proof.
     + assumption.
     + rewrite ren_inst. f_equal.
       symmetry. apply closed_ren. assumption.
-  - rasimpl. rewrite closed_ren. 2: eapply closed_delocal.
-    econstructor. all: eassumption.
+  - rasimpl. rewrite closed_ren. 2: assumption.
+    econstructor. all: assumption.
   - rasimpl. rasimpl in IHht2.
     econstructor. all: eauto.
     eapply conv_ren. all: eassumption.
@@ -733,11 +735,11 @@ Proof.
     apply forallb_All in h. move h at top.
     eapply All_prod in h. 2: eassumption.
     eapply All_impl. 2: eassumption. clear - e.
-    cbn. intros l [h1 h2].
-    apply map_ext_All.
-    apply forallb_All in h2.
-    eapply All_prod in h1. 2: eassumption.
-    eapply All_impl. 2: eassumption. clear - e.
+    cbn. intros o [h1 h2].
+    apply option_map_ext_onSomeT.
+    apply onSomeb_onSome, onSome_onSomeT in h2.
+    eapply onSomeT_prod in h1. 2: eassumption.
+    eapply onSomeT_impl. 2: eassumption. clear - e.
     cbn. intros t [h1 h2]. eauto.
 Qed.
 
@@ -755,16 +757,6 @@ Fixpoint listify k (σ : nat → term) :=
   | 0 => []
   | S k => σ 0 :: listify k (S >> σ)
   end.
-
-Lemma eq_subst_slist k σ :
-  eq_subst_on k σ (slist (listify k σ)).
-Proof.
-  intros x h.
-  induction k as [| k ih] in x, h, σ |- *. 1: lia.
-  cbn. destruct x as [| x].
-  - reflexivity.
-  - cbn. apply (ih (S >> σ)). lia.
-Qed.
 
 Fixpoint trunc k d (σ : nat → term) :=
   match k with
@@ -898,9 +890,9 @@ Proof.
   - cbn. f_equal.
     rewrite !map_map. apply map_ext_All.
     eapply All_impl. 2: eassumption.
-    intros l hl.
-    rewrite !map_map. apply map_ext_All.
-    eapply All_impl. 2: eassumption.
+    intros o ho. change @core.option_map with @option_map.
+    rewrite !option_map_option_map. apply option_map_ext_onSomeT.
+    eapply onSomeT_impl. 2: eassumption.
     eauto.
   - cbn. rewrite !iget_ren. rasimpl.
     rewrite rinstInst'_term.
@@ -910,15 +902,13 @@ Proof.
 Qed.
 
 Notation subst_instance σ ξ :=
-  (map (map (subst_term σ)) ξ).
+  (map_instance (subst_term σ) ξ).
 
-Lemma iget_subst σ ξ M x :
-  iget (subst_instance σ ξ) M x = (iget ξ M x) <[ σ ].
+Lemma iget_subst σ ξ x :
+  iget (subst_instance σ ξ) x = (iget ξ x) <[ σ ].
 Proof.
   unfold iget.
-  rewrite nth_error_map. destruct nth_error. 2: reflexivity.
-  cbn. rewrite nth_error_map. destruct nth_error. 2: reflexivity.
-  cbn. reflexivity.
+  rewrite nth_error_map. destruct nth_error as [ [] |]. all: reflexivity.
 Qed.
 
 Lemma subst_inst_scoped σ ξ t k :
@@ -940,7 +930,7 @@ Proof.
     }
     f_equal.
     rewrite !map_map. apply map_ext. intro l.
-    rewrite !map_map. apply map_ext. intro t.
+    rewrite !option_map_option_map. apply option_map_ext. intro t.
     rasimpl. reflexivity.
   - cbn in *. apply andb_prop in h as [].
     f_equal. 1: eauto.
@@ -952,7 +942,7 @@ Proof.
     }
     f_equal.
     rewrite !map_map. apply map_ext. intro l.
-    rewrite !map_map. apply map_ext. intro t.
+    rewrite !option_map_option_map. apply option_map_ext. intro o.
     rasimpl. reflexivity.
   - cbn in *. apply andb_prop in h as [].
     f_equal. all: eauto.
@@ -961,11 +951,12 @@ Proof.
     apply forallb_All in h. move h at top.
     eapply All_prod in h. 2: eassumption.
     eapply All_impl. 2: eassumption. clear - hσ.
-    cbn. intros l [h1 h2].
-    rewrite map_map. apply map_ext_All.
-    apply forallb_All in h2.
-    eapply All_prod in h1. 2: eassumption.
-    eapply All_impl. 2: eassumption. clear - hσ.
+    cbn. intros o [h1 h2].
+    change @core.option_map with option_map.
+    rewrite option_map_option_map. apply option_map_ext_onSomeT.
+    apply onSomeb_onSome, onSome_onSomeT in h2.
+    eapply onSomeT_prod in h1. 2: eassumption.
+    eapply onSomeT_impl. 2: eassumption. clear - hσ.
     cbn. intros t [h1 h2]. eauto.
   - cbn. symmetry. apply iget_subst.
 Qed.
@@ -1000,7 +991,7 @@ Lemma subst_instance_ext σ θ ξ :
 Proof.
   intros h.
   apply map_ext. intro.
-  apply map_ext. intro.
+  apply option_map_ext. intro.
   apply ext_term. assumption.
 Qed.
 
@@ -1008,7 +999,7 @@ Lemma ren_subst_instance ρ σ ξ :
   ren_instance ρ (subst_instance σ ξ) = subst_instance (σ >> (ren_term ρ)) ξ.
 Proof.
   rewrite map_map. apply map_ext. intro.
-  rewrite map_map. apply map_ext. intro.
+  rewrite option_map_option_map. apply option_map_ext. intro.
   rasimpl. reflexivity.
 Qed.
 
@@ -1016,7 +1007,7 @@ Lemma subst_ren_instance ρ σ ξ :
   subst_instance σ (ren_instance ρ ξ) = subst_instance (ρ >> σ) ξ.
 Proof.
   rewrite map_map. apply map_ext. intro.
-  rewrite map_map. apply map_ext. intro.
+  rewrite option_map_option_map. apply option_map_ext. intro.
   rasimpl. reflexivity.
 Qed.
 
@@ -1034,22 +1025,18 @@ Qed.
 
 Lemma inst_equations_subst_ih Σ Ξ Γ Δ σ ξ Ξ' :
   inst_equations Σ Ξ Γ ξ Ξ' →
-  inst_equations_ Σ (λ _ u v, ∀ Δ σ, Σ ;; Ξ | Δ ⊢ u <[ σ ] ≡ v <[ σ ]) Γ ξ Ξ' →
+  inst_equations_ (λ _ u v, ∀ Δ σ, Σ ;; Ξ | Δ ⊢ u <[ σ ] ≡ v <[ σ ]) Γ ξ Ξ' →
   inst_equations Σ Ξ Δ (subst_instance σ ξ) Ξ'.
 Proof.
   intros h ih.
-  intros E M ξ' hM.
-  specialize (ih _ _ _ hM) as (Ξ'' & Δ' & R & e & ih).
-  eexists _,_,_. split. 1: eauto.
-  intros n ε hn m δ Θ lhs0 rhs0. cbn.
-  rewrite liftn_subst_instance.
-  (* forward *)
-  specialize ih with (1 := hn). cbn in ih.
-  fold m δ lhs0 rhs0 in ih.
-  destruct ih as (? & ? & ih).
+  intros x rl hx m Θ. specialize (ih _ _ hx).
+  cbn in ih. fold Θ m in ih. destruct ih as (e & hl & hr & ih).
   specialize ih with (σ := ups m σ).
+  cbn.
+  rewrite !liftn_subst_instance.
   erewrite 2!subst_inst_ups in ih. 2,3: eassumption.
-  eauto.
+  rewrite nth_error_map. rewrite e.
+  intuition eauto.
 Qed.
 
 (** Note:
@@ -1073,8 +1060,8 @@ Proof.
     apply Forall2_map_l, Forall2_map_r.
     eapply Forall2_impl. 2: eassumption.
     intros l l' h.
-    apply Forall2_map_l, Forall2_map_r.
-    eapply Forall2_impl. 2: eassumption.
+    apply option_rel_map_l, option_rel_map_r.
+    eapply option_rel_impl. 2: eassumption.
     cbn. auto.
 Qed.
 
@@ -1101,10 +1088,11 @@ Proof.
     eapply All_prod in h. 2: eassumption.
     eapply All_impl. 2: eassumption. clear.
     cbn. intros ? [h1 h2].
-    rewrite <- map_id. apply map_ext_All.
-    apply forallb_All in h2.
-    eapply All_prod in h1. 2: eassumption.
-    eapply All_impl. 2: eassumption. clear.
+    change @core.option_map with option_map.
+    apply option_map_id_onSomeT.
+    apply onSomeb_onSome, onSome_onSomeT in h2.
+    eapply onSomeT_prod in h1. 2: eassumption.
+    eapply onSomeT_impl. 2: eassumption. clear.
     cbn. intros t [h1 h2]. eauto.
 Qed.
 
@@ -1120,7 +1108,7 @@ Lemma subst_instance_id ξ :
   subst_instance ids ξ = ξ.
 Proof.
   rewrite <- map_id. apply map_ext. intro.
-  rewrite <- map_id. apply map_ext. intro.
+  rewrite <- option_map_id. apply option_map_ext. intro.
   rasimpl. reflexivity.
 Qed.
 
@@ -1130,11 +1118,10 @@ Lemma closed_subst_instance σ ξ :
 Proof.
   intros h.
   etransitivity. 2: apply subst_instance_id.
-  unfold closed_instance in h.
   apply map_ext_All. eapply All_impl.
   2:{ apply forallb_All. eassumption. }
-  cbn. intros ? hσ%forallb_All.
-  apply map_ext_All. eapply All_impl. 2: eassumption.
+  cbn. intros ? ho%onSomeb_onSome%onSome_onSomeT.
+  apply option_map_ext_onSomeT. eapply onSomeT_impl. 2: eassumption.
   cbn. rasimpl. apply closed_subst.
 Qed.
 
@@ -1162,9 +1149,10 @@ Proof.
   - cbn in *. apply All_forallb. apply forallb_All in ht.
     move ht at top. eapply All_prod in ht. 2: eassumption.
     eapply All_impl. 2: eassumption.
-    cbn. intros ? [h1 h2]. apply All_forallb. apply forallb_All in h2.
-    eapply All_prod in h1. 2: eassumption.
-    eapply All_impl. 2: eassumption.
+    cbn. intros ? [h1 h2]. apply onSomeb_onSome, onSomeT_onSome. 
+    apply onSomeb_onSome, onSome_onSomeT in h2.
+    eapply onSomeT_prod in h1. 2: eassumption.
+    eapply onSomeT_impl. 2: eassumption.
     cbn. intros ? []. eauto.
 Qed.
 
@@ -1222,10 +1210,10 @@ Proof.
     apply All_forallb. apply All_map. eapply All_impl. 2: eassumption.
     clear.
     cbn. intros σ [h1 h2].
-    apply All_forallb. apply All_map.
-    apply forallb_All in h2.
-    eapply All_prod in h1. 2: eassumption.
-    eapply All_impl. 2: eassumption. clear.
+    apply onSomeb_onSome, onSomeT_onSome. apply onSomeT_map.
+    apply onSomeb_onSome, onSome_onSomeT in h2.
+    eapply onSomeT_prod in h1. 2: eassumption.
+    eapply onSomeT_impl. 2: eassumption. clear.
     cbn. intros t [h1 h2]. eauto.
 Qed.
 
@@ -1263,18 +1251,16 @@ Proof.
     eapply All_prod in ht. 2: eassumption.
     apply All_forallb. apply All_map. eapply All_impl. 2: eassumption.
     clear - hξ.
-    cbn. intros σ [h1 h2].
-    apply All_forallb. apply All_map.
-    apply forallb_All in h2.
-    eapply All_prod in h1. 2: eassumption.
-    eapply All_impl. 2: eassumption. clear - hξ.
+    cbn. intros o [h1 h2].
+    apply onSomeb_onSome, onSomeT_onSome. apply onSomeT_map.
+    apply onSomeb_onSome, onSome_onSomeT in h2.
+    eapply onSomeT_prod in h1. 2: eassumption.
+    eapply onSomeT_impl. 2: eassumption. clear - hξ.
     cbn. intros t [h1 h2]. eauto.
   - cbn. rewrite iget_ren. unfold iget.
-    destruct nth_error as [σ |] eqn: eM. 2: reflexivity.
-    destruct (nth_error σ _) eqn: ex. 2: reflexivity.
-    apply nth_error_In in eM, ex.
-    rewrite forallb_forall in hξ. specialize hξ with (1 := eM).
-    rewrite forallb_forall in hξ. specialize hξ with (1 := ex).
+    destruct nth_error as [[t|] |] eqn: hx. 2,3: reflexivity.
+    apply nth_error_In in hx.
+    rewrite forallb_forall in hξ. specialize hξ with (1 := hx).
     eapply scoped_lift. assumption.
 Qed.
 
@@ -1308,17 +1294,11 @@ Proof.
   intros hσ [h1 [h2 h3]] [ih1 [ih2 ih3]].
   split. 2: split.
   - eauto using inst_equations_subst_ih, inst_equations_prop, conv_subst.
-  - intros M E ξ' e. specialize (ih2 _ _ _ e) as [? [? [? [? [? [? ih2]]]]]].
+  - intros x A hx. specialize (ih2 _ _ hx) as [? ih2].
     split. 1: assumption.
-    eexists _,_,_. split. 1: eassumption.
-    split.
-    1:{
-      rewrite nth_error_map, onSome_map. setoid_rewrite length_map. assumption.
-    }
-    intros ?? h.
     rewrite iget_subst. eapply meta_conv.
     + eauto.
-    + apply subst_inst_closed. apply closed_delocal.
+    + apply subst_inst_closed. assumption.
   - rewrite length_map. assumption.
 Qed.
 
@@ -1342,7 +1322,7 @@ Proof.
     + econstructor. 1,3: eassumption.
       eapply inst_typing_subst. all: eassumption.
     + symmetry. apply subst_inst_closed. assumption.
-  - cbn. rewrite closed_subst. 2: eapply closed_delocal.
+  - cbn. rewrite closed_subst. 2: assumption.
     econstructor. all: eassumption.
   - econstructor. 1,3: eauto.
     eapply conv_subst. eassumption.
@@ -1371,14 +1351,11 @@ Proof.
     rewrite liftn_liftn. rewrite length_app. reflexivity.
 Qed.
 
-Lemma inst_iget ξ ξ' M x :
-  inst ξ (iget ξ' M x) = iget (inst_instance ξ ξ') M x.
+Lemma inst_get ξ ξ' x :
+  inst ξ (iget ξ' x) = iget (inst_instance ξ ξ') x.
 Proof.
   unfold iget. rewrite nth_error_map.
-  destruct nth_error. 2: reflexivity.
-  cbn. rewrite nth_error_map.
-  destruct nth_error. 2: reflexivity.
-  reflexivity.
+  destruct nth_error as [[]|]. all: reflexivity.
 Qed.
 
 Lemma inst_inst ξ ξ' t :
@@ -1388,29 +1365,29 @@ Proof.
   all: try solve [ cbn ; f_equal ; eauto ].
   - cbn. f_equal. 1: eauto.
     rewrite IHt2. f_equal.
-    rewrite !map_map. apply map_ext. intro σ.
-    rewrite !map_map. apply map_ext. intro t.
+    rewrite !map_map. apply map_ext. intro o.
+    rewrite !option_map_option_map. apply option_map_ext. intro t.
     symmetry. apply ren_inst.
   - cbn. f_equal. 1: eauto.
     rewrite IHt2. f_equal.
-    rewrite !map_map. apply map_ext. intro σ.
-    rewrite !map_map. apply map_ext. intro t.
+    rewrite !map_map. apply map_ext. intro o.
+    rewrite !option_map_option_map. apply option_map_ext. intro t.
     symmetry. apply ren_inst.
   - cbn. f_equal.
     rewrite !map_map. apply map_ext_All.
     eapply All_impl. 2: eassumption.
-    intros σ hσ.
-    rewrite !map_map. apply map_ext_All.
-    eapply All_impl. 2: eassumption.
+    intros o ho.
+    rewrite !option_map_option_map. apply option_map_ext_onSomeT.
+    eapply onSomeT_impl. 2: eassumption.
     auto.
-  - cbn. apply inst_iget.
+  - cbn. apply inst_get.
 Qed.
 
 Lemma liftn_map_map n ξ ξ' :
   liftn n (inst_instance ξ ξ') = inst_instance (liftn n ξ) (liftn n ξ').
 Proof.
   rewrite !map_map. apply map_ext. intro.
-  rewrite !map_map. apply map_ext. intro.
+  rewrite !option_map_option_map. apply option_map_ext. intro.
   rewrite ren_inst. reflexivity.
 Qed.
 
@@ -1424,32 +1401,10 @@ Proof.
     rewrite liftn_map_map. reflexivity.
 Qed.
 
-Lemma conv_equations Σ Ξ Ξ' Γ ξ M E ξ' Ξ'' Δ R n rl :
-  inst_equations Σ Ξ Γ ξ Ξ' →
-  ictx_get Ξ' M = Some (E, ξ') →
-  Σ E = Some (Ext Ξ'' Δ R) →
-  nth_error R n = Some rl →
-  let m := length rl.(cr_env) in
-  let δ := length Δ in
-  let Θ := ctx_inst ξ (ctx_inst ξ' rl.(cr_env)) in
-  let lhs0 := rlhs M ξ' δ rl in
-  let rhs0 := rrhs M ξ' δ rl in
-  (* scoped m lhs0 = true →
-  scoped m rhs0 = true → *)
-  let lhs := inst (liftn m ξ) lhs0 in
-  let rhs := inst (liftn m ξ) rhs0 in
-  Σ ;; Ξ | Γ ,,, Θ ⊢ lhs ≡ rhs.
-Proof.
-  intros hξ hM hE hn m δ Θ lhs0 rhs0 (* hl hr *).
-  specialize (hξ _ _ _ hM) as [? [? [? [e h]]]].
-  rewrite e in hE. inversion hE. subst.
-  eapply h. eassumption.
-Qed.
-
 Lemma inst_equations_inst_ih Σ Ξ Ξ' Ξ'' Γ Δ ξ ξ' :
   inst_equations Σ Ξ Δ ξ Ξ' →
   inst_equations Σ Ξ' Γ ξ' Ξ'' →
-  inst_equations_ Σ (λ Γ u v,
+  inst_equations_ (λ Γ u v,
     ∀ Ξ Δ ξ,
       inst_equations Σ Ξ Δ ξ Ξ' →
       Σ ;; Ξ | Δ ,,, ctx_inst ξ Γ ⊢ inst (liftn (length Γ) ξ) u ≡ inst (liftn (length Γ) ξ) v
@@ -1457,22 +1412,17 @@ Lemma inst_equations_inst_ih Σ Ξ Ξ' Ξ'' Γ Δ ξ ξ' :
   inst_equations Σ Ξ (Δ ,,, ctx_inst ξ Γ) (inst_instance (liftn (length Γ) ξ) ξ') Ξ''.
 Proof.
   intros hξ h ih.
-  intros E M ξ'' hM.
-  specialize (ih _ _ _ hM) as (Ξ3 & Δ3 & R & hE & ih).
-  eexists _,_,_. split. 1: eassumption.
-  intros n ε hn m δ Θ lhs0 rhs0. cbn.
-  specialize ih with (1 := hn). cbn in ih.
-  fold m δ Θ lhs0 rhs0 in ih.
-  destruct ih as (? & ? & ih).
+  intros x rl hx m Θ. specialize (ih _ _ hx) as (e & hl & hr & ih).
+  cbn in *. fold m Θ in ih.
   specialize ih with (1 := hξ).
   rewrite ctx_inst_app in ih. rewrite <- app_assoc in ih.
   rewrite ctx_inst_comp in ih.
   rewrite !length_app in ih. rewrite !length_ctx_inst in ih.
-  fold δ m in ih.
   rewrite !inst_inst in ih.
   rewrite liftn_map_map.
   rewrite liftn_liftn.
-  eauto.
+  rewrite nth_error_map, e. cbn.
+  intuition eauto.
 Qed.
 
 Lemma conv_inst Σ Ξ Ξ' Γ Δ u v ξ :
@@ -1497,8 +1447,7 @@ Proof.
     erewrite (ext_term_scoped _ rhs).
     3: eapply eq_subst_trunc. 2: eassumption.
     erewrite 2!subst_inst. 2,3: eapply trunc_bounds.
-    eapply conv_subst.
-    eapply conv_equations. all: eassumption.
+    eapply conv_subst. eapply hξ. eassumption.
   - cbn. constructor. 1: eauto.
     rewrite lift_liftn.
     apply IHh2. assumption.
@@ -1509,8 +1458,8 @@ Proof.
     apply Forall2_map_l, Forall2_map_r.
     eapply Forall2_impl. 2: eassumption.
     intros l l' h.
-    apply Forall2_map_l, Forall2_map_r.
-    eapply Forall2_impl. 2: eassumption.
+    apply option_rel_map_l, option_rel_map_r.
+    eapply option_rel_impl. 2: eassumption.
     cbn. auto.
 Qed.
 
@@ -1523,19 +1472,6 @@ Proof.
   eapply conv_inst in h. 2: eassumption.
   cbn in h. rewrite ren_instance_id_ext in h. 2: auto.
   assumption.
-Qed.
-
-Lemma type_iget Σ Ξ Ξ' Γ ξ M x E ξ' Ξ'' Δ R A :
-  inst_iget Σ Ξ Γ ξ Ξ' →
-  ictx_get Ξ' M = Some (E, ξ') →
-  Σ E = Some (Ext Ξ'' Δ R) →
-  nth_error Δ x = Some A →
-  Σ ;; Ξ | Γ ⊢ iget ξ M x : inst ξ (delocal M (inst ξ' (plus (S x) ⋅ A))).
-Proof.
-  intros hξ hM hE hx.
-  specialize (hξ _ _ _ hM) as [? [? [? [? [e hξ]]]]].
-  rewrite e in hE. inversion hE. subst.
-  intuition eauto.
 Qed.
 
 Lemma typing_inst Σ Ξ Ξ' Γ Δ t A ξ :
@@ -1579,17 +1515,9 @@ Proof.
       * destruct hξ as (? & ? & ?).
         eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst.
       * rename H3 into ih2.
-        intros M E ξ' e.
-        specialize (ih2 _ _ _ e) as [? [? [? [? [? [? ih2]]]]]].
+        intros x B hx. specialize (ih2 _ _ hx) as [? ih2].
         split. 1: assumption.
-        eexists _,_,_. split. 1: eassumption.
-        split.
-        1:{
-          rewrite nth_error_map, onSome_map. setoid_rewrite length_map.
-          assumption.
-        }
-        intros ?? h.
-        rewrite <- inst_iget. rewrite <- inst_inst.
+        rewrite <- inst_get. rewrite <- inst_inst.
         eauto.
       * rewrite length_map. assumption.
     + rewrite inst_inst. reflexivity.
@@ -1597,10 +1525,9 @@ Proof.
     eapply meta_conv.
     + eapply typing_ren.
       1:{ erewrite <- length_ctx_inst. eapply rtyping_add. }
-      eapply type_iget. 2-4: eassumption.
-      apply hξ.
+      eapply hξ. eassumption.
     + rewrite ren_inst. f_equal.
-      apply closed_ren. apply closed_delocal.
+      apply closed_ren. assumption.
   - econstructor. 1,3: eauto.
     eapply conv_inst. 2: eassumption.
     apply hξ.
@@ -1619,7 +1546,7 @@ Proof.
 Qed.
 
 Lemma conv_insts Σ Ξ Γ t ξ ξ' :
-  Forall2 (Forall2 (conversion Σ Ξ Γ)) ξ ξ' →
+  Forall2 (option_rel (conversion Σ Ξ Γ)) ξ ξ' →
   Σ ;; Ξ | Γ ⊢ inst ξ t ≡ inst ξ' t.
 Proof.
   intros hξ.
@@ -1629,26 +1556,26 @@ Proof.
     eapply IHt2. eapply Forall2_map_l, Forall2_map_r.
     eapply Forall2_impl. 2: eassumption.
     intros.
-    eapply Forall2_map_l, Forall2_map_r.
-    eapply Forall2_impl. 2: eassumption.
+    eapply option_rel_map_l, option_rel_map_r.
+    eapply option_rel_impl. 2: eassumption.
     intros. eapply conv_ren. eassumption.
   - cbn. eapply cong_lam. 1: eauto.
     eapply IHt2. eapply Forall2_map_l, Forall2_map_r.
     eapply Forall2_impl. 2: eassumption.
     intros.
-    eapply Forall2_map_l, Forall2_map_r.
-    eapply Forall2_impl. 2: eassumption.
+    eapply option_rel_map_l, option_rel_map_r.
+    eapply option_rel_impl. 2: eassumption.
     intros. eapply conv_ren. eassumption.
   - cbn. eapply cong_const.
     eapply Forall2_map_l, Forall2_map_r.
     eapply Forall2_diag. eapply All_Forall.
     eapply All_impl. 2: eassumption.
     intros.
-    eapply Forall2_map_l, Forall2_map_r.
-    eapply Forall2_diag. eapply All_Forall.
-    eapply All_impl. 2: eassumption.
+    eapply option_rel_map_l, option_rel_map_r.
+    eapply option_rel_diag. rewrite OnSome_onSome. apply onSomeT_onSome.
+    eapply onSomeT_impl. 2: eassumption.
     cbn. intros. eauto.
-  - cbn. unfold iget. destruct (nth_error ξ _) as [σ1 |] eqn:e1.
+  - cbn. unfold iget. destruct (nth_error ξ _) as [o1 |] eqn:e1.
     2:{
       destruct (nth_error ξ' _) eqn:e2.
       1:{
@@ -1658,25 +1585,15 @@ Proof.
       ttconv.
     }
     eapply Forall2_nth_error_l in e1 as e2. 2: eassumption.
-    destruct e2 as (σ2 & e2 & h). rewrite e2.
-    destruct (nth_error σ1 _) as [u1 |] eqn:e3.
-    2:{
-      destruct (nth_error σ2 _) eqn:e4.
-      1:{
-        eapply nth_error_None in e3. eapply Forall2_length in h.
-        rewrite h in e3. rewrite <- nth_error_None in e3. congruence.
-      }
-      ttconv.
-    }
-    eapply Forall2_nth_error_l in e3 as e4. 2: eassumption.
-    destruct e4 as (u2 & e4 & h'). rewrite e4.
+    destruct e2 as (o2 & e2 & h). rewrite e2.
+    destruct h. 1: ttconv.
     assumption.
 Qed.
 
 Lemma cong_inst Σ Ξ Γ u v ξ ξ' Ξ' :
   inst_equations Σ Ξ Γ ξ Ξ' →
   Σ ;; Ξ' | ∙ ⊢ u ≡ v →
-  Forall2 (Forall2 (conversion Σ Ξ Γ)) ξ ξ' →
+  Forall2 (option_rel (conversion Σ Ξ Γ)) ξ ξ' →
   Σ ;; Ξ | Γ ⊢ inst ξ u ≡ inst ξ' v.
 Proof.
   intros hξ h hh.
@@ -1706,7 +1623,7 @@ Lemma conv_eweak Σ Ξ d Γ u v :
 Proof.
   intros h. induction h using conversion_ind.
   all: try solve [ econstructor ; eauto ].
-  econstructor. 1,3-5: eauto.
+  econstructor. 2-3: eauto.
   apply ictx_get_weak. eassumption.
 Qed.
 
@@ -1715,24 +1632,18 @@ Lemma inst_equations_eweak Σ Ξ d Γ ξ Ξ' :
   inst_equations Σ (d :: Ξ) Γ ξ Ξ'.
 Proof.
   intros h.
-  intros E M ξ' hM.
-  specialize (h _ _ _ hM) as (Ξ'' & Δ & R & e & h).
-  eexists _,_,_. split. 1: eauto.
-  intros n ε hn m δ θ lhs0 rhs0.
-  specialize h with (1 := hn).
-  destruct h as (? & ? & h).
-  eauto using conv_eweak.
+  intros x rl hx. specialize (h _ _ hx).
+  cbn in *. intuition eauto using conv_eweak.
 Qed.
 
 Lemma inst_iget_eweak Σ Ξ d Γ ξ Ξ' :
   inst_iget Σ Ξ Γ ξ Ξ' →
-  inst_iget_ Σ (λ Γ t A, Σ ;; d :: Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
+  inst_iget_ (λ Γ t A, Σ ;; d :: Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
   inst_iget Σ (d :: Ξ) Γ ξ Ξ'.
 Proof.
   intros h ih.
-  intros M E ξ' e. specialize (ih _ _ _ e) as [? [? [? [? [? ih]]]]].
+  intros x A hx. specialize (ih _ _ hx) as [? ih].
   split. 1: assumption.
-  eexists _,_,_. split. 1: eassumption.
   eauto.
 Qed.
 
@@ -1756,10 +1667,10 @@ Proof.
   all: try solve [ econstructor ; eauto ].
   - econstructor. 1,3: eauto.
     eapply inst_typing_eweak_. all: eassumption.
-  - econstructor. 2-4: eauto.
+  - econstructor. 2: assumption.
     eapply ictx_get_weak. assumption.
   - econstructor. 1,3: eassumption.
-    eapply conv_eweak. all: eauto.
+    eapply conv_eweak. assumption.
 Qed.
 
 Lemma inst_typing_eweak Σ Ξ d Γ ξ Ξ' :
@@ -1770,25 +1681,42 @@ Proof.
   eapply inst_typing_eweak_. 1: eassumption.
   destruct h as [h1 [h2 h3]]. split. 2: split.
   - assumption.
-  - intros M E ξ' e. specialize (h2 _ _ _ e) as [? [? [? [? [? [? ih]]]]]].
-    split. 1: assumption.
-    eexists _,_,_. split. 1: eassumption.
+  - intros x A hx. specialize (h2 _ _ hx) as [? ih].
     split. 1: assumption.
     eauto using typing_eweak.
   - assumption.
+Qed.
+
+Lemma wf_eweak Σ Ξ d Γ :
+  wf Σ Ξ Γ →
+  wf Σ (d :: Ξ) Γ.
+Proof.
+  intros h. induction h.
+  - constructor.
+  - econstructor.
+    + assumption.
+    + eapply typing_eweak. eassumption.
+Qed.
+
+Lemma equation_typing_eweak Σ Ξ d r :
+  equation_typing Σ Ξ r →
+  equation_typing Σ (d :: Ξ) r.
+Proof.
+  intros (hctx & [i hty] & hl & hr).
+  unfold equation_typing.
+  intuition eauto using typing_eweak, wf_eweak.
 Qed.
 
 (** Global environment weakening *)
 
 Lemma inst_equations_gweak_ih Σ Σ' Ξ Γ ξ Ξ' :
   Σ ⊑ Σ' →
-  inst_equations_ Σ (λ Γ u v, Σ' ;; Ξ | Γ ⊢ u ≡ v) Γ ξ Ξ' →
+  inst_equations_ (λ Γ u v, Σ' ;; Ξ | Γ ⊢ u ≡ v) Γ ξ Ξ' →
   inst_equations Σ' Ξ Γ ξ Ξ'.
 Proof.
   intros hle ih.
-  intros E M ξ' hM.
-  specialize (ih _ _ _ hM) as (Ξ'' & Δ & R & e & ih).
-  eexists _,_,_. intuition eauto.
+  intros x rl hx. specialize (ih _ _ hx).
+  intuition eauto.
 Qed.
 
 Lemma conv_gweak Σ Σ' Ξ Γ u v :
@@ -1797,8 +1725,7 @@ Lemma conv_gweak Σ Σ' Ξ Γ u v :
   Σ' ;; Ξ | Γ ⊢ u ≡ v.
 Proof.
   intros h hle. induction h using conversion_ind.
-  all: try solve [ econstructor ; eauto ].
-  econstructor ; eauto using inst_equations_gweak_ih.
+  all: solve [ econstructor ; eauto ].
 Qed.
 
 Lemma inst_equations_gweak Σ Σ' Ξ Γ ξ Ξ' :
@@ -1812,16 +1739,11 @@ Qed.
 
 Lemma inst_iget_gweak Σ Σ' Ξ Γ ξ Ξ' :
   inst_iget Σ Ξ Γ ξ Ξ' →
-  inst_iget_ Σ (λ Γ t A, Σ' ;; Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
+  inst_iget_ (λ Γ t A, Σ' ;; Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
   Σ ⊑ Σ' →
   inst_iget Σ' Ξ Γ ξ Ξ'.
 Proof.
-  intros h ih hle.
-  intros M E ξ' e. specialize (ih _ _ _ e) as [? [? [? [? [? ih]]]]].
-  split. 1: assumption.
-  eexists _,_,_. split.
-  - eapply hle. eassumption.
-  - eapply ih.
+  intros h ih hle. auto.
 Qed.
 
 Lemma inst_typing_gweak_ Σ Σ' Ξ Γ ξ Ξ' :
@@ -1833,7 +1755,7 @@ Proof.
   intros [h1 [h2 h3]] [ih1 [ih2 ih3]] hle.
   split. 2: split.
   - eapply inst_equations_gweak. all: eassumption.
-  - eapply inst_iget_gweak. all: eassumption.
+  - eapply inst_iget_gweak. 3: eassumption. all: eassumption.
   - assumption.
 Qed.
 
@@ -1859,54 +1781,10 @@ Proof.
   eapply inst_typing_gweak_. 1,3: eassumption.
   destruct h as [h1 [h2 h3]]. split. 2: split.
   - assumption.
-  - intros M E ξ' e. specialize (h2 _ _ _ e) as [? [? [? [? [? [? h2]]]]]].
+  - intros x A hx. specialize (h2 _ _ hx) as [? h2].
     split. 1: assumption.
-    eexists _,_,_. split. 1: eassumption. split. 1: assumption.
     eauto using typing_gweak.
   - assumption.
-Qed.
-
-Lemma iwf_gweak Σ Σ' Ξ :
-  iwf Σ Ξ →
-  Σ ⊑ Σ' →
-  iwf Σ' Ξ.
-Proof.
-  intros h hle. induction h.
-  - constructor.
-  - econstructor. 1,2: eauto.
-    eapply inst_typing_gweak. all: eauto.
-Qed.
-
-Lemma wf_gweak Σ Σ' Ξ Γ :
-  wf Σ Ξ Γ →
-  Σ ⊑ Σ' →
-  wf Σ' Ξ Γ.
-Proof.
-  intros h hle. induction h.
-  - constructor.
-  - econstructor.
-    + assumption.
-    + eapply typing_gweak. all: eassumption.
-Qed.
-
-Lemma equation_typing_gweak Σ Σ' Ξ Δ r :
-  equation_typing Σ Ξ Δ r →
-  Σ ⊑ Σ' →
-  equation_typing Σ' Ξ Δ r.
-Proof.
-  intros (hctx & [i hty] & hl & hr) hle.
-  unfold equation_typing.
-  intuition eauto using typing_gweak, wf_gweak.
-Qed.
-
-Lemma wf_rules_gweak Σ Σ' Ξ Δ R :
-  Forall (equation_typing Σ Ξ Δ) R →
-  Σ ⊑ Σ' →
-  Forall (equation_typing Σ' Ξ Δ) R.
-Proof.
-  intros h hle.
-  eapply Forall_impl. 2: eassumption.
-  intros. eauto using equation_typing_gweak.
 Qed.
 
 Lemma gscope_gweak Σ Σ' t :
@@ -1927,6 +1805,53 @@ Proof.
   intros h hle.
   destruct h. split.
   all: intuition eauto using Forall_impl, gscope_gweak.
+Qed.
+
+Lemma wf_gweak Σ Σ' Ξ Γ :
+  wf Σ Ξ Γ →
+  Σ ⊑ Σ' →
+  wf Σ' Ξ Γ.
+Proof.
+  intros h hle. induction h.
+  - constructor.
+  - econstructor.
+    + assumption.
+    + eapply typing_gweak. all: eassumption.
+Qed.
+
+Lemma equation_typing_gweak Σ Σ' Ξ r :
+  equation_typing Σ Ξ r →
+  Σ ⊑ Σ' →
+  equation_typing Σ' Ξ r.
+Proof.
+  intros (hctx & [i hty] & hl & hr) hle.
+  unfold equation_typing.
+  intuition eauto using typing_gweak, wf_gweak.
+Qed.
+
+Lemma iwf_gweak Σ Σ' Ξ :
+  iwf Σ Ξ →
+  Σ ⊑ Σ' →
+  iwf Σ' Ξ.
+Proof.
+  intros h hle. induction h.
+  - constructor.
+  - econstructor. 1: assumption.
+    eapply typing_gweak. all: eassumption.
+  - econstructor.
+    + assumption.
+    + eapply gscope_crule_gweak. all: eassumption.
+    + eapply equation_typing_gweak. all: eassumption.
+Qed.
+
+Lemma wf_rules_gweak Σ Σ' Ξ R :
+  Forall (equation_typing Σ Ξ) R →
+  Σ ⊑ Σ' →
+  Forall (equation_typing Σ' Ξ) R.
+Proof.
+  intros h hle.
+  eapply Forall_impl. 2: eassumption.
+  intros. eauto using equation_typing_gweak.
 Qed.
 
 (** Validity (or presupposition) *)
@@ -1993,36 +1918,41 @@ Proof.
     rewrite <- h. f_equal. lia.
 Qed.
 
-Lemma valid_iwf Σ Ξ M E ξ :
+Lemma valid_assm Σ Ξ x A :
   iwf Σ Ξ →
-  ictx_get Ξ M = Some (E, ξ) →
-  ∃ Ξ' Δ R,
-    Σ E = Some (Ext Ξ' Δ R) ∧
-    inst_typing Σ Ξ ∙ ξ Ξ'.
+  ictx_get Ξ x = Some (Assm A) →
+  ∃ i, Σ ;; Ξ | ∙ ⊢ A : Sort i.
 Proof.
   intros hΞ e.
-  induction hΞ as [ | Ξ E' ξ' Ξ' Δ R h ih he hξ ].
-  1:{ destruct M. all: discriminate. }
-  eapply ictx_get_case in e as eh. destruct eh as [[-> eh] | eh].
-  - inversion eh. subst.
-    eexists _,_,_. split. 1: eassumption.
-    eapply inst_typing_eweak. assumption.
-  - specialize (ih eh) as [? [? [? []]]].
-    eexists _,_,_. split. 1: eassumption.
-    eapply inst_typing_eweak. assumption.
+  induction hΞ as [| B Ξ i hΞ ih hB | rl Ξ hΞ ih hs ht ].
+  - destruct x. all: discriminate.
+  - eapply ictx_get_case in e as eh. destruct eh as [[-> eh] | eh]. 
+    + inversion eh. subst.
+      eexists. eapply typing_eweak. eassumption.
+    + specialize (ih eh) as [].
+      eexists. eapply typing_eweak. eassumption.
+  - eapply ictx_get_case in e as eh. destruct eh as [[-> eh] | eh].
+    1: discriminate.
+    specialize (ih eh) as [].
+    eexists. eapply typing_eweak. eassumption.
 Qed.
 
-Corollary valid_iwf_alt Σ Ξ M E ξ Ξ' Δ R :
+Lemma valid_comp Σ Ξ x rl :
   iwf Σ Ξ →
-  ictx_get Ξ M = Some (E, ξ) →
-  Σ E = Some (Ext Ξ' Δ R) →
-  inst_typing Σ Ξ ∙ ξ Ξ'.
+  ictx_get Ξ x = Some (Comp rl) →
+  gscope_crule Σ rl ∧ equation_typing Σ Ξ (crule_eq rl).
 Proof.
-  intros hΞ hM hE.
-  eapply valid_iwf in hM. 2: eassumption.
-  destruct hM as [? [? [? [e ?]]]].
-  rewrite e in hE. inversion hE. subst.
-  assumption.
+  intros hΞ e.
+  induction hΞ as [| B Ξ i hΞ ih hB | rl' Ξ hΞ ih hs ht ].
+  - destruct x. all: discriminate.
+  - eapply ictx_get_case in e as eh. destruct eh as [[-> eh] | eh].
+    1: discriminate. 
+    intuition eauto using equation_typing_eweak.
+  - eapply ictx_get_case in e as eh. destruct eh as [[-> eh] | eh]. 
+    + inversion eh. subst.
+      intuition eauto using equation_typing_eweak.
+    + specialize (ih eh) as [].
+      intuition eauto using equation_typing_eweak.
 Qed.
 
 Lemma extends_nil Σ :
@@ -2049,43 +1979,13 @@ Lemma valid_def Σ c Ξ A t :
   Σ ;; Ξ | ∙ ⊢ t : A.
 Proof.
   intros hΣ hc.
-  induction hΣ as [ | c' ?????? ih | c' ??????? ih ] in c, Ξ, A, t, hc |- *.
+  induction hΣ as [ | c' ??????? ih ] in c, Ξ, A, t, hc |- *.
   - discriminate.
-  - cbn in hc. destruct (c =? c')%string. 1: discriminate.
-    specialize ih with (1 := hc) as [? [[i ?] ?]].
-    split. 2: split.
-    + eapply iwf_gweak. all: eauto using extends_gcons.
-    + eexists. eapply typing_gweak. all: eauto using extends_gcons.
-    + eapply typing_gweak. all: eauto using extends_gcons.
   - cbn in hc. destruct (c =? c')%string.
     + inversion hc. subst.
       intuition eauto using iwf_gweak, typing_gweak, extends_gcons.
     + specialize ih with (1 := hc) as [? [[j ?] ?]].
       intuition eauto using iwf_gweak, typing_gweak, extends_gcons.
-Qed.
-
-Lemma valid_ext Σ c Ξ Δ R :
-  gwf Σ →
-  Σ c = Some (Ext Ξ Δ R) →
-  iwf Σ Ξ ∧
-  wf Σ Ξ Δ ∧
-  Forall (gscope_crule Σ) R ∧
-  Forall (equation_typing Σ Ξ Δ) (map crule_eq R).
-Proof.
-  intros hΣ hc.
-  induction hΣ as [ | c' ?????? ih | c' ??????? ih ] in c, Ξ, Δ, R, hc |- *.
-  - discriminate.
-  - cbn in hc. destruct (c =? c')%string.
-    + inversion hc. subst.
-      intuition eauto
-      using wf_gweak, iwf_gweak, typing_gweak, extends_gcons, wf_rules_gweak, Forall_impl, gscope_crule_gweak.
-    + specialize ih with (1 := hc) as [? ?].
-      intuition eauto
-      using wf_gweak, iwf_gweak, typing_gweak, extends_gcons, wf_rules_gweak, Forall_impl, gscope_crule_gweak.
-  - cbn in hc. destruct (c =? c')%string. 1: discriminate.
-    specialize ih with (1 := hc) as [? ?].
-    intuition eauto
-    using wf_gweak, iwf_gweak, typing_gweak, extends_gcons, wf_rules_gweak, Forall_impl, gscope_crule_gweak.
 Qed.
 
 Definition styping_alt Σ Ξ (Γ : ctx) (σ : nat → term) (Δ : ctx) :=
@@ -2150,29 +2050,10 @@ Proof.
     exists i. eapply meta_conv.
     + eapply typing_inst_closed. all: eassumption.
     + reflexivity.
-  - eapply valid_ext in hΣ as h. 2: eassumption.
-    destruct h as (hΞ' & hΔ & hR).
-    eapply valid_wf in hΔ as hA. 2: eassumption.
-    destruct hA as [i hA].
-    exists i. eapply typing_lift_closed.
-    2: reflexivity.
-    eapply valid_iwf_alt in hΞ as hξ. 2,3: eassumption.
-    eapply typing_inst in hA. 2: eassumption.
-    cbn in hA. rewrite app_nil_r in hA.
-    rewrite closed_ren_instance in hA. 2: assumption.
-    unfold delocal. eapply meta_conv.
-    + eapply typing_subst. 2: eassumption.
-      rewrite styping_alt_equiv. intros y B e.
-      rewrite nth_error_ctx_inst in e.
-      destruct (nth_error Δ y) eqn:e2. 2: discriminate.
-      cbn in e. inversion e. subst. clear e.
-      eapply meta_conv.
-      * econstructor. all: eassumption.
-      * rewrite closed_ren_instance. 2: assumption.
-        rewrite ren_inst.
-        rewrite closed_ren_instance. 2: assumption.
-        reflexivity.
-    + reflexivity.
+  - eapply valid_assm in hΞ as h. 2: eassumption.
+    destruct h as [i hA].
+    exists i. eapply typing_lift_closed. 2: reflexivity.
+    assumption.
   - eexists. eassumption.
 Qed.
 
@@ -2221,13 +2102,11 @@ Lemma typing_ind_wf :
       closed A = true →
       P Γ (const c ξ) (inst ξ A)
     ) →
-    (∀ Γ M x E ξ Ξ' Δ R A,
+    (∀ Γ x A,
       wf Σ Ξ Γ →
-      ictx_get Ξ M = Some (E, ξ) →
-      Σ E = Some (Ext Ξ' Δ R) →
-      nth_error Δ x = Some A →
-      closed_instance ξ = true →
-      P Γ (assm M x) (delocal M (inst ξ ((plus (S x)) ⋅ A)))
+      ictx_get Ξ x = Some (Assm A) →
+      closed A = true →
+      P Γ (assm x) A
     ) →
     (∀ Γ i A B t,
       wf Σ Ξ Γ →
