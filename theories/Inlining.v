@@ -31,7 +31,6 @@ Section Inline.
 
   Context (Σ : gctx).
   Context (κ : ginst). (** A map from references to their translated def. *)
-  Context (Σᵗ : gctx). (** The translation of [Σ] *)
 
   Reserved Notation "⟦ t ⟧" (at level 0).
   Reserved Notation "⟦ k ⟧×" (at level 0).
@@ -157,7 +156,7 @@ Section Inline.
   Definition g_conv_unfold :=
     ∀ c Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
-      Σᵗ ;; ⟦ Ξ' ⟧e | ∙ ⊢ κ c ≡ ⟦ t ⟧.
+      [] ;; ⟦ Ξ' ⟧e | ∙ ⊢ κ c ≡ ⟦ t ⟧.
 
   Context (h_conv_unfold : g_conv_unfold).
 
@@ -250,8 +249,8 @@ Section Inline.
   Qed.
 
   Lemma inst_equations_inline_ih Ξ Ξ' Γ ξ :
-    inst_equations_ (λ Γ u v, Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧) Γ ξ Ξ' →
-    inst_equations Σᵗ ⟦ Ξ ⟧e ⟦ Γ ⟧* ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
+    inst_equations_ (λ Γ u v, [] ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧) Γ ξ Ξ' →
+    inst_equations [] ⟦ Ξ ⟧e ⟦ Γ ⟧* ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
   Proof.
     intros ih.
     intros x rl hx.
@@ -280,7 +279,7 @@ Section Inline.
 
   Lemma conv_inline Ξ Γ u v :
     Σ ;; Ξ | Γ ⊢ u ≡ v →
-    Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
+    [] ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
   Proof.
     intros h.
     induction h using conversion_ind.
@@ -309,13 +308,13 @@ Section Inline.
   Definition g_type :=
     ∀ c Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
-      Σᵗ ;; ⟦ Ξ' ⟧e | ∙ ⊢ κ c : ⟦ A ⟧.
+      [] ;; ⟦ Ξ' ⟧e | ∙ ⊢ κ c : ⟦ A ⟧.
 
   Context (h_type : g_type).
 
   Lemma inst_typing_inline Ξ Γ ξ Ξ' :
-    inst_typing_ Σ Ξ (λ Γ t A, Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧) Γ ξ Ξ' →
-    inst_typing Σᵗ ⟦ Ξ ⟧e ⟦ Γ ⟧* ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
+    inst_typing_ Σ Ξ (λ Γ t A, [] ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧) Γ ξ Ξ' →
+    inst_typing [] ⟦ Ξ ⟧e ⟦ Γ ⟧* ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
   Proof.
     intros (he & ih & e).
     split. 2: split.
@@ -335,7 +334,7 @@ Section Inline.
   Lemma typing_inline Ξ Γ t A :
     gwf Σ →
     Σ ;; Ξ | Γ ⊢ t : A →
-    Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
+    [] ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧.
   Proof.
     intros hΣ h.
     induction h using typing_ind.
@@ -528,7 +527,7 @@ Qed.
 
 Lemma gwf_conv_unfold Σ :
   gwf Σ →
-  g_conv_unfold Σ ⟦ Σ ⟧κ [].
+  g_conv_unfold Σ ⟦ Σ ⟧κ.
 Proof.
   intros h c Ξ' A t ec.
   induction h as [ | c' ??????? ih ].
@@ -551,7 +550,7 @@ Qed.
 
 Lemma gwf_type Σ :
   gwf Σ →
-  g_type Σ ⟦ Σ ⟧κ [].
+  g_type Σ ⟦ Σ ⟧κ.
 Proof.
   intros h.
   induction h as [ | c' ??????? ih ].
