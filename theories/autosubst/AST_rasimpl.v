@@ -1,4 +1,4 @@
-(** GAST support for rasimpl **)
+(** GAST support for rasimpl *)
 
 From Stdlib Require Import Utf8 List.
 From LocalComp.autosubst
@@ -38,7 +38,7 @@ with unquote_term q :=
   | qsubst s t => subst_term (unquote_subst s) (unquote_term t)
   end.
 
-(** Evaluation **)
+(** Evaluation *)
 
 Inductive eval_subst_comp_view : quoted_subst → quoted_subst → Type :=
 | es_id_l s : eval_subst_comp_view qsubst_id s
@@ -216,7 +216,7 @@ with eval_term (t : quoted_term) : quoted_term :=
   | _ => t
   end.
 
-(** Correctness **)
+(** Correctness *)
 
 Lemma apply_subst_sound :
   ∀ s n,
@@ -397,7 +397,7 @@ Proof.
   }
 Qed.
 
-(** Quoting **)
+(** Quoting *)
 
 Ltac quote_subst s :=
   lazymatch s with
@@ -445,7 +445,7 @@ with quote_term t :=
   | _ => constr:(qatom t)
   end.
 
-(** Unfoldings **)
+(** Unfoldings *)
 
 #[export] Hint Unfold
   VarInstance_term Ren_term Up_term_term Up_term up_term Subst_term
@@ -513,7 +513,7 @@ Proof.
   apply autosubst_simpl_term, _.
 Qed.
 
-(** Triggers **)
+(** Triggers *)
 
 #[export] Hint Rewrite -> autosubst_simpl_term_ren : asimpl.
 #[export] Hint Rewrite -> autosubst_simpl_term_subst : asimpl.

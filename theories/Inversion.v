@@ -1,4 +1,4 @@
-(** Inversion of typing **)
+(** Inversion of typing *)
 
 From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
@@ -98,19 +98,17 @@ Lemma type_const_inv Σ Ξ Γ c ξ T :
     Σ c = Some (Def Ξ' A t) ∧
     inst_typing Σ Ξ Γ ξ Ξ' ∧
     closed A = true ∧
-    Σ ;; Ξ | Γ ⊢ einst ξ A ≡ T.
+    Σ ;; Ξ | Γ ⊢ inst ξ A ≡ T.
 Proof.
   intros h. invtac h.
 Qed.
 
-Lemma type_assm_inv Σ Ξ Γ M x T :
-  Σ ;; Ξ | Γ ⊢ assm M x : T →
-  ∃ E ξ Ξ' Δ R A,
-    ectx_get Ξ M = Some (E, ξ) ∧
-    Σ E = Some (Ext Ξ' Δ R) ∧
-    nth_error Δ x = Some A ∧
-    closed_eargs ξ = true ∧
-    Σ ;; Ξ | Γ ⊢ delocal M (einst ξ (plus (S x) ⋅ A)) ≡ T.
+Lemma type_assm_inv Σ Ξ Γ x T :
+  Σ ;; Ξ | Γ ⊢ assm x : T →
+  ∃ A,
+    ictx_get Ξ x = Some (Assm A) ∧
+    closed A = true ∧
+    Σ ;; Ξ | Γ ⊢ A ≡ T.
 Proof.
   intros h. invtac h.
 Qed.
@@ -125,6 +123,6 @@ Ltac ttinv h h' :=
     | lam _ _ => eapply type_lam_inv in h as h'
     | app _ _ => eapply type_app_inv in h as h'
     | const _ _ => eapply type_const_inv in h as h'
-    | assm _ _ => eapply type_assm_inv in h as h'
+    | assm _ => eapply type_assm_inv in h as h'
     end
   end.

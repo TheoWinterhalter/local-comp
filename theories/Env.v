@@ -1,11 +1,11 @@
-(** Environments
+(** * Environments
 
   We have three kinds of environments:
   - Σ the global signature, containing definitions and interfaces.
   - Ξ the extension environment.
   - Γ the local environment.
 
-**)
+*)
 
 From Stdlib Require Import Utf8 String List Arith.
 From LocalComp.autosubst Require Import AST SubstNotations RAsimpl AST_rasimpl.
@@ -13,36 +13,10 @@ From LocalComp Require Import Util BasicAST.
 
 Import ListNotations.
 
-(** Local environment, a list of types **)
+(** Local environment, a list of types *)
 Definition ctx := list term.
 
-(** Extension arguments **)
-Definition eargs := list (list term).
-
-(** Instance declaration
-
-  It is given by a global reference (that should point to an extension)
-  and by arguments for the corresponding extension.
-
-**)
-Definition idecl : Type := gref * eargs.
-
-(** Extension environment **)
-Definition ectx := list idecl.
-
-(** Access in an extension environment
-
-  This is special because we use de Bruijn levels so we need to perform some
-  simple arithmetic. We also avoid returning [Some] for de Bruijn levels that go
-  too far.
-
-**)
-
-Definition ectx_get (Ξ : ectx) (M : eref) :=
-  if length Ξ <=? M then None
-  else nth_error Ξ (length Ξ - (S M)).
-
-(** * Custom computation rule
+(** ** Custom computation rule
 
   We consider them as definitional equalities which might be nonlinear.
   For implementation purposes however, it's better to have a linear version
@@ -62,7 +36,7 @@ Definition ectx_get (Ξ : ectx) (M : eref) :=
   This represents the following (typed) definitional equality:
   [Θ ⊢ l <[ρ] ≡ r : A]
 
-**)
+*)
 Record crule := {
   cr_env : ctx ;
   cr_pat : term ;
@@ -86,10 +60,44 @@ Definition crule_eq rule : equation := {|
   eq_typ := rule.(cr_typ)
 |}.
 
-(** Global declaration **)
+(** Interface declaration
+
+  An interface interleaves assumptions (or symbols) and computation rules.
+
+*)
+Inductive idecl :=
+| Assm (A : term)
+| Comp (rl : crule).
+
+(** Interface *)
+Definition ictx := list idecl.
+
+(** Instances 
+
+  It is given by a list of terms corresponding to assumptions of an interface.
+  Because an interface also contains rules, we opt for the use of [None] in
+  the corresponding positions.
+
+  Maybe an association list would make more sense.
+
+*)
+Definition instance := list (option term).
+
+(** Access in an interface
+
+  This is special because we use de Bruijn levels so we need to perform some
+  simple arithmetic. We also avoid returning [Some] for de Bruijn levels that go
+  too far.
+
+*)
+
+Definition ictx_get (Ξ : ictx) (x : aref) :=
+  if length Ξ <=? x then None
+  else nth_error Ξ (length Ξ - (S x)).
+
+(** Global declaration *)
 Inductive gdecl :=
-| Ext (Ξ : ectx) (Δ : ctx) (R : list crule)
-| Def (Ξ : ectx) (A : term) (t : term).
+| Def (Ξ : ictx) (A : term) (t : term).
 
 Definition gctx : Type := list (gref * gdecl).
 
@@ -108,7 +116,7 @@ Definition extends (Σ Σ' : gctx) :=
 
 Notation "a ⊑ b" := (extends a b) (at level 70, b at next level).
 
-(** Notations **)
+(** ** Notations *)
 
 Notation "'∙'" :=
   (@nil term).

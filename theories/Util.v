@@ -50,7 +50,7 @@ Ltac wlog_iff_using tac :=
 Ltac wlog_iff :=
   wlog_iff_using firstorder.
 
-(** Relations **)
+(** Relations *)
 
 Lemma rt_step_ind A B R R' f x y :
   (∀ x y, R x y → clos_refl_trans B R' (f x) (f y)) →
@@ -93,7 +93,7 @@ Proof.
   auto.
 Qed.
 
-(** [All] predicate **)
+(** [All] predicate *)
 
 Inductive All {A} (P : A → Type) : list A → Type :=
 | All_nil : All P []
@@ -241,7 +241,7 @@ Proof.
   apply Forall2_diag. rewrite Forall_forall. auto.
 Qed.
 
-(** [OnOne2] predicate **)
+(** [OnOne2] predicate *)
 
 Inductive OnOne2 {A} (R : A → A → Prop) : list A → list A → Prop :=
 | OnOne2_hd a a' l : R a a' → OnOne2 R (a :: l) (a' :: l)
@@ -317,7 +317,7 @@ Proof.
   - constructor. inversion hf. intuition auto.
 Qed.
 
-(** Some mini [congruence] **)
+(** Some mini [congruence] *)
 
 Ltac eqtwice :=
   match goal with
@@ -325,7 +325,7 @@ Ltac eqtwice :=
     rewrite e2 in e1 ; inversion e1 ; clear e1
   end.
 
-(** On [nth_error] **)
+(** On [nth_error] *)
 
 Lemma nth_error_Some_alt A (l : list A) n x :
   nth_error l n = Some x →
@@ -335,7 +335,7 @@ Proof.
   rewrite <- nth_error_Some. congruence.
 Qed.
 
-(** [option] util **)
+(** [option] util *)
 
 Definition onSome [A] (P : A → Prop) (o : option A) : Prop :=
   match o with
@@ -360,7 +360,207 @@ Proof.
   - cbn. reflexivity.
 Qed.
 
-(** [fold_left] util **)
+Definition onSomeb [A] (P : A → bool) (o : option A) : bool :=
+  match o with
+  | Some a => P a
+  | None => true
+  end.
+
+Inductive OnSome [A] (P : A → Prop) : option A → Prop :=
+| OnSome_None : OnSome P None
+| OnSome_Some a : P a → OnSome P (Some a).
+
+Lemma OnSome_onSome A P o :
+  @OnSome A P o ↔ onSome P o.
+Proof.
+  split.
+  - destruct 1. all: cbn. all: auto.
+  - destruct o. all: cbn. all: intros ; constructor ; auto.
+Qed.
+
+Definition onSomeT [A] (P : A → Type) (o : option A) : Type :=
+  match o with
+  | Some a => P a
+  | None => unit
+  end.
+
+Lemma onSomeT_impl A P Q o :
+  (∀ a, P a → Q a) →
+  @onSomeT A P o →
+  onSomeT Q o.
+Proof.
+  intros hPQ h.
+  destruct o. all: cbn in *. all: auto.
+Qed.
+
+Lemma onSomeT_prod A P Q o :
+  @onSomeT A P o →
+  onSomeT Q o →
+  onSomeT (λ x, P x * Q x)%type o.
+Proof.
+  destruct o. all: cbn. all: auto.
+Qed.
+
+Lemma onSomeb_onSome A P o :
+  @onSomeb A P o = true ↔ onSome (λ x, P x = true) o.
+Proof.
+  split. all: destruct o. all: cbn. all: auto.
+Qed.
+
+Lemma onSome_onSomeT A P o :
+  @onSome A P o →
+  onSomeT P o.
+Proof.
+  destruct o. all: cbn.
+  - auto.
+  - intros. constructor.
+Qed.
+
+Lemma onSomeT_onSome A (P : _ → Prop) o :
+  @onSomeT A P o →
+  onSome P o.
+Proof.
+  destruct o. all: cbn.
+  - auto.
+  - intros. constructor.
+Qed.
+
+Lemma onSomeT_map [A B] (f : A → B) P o :
+  onSomeT (λ x, P (f x)) o → 
+  onSomeT P (option_map f o).
+Proof.
+  intros h. destruct o. all: cbn in *. all: auto.
+Qed.
+
+Inductive option_rel [A B] (R : A → B → Prop) : option A → option B → Prop :=
+| option_none : option_rel R None None
+| option_some x y : R x y → option_rel R (Some x) (Some y).
+
+Lemma option_rel_impl [A B] (R R' : A → B → Prop) x y :
+  (∀ x y, R x y → R' x y) →
+  option_rel R x y →
+  option_rel R' x y.
+Proof.
+  intros hinc h.
+  destruct h.
+  - constructor.
+  - constructor. eauto.
+Qed.
+
+Lemma option_rel_map_l A B C (f : A → B) (R : B → C → Prop) o o' :
+  option_rel R (option_map f o) o' ↔ option_rel (λ x y, R (f x) y) o o'.
+Proof.
+  split.
+  - intro h. remember (option_map f o) as o'' eqn: e.
+    induction h in o, e |- *.
+    + destruct o. 1: discriminate.
+      constructor.
+    + destruct o. 2: discriminate.
+      cbn in e. inversion e. subst.
+      constructor. assumption.
+  - intro h. induction h. 1: constructor.
+    cbn. constructor. assumption.
+Qed.
+
+Lemma option_rel_flip A B R a b :
+  @option_rel A B R a b →
+  option_rel (λ b a, R a b) b a.
+Proof.
+  intro h. induction h. all: constructor ; auto.
+Qed.
+
+Lemma option_rel_map_r A B C (f : A → B) R (o : option C) o' :
+  option_rel R o (option_map f o') ↔ option_rel (λ x y, R x (f y)) o o'.
+Proof.
+  split.
+  - intro h. apply option_rel_flip in h. rewrite option_rel_map_l in h.
+    apply option_rel_flip. assumption.
+  - intro h. apply option_rel_flip in h.
+    apply option_rel_flip. rewrite option_rel_map_l. assumption.
+Qed.
+
+Lemma option_rel_diag [A] (R : A → A → Prop) o :
+  OnSome (λ x, R x x) o →
+  option_rel R o o.
+Proof.
+  intros h. destruct h. all: constructor ; auto.
+Qed.
+
+#[export] Instance Reflexive_option_rel A (R : relation A) :
+  Reflexive R →
+  Reflexive (option_rel R).
+Proof.
+  intros hrefl. intros o.
+  apply option_rel_diag. destruct o. all: constructor ; eauto.
+Qed.
+
+Lemma option_map_option_map [A B C] (f : A → B) (g : B → C) o :
+  option_map g (option_map f o) = option_map (λ x, g (f x)) o.
+Proof.
+  destruct o. all: reflexivity.
+Qed.
+
+Lemma option_map_ext [A B] (f g : A → B) o :
+  (∀ a, f a = g a) →
+  option_map f o = option_map g o.
+Proof.
+  intros e.
+  destruct o. 2: reflexivity.
+  cbn. f_equal. auto.
+Qed.
+
+Lemma option_map_ext_onSomeT [A B] (f g : A → B) o :
+  onSomeT (λ x, f x = g x) o →
+  option_map f o = option_map g o.
+Proof.
+  destruct o. all: cbn. all: congruence.
+Qed.
+
+Lemma option_map_id [A] o :
+  @option_map A A id o = o.
+Proof.
+  destruct o. all: reflexivity.
+Qed.
+
+Lemma option_map_id_onSomeT [A] f (o : option A) :
+  onSomeT (λ x, f x = x) o →
+  option_map f o = o.
+Proof.
+  intro h.
+  rewrite <- option_map_id.
+  apply option_map_ext_onSomeT. assumption.
+Qed.
+
+Inductive some_rel [A B] (R : A → B → Prop) : option A → option B → Prop :=
+| some_rel_some a b : R a b → some_rel R (Some a) (Some b).
+
+Lemma option_rel_rst_some_rel A (R : relation A) a b :
+  option_rel R a b →
+  clos_refl_sym_trans _ (some_rel R) a b.
+Proof.
+  intros h. destruct h.
+  - apply rst_refl.
+  - apply rst_step. constructor. assumption.
+Qed.
+
+Lemma some_rel_rst_comm A R x y :
+  some_rel (clos_refl_sym_trans A R) x y →
+  clos_refl_sym_trans _ (some_rel R) x y.
+Proof.
+  intros h. destruct h.
+  eapply rst_step_ind. 2: eassumption.
+  intros. apply rst_step. constructor. assumption.
+Qed.
+
+Lemma some_rel_option_rel A B (R : A → B → Prop) a b :
+  some_rel R a b →
+  option_rel R a b.
+Proof.
+  intro h. destruct h.
+  constructor. assumption.
+Qed.
+
+(** [fold_left] util *)
 
 Lemma fold_left_map A B C (f : A → B → A) l a g :
   fold_left f (map g l) a = fold_left (λ a (c : C), f a (g c)) l a.
