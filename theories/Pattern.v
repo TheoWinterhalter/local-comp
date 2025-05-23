@@ -267,6 +267,17 @@ Section Red.
     destruct p. cbn. discriminate.
   Qed.
 
+  Lemma pattern_rules_lhs_no_const x rl σ c ξ :
+    ictx_get Ξ x = Some (Comp rl) →
+    let lhs := rl.(cr_pat) in
+    lhs <[ σ ] ≠ const c ξ.
+  Proof.
+    intros hx lhs.
+    eapply hpr in hx as hn. fold lhs in hn. clearbody lhs. 
+    destruct hn as [p ->].
+    destruct p. cbn. discriminate.
+  Qed.
+
   Lemma triangle Γ t u :
     Γ ⊢ t ⇒ u →
     ∃ tᵨ, Γ ⊢ t ⇒ᵨ tᵨ ∧ Γ ⊢ u ⇒ tᵨ.
@@ -332,7 +343,7 @@ Section Red.
       2:{ discriminate. }
       subst. f_equal. 1: f_equal. all: eauto.
     - inversion hv.
-      2: admit.
+      2:{ exfalso. eapply pattern_rules_lhs_no_const. all: eassumption. }
       2:{ (* Wrong, need a check *) admit. }
       subst. f_equal.
       + admit.
@@ -348,7 +359,7 @@ Section Red.
       subst. f_equal. all: eauto.
     - inversion hv.
       1:{ (* Same, make sure we have constraints *) admit. }
-      1: admit.
+      1:{ exfalso. eapply pattern_rules_lhs_no_const. all: eassumption. }
       subst. f_equal.
       admit.
   Admitted.
