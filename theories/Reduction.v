@@ -46,14 +46,12 @@ Section Red.
       closed t = true →
       Γ ⊢ const c ξ ↦ inst ξ t
 
-  | red_rule E Ξ' Δ R M ξ' n rule σ :
-      Σ E = Some (Ext Ξ' Δ R) →
-      ictx_get Ξ M = Some (E, ξ') →
-      nth_error R n = Some rule →
-      let δ := length Δ in
-      let lhs := rlhs M ξ' δ rule in
-      let rhs := rrhs M ξ' δ rule in
-      let k := length rule.(cr_env) in
+  | red_rule n rl σ :
+      ictx_get Ξ n = Some (Comp rl) →
+      let Θ := rl.(cr_env) in
+      let k := length Θ in
+      let lhs := rl.(cr_pat) in
+      let rhs := rl.(cr_rep) in
       scoped k lhs = true →
       scoped k rhs = true →
       Γ ⊢ lhs <[ σ ] ↦ rhs <[ σ ]
@@ -85,7 +83,7 @@ Section Red.
       Γ ⊢ app u v ↦ app u v'
 
   | red_const c ξ ξ' :
-      OnOne2 (OnOne2 (λ u v, Γ ⊢ u ↦ v)) ξ ξ' →
+      OnOne2 (some_rel (λ u v, Γ ⊢ u ↦ v)) ξ ξ' →
       Γ ⊢ const c ξ ↦ const c ξ'
 
   where "Γ ⊢ u ↦ v" := (red1 Γ u v).
@@ -99,14 +97,12 @@ Section Red.
         closed t = true →
         P Γ (const c ξ) (inst ξ t)
       ) →
-      (∀ Γ E Ξ' Δ R M ξ' n rule σ,
-        Σ E = Some (Ext Ξ' Δ R) →
-        ictx_get Ξ M = Some (E, ξ') →
-        nth_error R n = Some rule →
-        let δ := Datatypes.length Δ in
-        let lhs := rlhs M ξ' δ rule in
-        let rhs := rrhs M ξ' δ rule in
-        let k := length rule.(cr_env) in
+      (∀ Γ n rl σ,
+        ictx_get Ξ n = Some (Comp rl) →
+        let Θ := rl.(cr_env) in
+        let k := length Θ in
+        let lhs := rl.(cr_pat) in
+        let rhs := rl.(cr_rep) in
         scoped k lhs = true →
         scoped k rhs = true →
         P Γ (lhs <[ σ]) (rhs <[ σ])
@@ -122,8 +118,8 @@ Section Red.
       (∀ Γ u v u', Γ ⊢ u ↦ u' → P Γ u u' → P Γ (app u v) (app u' v)) →
       (∀ Γ u v v', Γ ⊢ v ↦ v' → P Γ v v' → P Γ (app u v) (app u v')) →
       (∀ Γ c ξ ξ',
-        OnOne2 (OnOne2 (λ u v : term, Γ ⊢ u ↦ v)) ξ ξ' →
-        OnOne2 (OnOne2 (P Γ)) ξ ξ' →
+        OnOne2 (some_rel (λ u v : term, Γ ⊢ u ↦ v)) ξ ξ' →
+        OnOne2 (some_rel (P Γ)) ξ ξ' →
         P Γ (const c ξ) (const c ξ')
       ) →
       ∀ Γ u v, Γ ⊢ u ↦ v → P Γ u v.
@@ -134,11 +130,8 @@ Section Red.
     10:{
       eapply hconst. 1: assumption.
       revert ξ ξ' H. fix aux1 3.
-      intros ξ ξ' h. destruct h as [ σ σ' ξ h | σ ξ ξ' h ].
-      - constructor. revert σ σ' h. fix aux2 3.
-        intros σ σ' h. destruct h as [ u v σ h | u σ σ' h ].
-        + constructor. auto.
-        + constructor. auto.
+      intros ξ ξ' h. destruct h as [ o o' ξ h | o ξ ξ' h ].
+      - constructor. destruct h. constructor. auto.
       - constructor. auto.
     }
     all: match goal with h : _ |- _ => eapply h end.
@@ -288,13 +281,13 @@ Proof.
 Qed.
 
 Lemma equiv_const Σ Ξ Γ c ξ ξ' :
-  Forall2 (Forall2 (λ u v, Σ ;; Ξ | Γ ⊢ u ↮ v)) ξ ξ' →
+  Forall2 (option_rel (λ u v, Σ ;; Ξ | Γ ⊢ u ↮ v)) ξ ξ' →
   Σ ;; Ξ | Γ ⊢ const c ξ ↮ const c ξ'.
 Proof.
   intros hξ.
-  eapply Forall2_impl in hξ. 2: eapply Forall2_rst_OnOne2.
+  eapply Forall2_impl in hξ. 2: eapply option_rel_rst_some_rel.
   eapply Forall2_impl in hξ.
-  2:{ eapply clos_refl_sym_trans_incl. intros ??. eapply OnOne2_rst_comm. }
+  2:{ eapply clos_refl_sym_trans_incl. intros ??. eapply some_rel_rst_comm. }
   eapply Forall2_impl in hξ. 2: eapply Operators_Properties.clos_rst_idempotent.
   eapply Forall2_rst_OnOne2 in hξ.
   eapply clos_refl_sym_trans_incl in hξ.
@@ -328,33 +321,29 @@ Qed.
 
 Lemma inst_typing_Forall_typed Σ Ξ Γ ξ Ξ' :
   inst_typing Σ Ξ Γ ξ Ξ' →
-  Forall (Forall (λ t, ∃ A, Σ ;; Ξ | Γ ⊢ t : A)) ξ.
+  Forall (onSome (λ t, ∃ A, Σ ;; Ξ | Γ ⊢ t : A)) ξ.
 Proof.
-  intros (_ & h & e).
-  rewrite Forall_forall. intros σ hσ.
-  rewrite Forall_forall. intros t ht.
-  apply In_nth_error in hσ as [n hn].
-  apply In_nth_error in ht as [m hm].
+  intros (heq & h & e).
+  rewrite Forall_forall. intros o ho.
+  apply In_nth_error in ho as [x hx].
+  destruct o as [t |]. 2: constructor.
+  cbn.
   unfold inst_iget in h.
-  specialize (h n).
-  destruct ictx_get as [[E ξ']|] eqn: eg.
-  2:{ unfold ictx_get in eg. destruct (_ <=? _) eqn: en.
-    - rewrite Nat.leb_le in en.
-      rewrite <- e in en.
-      rewrite <- nth_error_None in en.
-      congruence.
+  specialize (h x).
+  destruct ictx_get as [[]|] eqn: eg.
+  3:{
+    unfold ictx_get in eg. destruct (_ <=? _) eqn: e1.
+    - rewrite Nat.leb_le in e1. rewrite <- e in e1.
+      rewrite <- nth_error_None in e1. congruence.
     - rewrite nth_error_None in eg.
-      rewrite Nat.leb_gt in en.
-      lia.
+      rewrite Nat.leb_gt in e1. lia.
+  }
+  2:{
+    specialize (heq _ _ eg). cbn in heq. intuition congruence.
   }
   specialize h with (1 := eq_refl).
-  destruct h as (? & ? & Δ & ? & ? & en & h).
-  rewrite hn in en. cbn in en.
-  destruct (nth_error Δ m) eqn: em.
-  2:{ rewrite nth_error_None in em. apply nth_error_Some_alt in hm. lia. }
-  specialize h with (1 := em).
-  unfold iget in h. rewrite hn, hm in h.
-  eexists. eassumption.
+  unfold iget in h. rewrite hx in h. 
+  eexists. intuition eauto.
 Qed.
 
 (* Definition factor_rules (Σ : gctx) Ξ :=
@@ -378,7 +367,7 @@ Proof.
   - econstructor. all: eassumption.
   - constructor. apply OnOne2_refl_Forall2. 1: exact _.
     eapply OnOne2_impl.
-    + apply OnOne2_refl_Forall2. exact _.
+    + intros ??. apply some_rel_option_rel.
     + assumption.
 Qed.
 
@@ -455,12 +444,9 @@ Abort.
 *)
 
 Definition no_pi_lhs (Σ : gctx) Ξ :=
-  ∀ M E ξ' Ξ' Δ R n rule σ A B,
-    ictx_get Ξ M = Some (E, ξ') →
-    Σ E = Some (Ext Ξ' Δ R) →
-    nth_error R n = Some rule →
-    let δ := length Δ in
-    let lhs := rlhs M ξ' δ rule in
+  ∀ x rl A B σ,
+    ictx_get Ξ x = Some (Comp rl) →
+    let lhs := rl.(cr_pat) in
     Pi A B ≠ lhs <[ σ ].
 
 #[export] Instance Reflexive_red Σ Ξ Γ :

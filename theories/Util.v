@@ -486,6 +486,14 @@ Proof.
   intros h. destruct h. all: constructor ; auto.
 Qed.
 
+#[export] Instance Reflexive_option_rel A (R : relation A) :
+  Reflexive R →
+  Reflexive (option_rel R).
+Proof.
+  intros hrefl. intros o.
+  apply option_rel_diag. destruct o. all: constructor ; eauto.
+Qed.
+
 Lemma option_map_option_map [A B C] (f : A → B) (g : B → C) o :
   option_map g (option_map f o) = option_map (λ x, g (f x)) o.
 Proof.
@@ -521,6 +529,35 @@ Proof.
   intro h.
   rewrite <- option_map_id.
   apply option_map_ext_onSomeT. assumption.
+Qed.
+
+Inductive some_rel [A B] (R : A → B → Prop) : option A → option B → Prop :=
+| some_rel_some a b : R a b → some_rel R (Some a) (Some b).
+
+Lemma option_rel_rst_some_rel A (R : relation A) a b :
+  option_rel R a b →
+  clos_refl_sym_trans _ (some_rel R) a b.
+Proof.
+  intros h. destruct h.
+  - apply rst_refl.
+  - apply rst_step. constructor. assumption.
+Qed.
+
+Lemma some_rel_rst_comm A R x y :
+  some_rel (clos_refl_sym_trans A R) x y →
+  clos_refl_sym_trans _ (some_rel R) x y.
+Proof.
+  intros h. destruct h.
+  eapply rst_step_ind. 2: eassumption.
+  intros. apply rst_step. constructor. assumption.
+Qed.
+
+Lemma some_rel_option_rel A B (R : A → B → Prop) a b :
+  some_rel R a b →
+  option_rel R a b.
+Proof.
+  intro h. destruct h.
+  constructor. assumption.
 Qed.
 
 (** [fold_left] util *)

@@ -26,46 +26,24 @@ Set Default Goal Selector "!".
 Require Import Equations.Prop.DepElim.
 
 Inductive pat :=
-| passm (M : eref) (x : aref).
+| passm (x : aref).
 
 Definition pat_to_term p :=
   match p with
-  | passm M x => assm M x
+  | passm x => assm x
   end.
 
-(* TODO UPSTREAM *)
-Definition get_rule (Σ : gctx) Ξ M n : option crule :=
-  match ictx_get Ξ M with
-  | Some (E, ξ') =>
-    match Σ E with
-    | Some (Ext Ξ' Δ R) =>
-      nth_error R n
-    | _ => None
-    end
-  | _ => None
-  end.
-
-Lemma get_get_rule (Σ : gctx) Ξ M n E ξ' Ξ' Δ R rl :
-  ictx_get Ξ M = Some (E, ξ') →
-  Σ E = Some (Ext Ξ' Δ R) →
-  nth_error R n = Some rl →
-  get_rule Σ Ξ M n = Some rl.
-Proof.
-  intros hM hE hn.
-  unfold get_rule. rewrite hM, hE. assumption.
-Qed.
-
-Definition pattern_rules Σ Ξ :=
-  ∀ M n rl,
-    get_rule Σ Ξ M n = Some rl →
+Definition pattern_rules Ξ :=
+  ∀ n rl,
+    ictx_get Ξ n = Some (Comp rl) →
     ∃ p, rl.(cr_pat) = pat_to_term p.
 
-Definition triangle_citerion Σ Ξ :=
-  ∀ M N m n rl1 rl2,
-    get_rule Σ Ξ M m = Some rl1 →
-    get_rule Σ Ξ N n = Some rl2 →
+Definition triangle_citerion Ξ :=
+  ∀ m n rl1 rl2,
+    ictx_get Ξ m = Some (Comp rl1) →
+    ictx_get Ξ n = Some (Comp rl2) →
     rl1.(cr_pat) = rl2.(cr_pat) →
-    M = N ∧ m = n.
+    m = n.
 
 (** ** Parallel reduction *)
 
@@ -90,17 +68,15 @@ Section Red.
       inst_equations Σ Ξ Γ ξ Ξ' →
       closed t = true →
       ∙ ⊢ t ⇒ t' →
-      Forall2 (Forall2 (pred Γ)) ξ ξ' →
+      Forall2 (option_rel (pred Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ inst ξ' t'
 
-  | pred_rule E Ξ' Δ R M ξ' n rule σ σ' :
-      Σ E = Some (Ext Ξ' Δ R) →
-      ictx_get Ξ M = Some (E, ξ') →
-      nth_error R n = Some rule →
-      let δ := length Δ in
-      let lhs := rlhs M ξ' δ rule in
-      let rhs := rrhs M ξ' δ rule in
-      let k := length rule.(cr_env) in
+  | pred_rule n rl σ σ' :
+      ictx_get Ξ n = Some (Comp rl) →
+      let Θ := rl.(cr_env) in
+      let k := length Θ in
+      let lhs := rl.(cr_pat) in
+      let rhs := rl.(cr_rep) in
       scoped k lhs = true →
       scoped k rhs = true →
       (∀ m, Γ ⊢ σ m ⇒ σ' m) →
@@ -124,7 +100,7 @@ Section Red.
       Γ ⊢ app u v ⇒ app u' v'
 
   | pred_const c ξ ξ' :
-      Forall2 (Forall2 (pred Γ)) ξ ξ' →
+      Forall2 (option_rel (pred Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ const c ξ'
 
   where "Γ ⊢ u ⇒ v" := (pred Γ u v).
@@ -144,22 +120,20 @@ Section Red.
         closed t = true →
         ∙ ⊢ t ⇒ t' →
         P ∙ t t' →
-        Forall2 (Forall2 (pred Γ)) ξ ξ' →
-        Forall2 (Forall2 (P Γ)) ξ ξ' →
+        Forall2 (option_rel (pred Γ)) ξ ξ' →
+        Forall2 (option_rel (P Γ)) ξ ξ' →
         P Γ (const c ξ) (inst ξ' t')
       ) →
-      (∀ Γ E Ξ' Δ R M ξ' n rule σ σ',
-        Σ E = Some (Ext Ξ' Δ R) →
-        ictx_get Ξ M = Some (E, ξ') →
-        nth_error R n = Some rule →
-        let δ := Datatypes.length Δ in
-        let lhs := rlhs M ξ' δ rule in
-        let rhs := rrhs M ξ' δ rule in
-        let k := Datatypes.length (cr_env rule) in
+      (∀ Γ n rl σ σ',
+        ictx_get Ξ n = Some (Comp rl) →
+        let Θ := rl.(cr_env) in
+        let k := length Θ in
+        let lhs := rl.(cr_pat) in
+        let rhs := rl.(cr_rep) in
         scoped k lhs = true →
         scoped k rhs = true →
-        (∀ m : nat, Γ ⊢ σ m ⇒ σ' m) →
-        (∀ m : nat, P Γ (σ m) (σ' m)) →
+        (∀ m, Γ ⊢ σ m ⇒ σ' m) →
+        (∀ m, P Γ (σ m) (σ' m)) →
         P Γ (lhs <[ σ]) (rhs <[ σ'])
       ) →
       (∀ Γ A B A' B',
@@ -184,8 +158,8 @@ Section Red.
         P Γ (app u v) (app u' v')
       ) →
       (∀ Γ c ξ ξ',
-        Forall2 (Forall2 (pred Γ)) ξ ξ' →
-        Forall2 (Forall2 (P Γ)) ξ ξ' →
+        Forall2 (option_rel (pred Γ)) ξ ξ' →
+        Forall2 (option_rel (P Γ)) ξ ξ' →
         P Γ (const c ξ) (const c ξ')
       ) →
       ∀ Γ u v, Γ ⊢ u ⇒ v → P Γ u v.
@@ -196,25 +170,19 @@ Section Red.
     7:{
       eapply hconst. 1: assumption.
       revert ξ ξ' H. fix aux1 3.
-      intros ξ ξ' h. destruct h as [ | σ σ' ξ ξ' h ].
+      intros ξ ξ' h. destruct h as [ | o o' ξ ξ' h ].
       - constructor.
       - constructor. 2: eauto.
-        revert σ σ' h. fix aux2 3.
-        intros σ σ' h. destruct h as [ | u v σ σ' h ].
-        + constructor.
-        + constructor. all: auto.
+        destruct h. all: constructor ; auto.
     }
     2:{
       eapply hunf. 1-6: eauto.
       clear H0.
       revert ξ ξ' H2. fix aux1 3.
-      intros ξ ξ' hh. destruct hh as [ | σ σ' ξ ξ' hh ].
+      intros ξ ξ' hh. destruct hh as [ | o o' ξ ξ' hh ].
       - constructor.
       - constructor. 2: eauto.
-        revert σ σ' hh. fix aux2 3.
-        intros σ σ' hh. destruct hh as [ | u v σ σ' hh ].
-        + constructor.
-        + constructor. all: auto.
+        destruct hh. all: constructor ; eauto.
     }
     all: match goal with h : _ |- _ => eapply h end.
     all: eauto.
@@ -248,16 +216,17 @@ Section Red.
   | pred_max_unfold c ξ Ξ' A t ξ' t' :
       Σ c = Some (Def Ξ' A t) →
       ∙ ⊢ t ⇒ᵨ t' →
-      Forall2 (Forall2 (pred_max Γ)) ξ ξ' →
+      Forall2 (option_rel (pred_max Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ᵨ inst ξ' t'
 
-  | pred_max_rule E Ξ' Δ R M ξ' n rule σ σ' :
-      Σ E = Some (Ext Ξ' Δ R) →
-      ictx_get Ξ M = Some (E, ξ') →
-      nth_error R n = Some rule →
-      let δ := length Δ in
-      let lhs := rlhs M ξ' δ rule in
-      let rhs := rrhs M ξ' δ rule in
+  | pred_max_rule n rl σ σ' :
+      ictx_get Ξ n = Some (Comp rl) →
+      let Θ := rl.(cr_env) in
+      let k := length Θ in
+      let lhs := rl.(cr_pat) in
+      let rhs := rl.(cr_rep) in
+      scoped k lhs = true →
+      scoped k rhs = true →
       (∀ m, Γ ⊢ σ m ⇒ᵨ σ' m) →
       Γ ⊢ lhs <[ σ ] ⇒ᵨ rhs <[ σ' ]
 
@@ -280,41 +249,23 @@ Section Red.
       Γ ⊢ app u v ⇒ᵨ app u' v'
 
   | predmax_const c ξ ξ' :
-      Forall2 (Forall2 (pred_max Γ)) ξ ξ' →
+      Forall2 (option_rel (pred_max Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ᵨ const c ξ'
 
   where "Γ ⊢ u ⇒ᵨ v" := (pred_max Γ u v).
 
-  Context (hpr : pattern_rules Σ Ξ).
+  Context (hpr : pattern_rules Ξ).
 
-  Lemma pattern_rules_lhs_no_lam M E ξ' Ξ' Δ R n rl σ A b :
-    ictx_get Ξ M = Some (E, ξ') →
-    Σ E = Some (Ext Ξ' Δ R) →
-    nth_error R n = Some rl →
-    let δ := length Δ in
-    let lhs := rlhs M ξ' δ rl in
+  Lemma pattern_rules_lhs_no_lam x rl σ A b :
+    ictx_get Ξ x = Some (Comp rl) →
+    let lhs := rl.(cr_pat) in
     lhs <[ σ ] ≠ lam A b.
   Proof.
-    intros hM hE hn δ lhs e.
-    eapply get_get_rule in hn. 2,3: eassumption.
-    eapply hpr in hn as [p ep].
-    subst lhs. unfold rlhs in e.
-    set (t := rl.(cr_pat)) in *. clearbody t. subst t.
-    unfold rule_tm in e.
-    destruct p. cbn in e.
-    (* Problem here: there is no guarantee ξ' won't instantiate the pattern
-      We should probably enforce it somehow.
-
-
-      In fact, the problem is more complex: with the current setting, we can
-      never refer to symbols from other interfaces because they will always be
-      instantiated, so there is no telling what they become after ξ' has been
-      applied. In other words, my definition doesn't actually offer interleaving
-      or layering as I had intended.
-
-      A major change is likely needed.
-    *)
-  Abort.
+    intros hx lhs.
+    eapply hpr in hx as hn. fold lhs in hn. clearbody lhs. 
+    destruct hn as [p ->].
+    destruct p. cbn. discriminate.
+  Qed.
 
   Lemma triangle Γ t u :
     Γ ⊢ t ⇒ u →
@@ -323,7 +274,7 @@ Section Red.
     induction 1 as [
       ?????? ht iht hu ihu
     | ???????????? iht ? ihξ
-    | ????????????????????? ih
+    | ????????????? ih
     | ?????? ihA ? ihB
     | ?????? ihA ? iht
     | ? u ??? hu ihu ? ihv
