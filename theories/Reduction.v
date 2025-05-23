@@ -15,7 +15,7 @@ From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst Typing BasicMetaTheory
-  GScope Inversion.
+  GScope Inversion Confluence.
 From Stdlib Require Import Setoid Morphisms Relation_Definitions
   Relation_Operators.
 From Equations Require Import Equations.
@@ -146,7 +146,7 @@ Notation "Σ ;; Ξ | Γ ⊢ u ↦ v" :=
 
 (** Reflexive transitive closure *)
 
-Definition red Σ Ξ Γ := clos_refl_trans _ (λ u v, Σ ;; Ξ | Γ ⊢ u ↦ v).
+Definition red Σ Ξ Γ := clos_refl_trans (λ u v, Σ ;; Ξ | Γ ⊢ u ↦ v).
 
 Notation "Σ ;; Ξ | Γ ⊢ u ↦* v" :=
   (red Σ Ξ Γ u v)
@@ -199,22 +199,15 @@ Qed.
 (** Notion of confluence *)
 
 Definition red_confluent Σ Ξ :=
-  ∀ Γ t u v,
-    Σ ;; Ξ | Γ ⊢ t ↦* u →
-    Σ ;; Ξ | Γ ⊢ t ↦* v →
-    ∃ w,
-      Σ ;; Ξ | Γ ⊢ u ↦* w ∧
-      Σ ;; Ξ | Γ ⊢ v ↦* w.
+  ∀ Γ, confluent (red1 Σ Ξ Γ).
 
 (** Joinability *)
 
-Definition joinable Σ Ξ Γ u v :=
-  ∃ w,
-    Σ ;; Ξ | Γ ⊢ u ↦* w ∧
-    Σ ;; Ξ | Γ ⊢ v ↦* w.
+Definition red_joinable Σ Ξ Γ :=
+  joinable (red Σ Ξ Γ).
 
 Notation "Σ ;; Ξ | Γ ⊢ u ⋈ v" :=
-  (joinable Σ Ξ Γ u v)
+  (red_joinable Σ Ξ Γ u v)
   (at level 80, u, v at next level).
 
 (** Assuming confluence, equivalence is the same as joinability *)
