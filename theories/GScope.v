@@ -24,30 +24,25 @@ Lemma inst_typing_gscope_ih Σ Ξ Γ ξ Ξ' :
   gscope_instance Σ ξ.
 Proof.
   intros h ih.
-  rewrite Forall_forall. intros σ hσ.
-  rewrite Forall_forall. intros u hu.
-  eapply In_nth_error in hσ as [M hM].
-  eapply In_nth_error in hu as [x hx].
-  destruct ih as [_ [ih e]]. red in ih. specialize (ih M).
-  destruct (ictx_get Ξ' M) as [[E ξ'] |] eqn:e'.
-  2:{
+  rewrite Forall_forall. intros o ho.
+  eapply In_nth_error in ho as [x hx].
+  destruct o as [u |]. 2: constructor.
+  constructor.
+  destruct ih as [heq [ih e]]. red in ih. specialize (ih x).
+  destruct (ictx_get Ξ' x) as [[] |] eqn:e'.
+  3:{
     unfold ictx_get in e'. destruct (_ <=? _) eqn: e1.
     - rewrite Nat.leb_le in e1. rewrite <- e in e1.
       rewrite <- nth_error_None in e1. congruence.
     - rewrite nth_error_None in e'.
       rewrite Nat.leb_gt in e1. lia.
-  }
-  specialize ih with (1 := eq_refl).
-  destruct ih as (hξ' & Ξ'' & Δ & R & hE & eM & ih).
-  rewrite hM in eM. cbn in eM.
-  destruct (nth_error Δ x) eqn: eΔ.
-  2:{
-    rewrite nth_error_None in eΔ. rewrite <- eM in eΔ.
-    rewrite <- nth_error_None in eΔ. congruence.
-  }
-  specialize ih with (1 := eΔ).
-  unfold iget in ih. rewrite hM, hx in ih.
-  assumption.
+    }
+    2:{
+      specialize (heq _ _ e'). cbn in heq. intuition congruence.
+    }
+    specialize ih with (1 := eq_refl).
+    unfold iget in ih. rewrite hx in ih.
+    apply ih.
 Qed.
 
 Lemma typing_gscope Σ Ξ Γ t A :
@@ -70,14 +65,10 @@ Proof.
   destruct h as (he & ht & e).
   split. 2: split.
   - assumption.
-  - intros M E ξ' eM.
-    specialize (ht _ _ _ eM). destruct ht as (? & Ξ'' & Δ & R & eE & ho & ht).
+  - intros x A hx. specialize (ht _ _ hx) as [].
     split. 1: assumption.
-    eexists _,_,_. split. 1 : eassumption.
-    split. 1: assumption.
-    intros x A hx. specialize ht with (1 := hx).
-    unfold iget in *. destruct (nth_error ξ _) as [σ |] eqn:e1. 2: constructor.
-    destruct (nth_error σ _) eqn:e2. 2: constructor.
+    unfold iget in *. 
+    destruct (nth_error ξ _) as [[] |] eqn:e1. 2,3: constructor.
     eapply typing_gscope. eassumption.
   - assumption.
 Qed.
@@ -111,19 +102,18 @@ Proof.
     + constructor. all: assumption.
 Qed.
 
-Lemma equation_typing_gscope Σ Ξ Δ r :
-  equation_typing Σ Ξ Δ r →
+Lemma equation_typing_gscope Σ Ξ r :
+  equation_typing Σ Ξ r →
   gscope_equation Σ r.
 Proof.
   intros (hctx & [i hty] & hl & hr).
   eapply typing_gscope in hl as gl, hr as gr, hty.
   eapply wf_gscope in hctx.
-  rewrite Forall_app in hctx.
   unfold gscope_equation. intuition eauto.
 Qed.
 
-Lemma equations_typing_gscope Σ Ξ Δ R :
-  Forall (equation_typing Σ Ξ Δ) R →
+Lemma equations_typing_gscope Σ Ξ R :
+  Forall (equation_typing Σ Ξ) R →
   Forall (gscope_equation Σ) R.
 Proof.
   eauto using Forall_impl, equation_typing_gscope.

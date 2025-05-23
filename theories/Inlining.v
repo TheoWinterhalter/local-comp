@@ -44,15 +44,33 @@ Section Inline.
     | lam A t => lam ⟦ A ⟧ ⟦ t ⟧
     | app u v => app ⟦ u ⟧ ⟦ v ⟧
     | const c ξ => inst ⟦ ξ ⟧× (κ c)
-    | assm M x => assm M x
+    | assm x => assm x
     end
 
   where "⟦ t ⟧" := (inline t)
-  and "⟦ k ⟧×" := (map (map inline) k).
+  and "⟦ k ⟧×" := (map_instance inline k).
 
   Notation "⟦ l ⟧*" := (map inline l).
 
-  Notation "⟦ X ⟧e" := (map (λ '(E, ξ), (E, ⟦ ξ ⟧×)) X).
+  Definition inline_crule rule := {|
+    cr_env := ⟦ rule.(cr_env) ⟧* ;
+    cr_pat := ⟦ rule.(cr_pat) ⟧ ;
+    cr_sub := rule.(cr_sub) ;
+    cr_rep := ⟦ rule.(cr_rep) ⟧ ;
+    cr_typ := ⟦ rule.(cr_typ) ⟧
+  |}.
+
+  Notation "⟦ r ⟧r" := (inline_crule r).
+  Notation "⟦ R ⟧R" := (map inline_crule R).
+
+  Definition inline_idecl (d : idecl) :=
+    match d with
+    | Assm A => Assm ⟦ A ⟧
+    | Comp rl => Comp ⟦ rl ⟧r
+    end.
+
+  Notation "⟦ d ⟧d" := (inline_idecl d).
+  Notation "⟦ X ⟧e" := (map inline_idecl X).
 
   Definition gclosed :=
     ∀ c, closed (κ c) = true.
@@ -68,9 +86,9 @@ Section Inline.
     f_equal.
     rewrite !map_map. apply map_ext_All.
     eapply All_impl. 2: eassumption.
-    intros σ h.
-    rewrite !map_map. apply map_ext_All.
-    eapply All_impl. 2: eassumption.
+    intros o h.
+    rewrite !option_map_option_map. apply option_map_ext_onSomeT.
+    eapply onSomeT_impl. 2: eassumption.
     cbn. auto.
   Qed.
 
@@ -98,26 +116,23 @@ Section Inline.
       rewrite !map_map. apply map_ext_All.
       eapply All_impl. 2: eassumption.
       intros ? h.
-      rewrite !map_map. apply map_ext_All.
-      eapply All_impl. 2: eassumption.
+      rewrite !option_map_option_map. apply option_map_ext_onSomeT.
+      eapply onSomeT_impl. 2: eassumption.
       cbn. auto.
   Qed.
 
-  Lemma inline_iget ξ M x :
-    ⟦ iget ξ M x ⟧ = iget ⟦ ξ ⟧× M x.
+  Lemma inline_iget ξ x :
+    ⟦ iget ξ x ⟧ = iget ⟦ ξ ⟧× x.
   Proof.
     unfold iget. rewrite nth_error_map.
-    destruct nth_error as [σ |] eqn: e1. 2: reflexivity.
-    cbn. rewrite nth_error_map.
-    destruct (nth_error σ _) as [t|] eqn:e2. 2: reflexivity.
-    cbn. reflexivity.
+    destruct nth_error as [[] |]. all: reflexivity.
   Qed.
 
   Lemma inline_ren_instance ρ ξ :
     ⟦ ren_instance ρ ξ ⟧× = ren_instance ρ ⟦ ξ ⟧×.
   Proof.
     rewrite !map_map. apply map_ext. intro.
-    rewrite !map_map. apply map_ext. intro.
+    rewrite !option_map_option_map. apply option_map_ext. intro.
     apply inline_ren.
   Qed.
 
@@ -133,8 +148,8 @@ Section Inline.
     - cbn. rewrite inst_inst. f_equal.
       rewrite !map_map. apply map_ext_All.
       eapply All_impl. 2: eassumption.
-      intros σ hσ. rewrite !map_map. apply map_ext_All.
-      eapply All_impl. 2: eassumption.
+      intros o ho. rewrite !option_map_option_map. apply option_map_ext_onSomeT.
+      eapply onSomeT_impl. 2: eassumption.
       auto.
     - cbn. apply inline_iget.
   Qed.
@@ -147,90 +162,42 @@ Section Inline.
   Context (h_conv_unfold : g_conv_unfold).
 
   Lemma conv_ren_inst Ξ Γ Δ ρ ξ ξ' :
-    Forall2 (Forall2 (conversion Σ Ξ Δ)) ξ ξ' →
-    Forall2 (Forall2 (conversion Σ Ξ Γ)) (ren_instance ρ ξ) (ren_instance ρ ξ').
+    Forall2 (option_rel (conversion Σ Ξ Δ)) ξ ξ' →
+    Forall2 (option_rel (conversion Σ Ξ Γ)) (ren_instance ρ ξ) (ren_instance ρ ξ').
   Proof.
     intros h.
     apply Forall2_map_l, Forall2_map_r.
     eapply Forall2_impl. 2: eassumption.
-    intros. apply Forall2_map_l, Forall2_map_r.
-    eapply Forall2_impl. 2: eassumption.
+    intros. apply option_rel_map_l, option_rel_map_r.
+    eapply option_rel_impl. 2: eassumption.
     intros. eapply conv_ren. eassumption.
   Qed.
 
-  Definition inline_crule rule := {|
-    cr_env := ⟦ rule.(cr_env) ⟧* ;
-    cr_pat := ⟦ rule.(cr_pat) ⟧ ;
-    cr_sub := rule.(cr_sub) ;
-    cr_rep := ⟦ rule.(cr_rep) ⟧ ;
-    cr_typ := ⟦ rule.(cr_typ) ⟧
-  |}.
-
-  Notation "⟦ r ⟧r" := (inline_crule r).
-
-  Definition map_fst [A B C] (f : A → C) (p : A * B) :=
-    let '(a,b) := p in (f a, b).
-
-  Notation "⟦ R ⟧R" := (map inline_crule R).
-
-  Definition trans_gctx_ext :=
-    ∀ E Ξ' Δ R,
-      Σ E = Some (Ext Ξ' Δ R) →
-      Σᵗ E = Some (Ext ⟦ Ξ' ⟧e ⟦ Δ ⟧* ⟦ R ⟧R).
-
-  Context (hext : trans_gctx_ext).
-
-  Lemma ictx_get_inline Ξ M E ξ' :
-    ictx_get Ξ M = Some (E, ξ') →
-    ictx_get ⟦ Ξ ⟧e M = Some (E, ⟦ ξ' ⟧×).
-  Proof.
-    unfold ictx_get. intro h.
-    rewrite length_map. destruct (_ <=? _) eqn:e. 1: discriminate.
-    rewrite nth_error_map.
-    destruct nth_error eqn:e'. 2: discriminate.
-    inversion h. subst.
-    cbn. reflexivity.
-  Qed.
-
-  Lemma ictx_get_map Ξ M f :
-    ictx_get (map (λ '(E, ξ), (E, f ξ)) Ξ) M =
-    option_map (λ '(E, ξ), (E, f ξ)) (ictx_get Ξ M).
+  Lemma ictx_get_map Ξ x f :
+    ictx_get (map f Ξ) x =
+    option_map f (ictx_get Ξ x).
   Proof.
     unfold ictx_get. rewrite length_map.
     rewrite nth_error_map.
     destruct (_ <=? _). all: reflexivity.
   Qed.
 
-  Lemma inline_rule_tm M ξ δ k t :
-    ⟦ rule_tm M ξ δ k t ⟧ = rule_tm M ⟦ ξ ⟧× δ k ⟦ t ⟧.
+  Lemma ictx_get_assm_inline Ξ x A :
+    ictx_get Ξ x = Some (Assm A) →
+    ictx_get ⟦ Ξ ⟧e x = Some (Assm ⟦ A ⟧).
   Proof.
-    unfold rule_tm. unfold delocal_lift.
-    rewrite inline_subst. rewrite inline_inst.
-    rewrite inline_ren_instance. apply ext_term.
-    intros n. unfold core.funcomp.
-    destruct (lt_dec n k).
-    - rewrite ups_below. 2: assumption.
-      reflexivity.
-    - pose (m := n - k). replace n with (k + m) by lia.
-      rewrite ups_above. reflexivity.
+    intro h. rewrite ictx_get_map. rewrite h. reflexivity.
   Qed.
 
-  Lemma inline_rlhs M ξ δ rule :
-    ⟦ rlhs M ξ δ rule ⟧ = rlhs M ⟦ ξ ⟧× δ ⟦ rule ⟧r.
+  Lemma ictx_get_comp_inline Ξ x rl :
+    ictx_get Ξ x = Some (Comp rl) →
+    ictx_get ⟦ Ξ ⟧e x = Some (Comp ⟦ rl ⟧r).
   Proof.
-    unfold rlhs. rewrite inline_rule_tm. cbn - [rule_tm].
-    rewrite length_map. reflexivity.
-  Qed.
-
-  Lemma inline_rrhs M ξ δ rule :
-    ⟦ rrhs M ξ δ rule ⟧ = rrhs M ⟦ ξ ⟧× δ ⟦ rule ⟧r.
-  Proof.
-    unfold rrhs. rewrite inline_rule_tm. cbn - [rule_tm].
-    rewrite length_map. reflexivity.
+    intro h. rewrite ictx_get_map. rewrite h. reflexivity.
   Qed.
 
   Lemma scoped_instance_inline_ih k ξ :
-    All (All (λ t, ∀ k, scoped k t = true → scoped k ⟦ t ⟧ = true)) ξ →
+    All (onSomeT (λ t, ∀ k, scoped k t = true → scoped k ⟦ t ⟧ = true)) ξ →
     scoped_instance k ξ = true →
     scoped_instance k ⟦ ξ ⟧× = true.
   Proof.
@@ -238,11 +205,11 @@ Section Inline.
     apply forallb_All in h. move h at top.
     eapply All_prod in h. 2: eassumption.
     apply All_forallb. apply All_map. eapply All_impl. 2: eassumption.
-    cbn. intros σ [h1 h2].
-    apply All_forallb. apply All_map.
-    apply forallb_All in h2.
-    eapply All_prod in h1. 2: eassumption.
-    eapply All_impl. 2: eassumption.
+    cbn. intros o [h1 h2].
+    apply onSomeb_onSome, onSomeT_onSome. apply onSomeT_map.
+    apply onSomeb_onSome, onSome_onSomeT in h2.
+    eapply onSomeT_prod in h1. 2: eassumption.
+    eapply onSomeT_impl. 2: eassumption.
     cbn. intros t []. eauto.
   Qed.
 
@@ -268,9 +235,9 @@ Section Inline.
   Proof.
     intros h.
     eapply scoped_instance_inline_ih. 2: assumption.
-    eapply forall_All. intros.
-    eapply forall_All. intros.
-    eapply scoped_inline. assumption.
+    eapply forall_All. intros o ho.
+    destruct o. 2: constructor.
+    cbn. intros. eapply scoped_inline. assumption.
   Qed.
 
   Lemma inline_ctx_inst ξ Γ :
@@ -283,28 +250,32 @@ Section Inline.
   Qed.
 
   Lemma inst_equations_inline_ih Ξ Ξ' Γ ξ :
-    inst_equations_ Σ (λ Γ u v, Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧) Γ ξ Ξ' →
+    inst_equations_ (λ Γ u v, Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧) Γ ξ Ξ' →
     inst_equations Σᵗ ⟦ Ξ ⟧e ⟦ Γ ⟧* ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
   Proof.
     intros ih.
-    intros E M ξ' hM.
-    rewrite ictx_get_map in hM.
-    destruct ictx_get as [[E' ξ'']|] eqn:hM'. 2: discriminate.
-    cbn in hM. inversion hM. subst. clear hM.
-    specialize (ih _ _ _ hM') as (Ξ'' & Δ' & R & e & ih).
-    eexists _,_,_. split. 1: eauto.
-    intros n rl hn m δ Θ lhs0 rhs0. cbn.
-    rewrite nth_error_map in hn.
-    destruct (nth_error _ n) as [rl' |] eqn:hn'. 2: discriminate.
-    cbn in hn. inversion hn. subst. clear hn.
-    specialize ih with (1 := hn'). cbn in ih.
-    destruct ih as (hl & hr & ih).
-    subst m lhs0 rhs0 δ.
-    cbn - [ rlhs rrhs]. rewrite !length_map.
-    rewrite <- inline_rrhs, <- inline_rlhs.
+    intros x rl hx.
+    rewrite ictx_get_map in hx.
+    destruct ictx_get as [[| rl']|] eqn:hx'. 1,3: discriminate.
+    cbn in hx. inversion hx. subst. clear hx.
+    specialize (ih _ _ hx') as (hx & hl & hr & ih).
+    cbn. rewrite nth_error_map, hx. cbn.
+    rewrite !length_map.
     rewrite map_app in ih. rewrite !inline_ctx_inst in ih.
     rewrite !inline_inst in ih. rewrite !inline_ren_instance in ih.
     intuition eauto using scoped_inline.
+  Qed.
+
+  Lemma cr_pat_inline rl :
+    ⟦ rl.(cr_pat) ⟧ = ⟦ rl ⟧r.(cr_pat).
+  Proof.
+    reflexivity.
+  Qed.
+
+  Lemma cr_rep_inline rl :
+    ⟦ rl.(cr_rep) ⟧ = ⟦ rl ⟧r.(cr_rep).
+  Proof.
+    reflexivity.
   Qed.
 
   Lemma conv_inline Ξ Γ u v :
@@ -320,21 +291,16 @@ Section Inline.
       + eapply inst_equations_inline_ih. eassumption.
       + eapply h_conv_unfold. eassumption.
     - rewrite !inline_subst. subst lhs rhs.
-      rewrite inline_rlhs, inline_rrhs.
-      replace δ with (length ⟦ Δ ⟧*). 2:{ apply length_map. }
+      rewrite cr_pat_inline, cr_rep_inline.
       eapply conv_red.
-      + eapply hext. eassumption.
-      + apply ictx_get_inline. assumption.
-      + rewrite nth_error_map. rewrite H1. reflexivity.
-      + rewrite <- inline_rlhs. eapply scoped_inline.
-        cbn. rewrite 2!length_map. assumption.
-      + rewrite <- inline_rrhs. eapply scoped_inline.
-        cbn. rewrite 2!length_map. assumption.
+      + apply ictx_get_comp_inline. eassumption.
+      + cbn. eapply scoped_inline. rewrite length_map. assumption. 
+      + cbn. eapply scoped_inline. rewrite length_map. assumption.
     - cbn. eapply conv_insts.
       apply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
-      intros. apply Forall2_map_l, Forall2_map_r.
-      eapply Forall2_impl. 2: eassumption.
+      intros. apply option_rel_map_l, option_rel_map_r.
+      eapply option_rel_impl. 2: eassumption.
       cbn. auto.
     - econstructor. assumption.
     - eapply conv_trans. all: eassumption.
@@ -347,13 +313,6 @@ Section Inline.
 
   Context (h_type : g_type).
 
-  Lemma inline_delocal M t :
-    ⟦ delocal M t ⟧ = delocal M ⟦ t ⟧.
-  Proof.
-    unfold delocal.
-    rewrite inline_subst. reflexivity.
-  Qed.
-
   Lemma inst_typing_inline Ξ Γ ξ Ξ' :
     inst_typing_ Σ Ξ (λ Γ t A, Σᵗ ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧) Γ ξ Ξ' →
     inst_typing Σᵗ ⟦ Ξ ⟧e ⟦ Γ ⟧* ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
@@ -361,26 +320,15 @@ Section Inline.
     intros (he & ih & e).
     split. 2: split.
     - eauto using inst_equations_inline_ih, inst_equations_prop, conv_inline.
-    - intros M E ξ' eM.
-      rewrite ictx_get_map in eM.
-      destruct ictx_get as [[E' ξ'']|] eqn:eM'. 2: discriminate.
-      cbn in eM. inversion eM. subst. clear eM.
-      specialize (ih _ _ _ eM') as (? & Ξ'' & Δ & R & eE & ho & ih).
-      split. 1:{ apply scoped_instance_inline. assumption. }
-      eexists _,_,_. split. 1: eauto.
-      split.
-      1:{
-        rewrite nth_error_map, onSome_map. setoid_rewrite length_map.
-        assumption.
-      }
-      intros x A hx.
-      rewrite nth_error_map in hx.
-      destruct (nth_error Δ x) as [B|] eqn: eB. 2: discriminate.
+    - intros x A hx. 
+      rewrite ictx_get_map in hx.
+      destruct ictx_get as [[]|] eqn: hx'. 2,3: discriminate.
       cbn in hx. inversion hx. subst. clear hx.
-      specialize ih with (1 := eB).
-      rewrite inline_iget, inline_inst, inline_delocal in ih.
-      rewrite inline_inst, inline_ren in ih.
-      assumption.
+      specialize (ih _ _ hx') as [hc ih].
+      split.
+      + apply scoped_inline. assumption.
+      + rewrite inline_iget, inline_inst in ih.
+        assumption.
     - rewrite 2!length_map. assumption.
   Qed.
 
@@ -400,12 +348,9 @@ Section Inline.
     - cbn. rewrite inline_inst. eapply typing_inst_closed.
       + eapply inst_typing_inline. eassumption.
       + eapply h_type. all: eassumption.
-    - cbn. rewrite inline_delocal. rewrite inline_inst. rewrite inline_ren.
-      econstructor.
-      + eapply ictx_get_inline. eassumption.
-      + eauto.
-      + rewrite nth_error_map. rewrite H1. reflexivity.
-      + eapply scoped_instance_inline. assumption.
+    - cbn. econstructor.
+      + apply ictx_get_assm_inline. assumption.
+      + apply scoped_inline. assumption.
     - econstructor. 1,3: eassumption.
       apply conv_inline. assumption.
   Qed.
@@ -414,8 +359,8 @@ End Inline.
 
 Notation "⟦ t ⟧⟨ k ⟩" := (inline k t) (at level 0).
 Notation "⟦ l ⟧*⟨ k ⟩" := (map (inline k) l).
-Notation "⟦ t ⟧×⟨ k ⟩" := (map (map (inline k)) t).
-Notation "⟦ X ⟧e⟨ k ⟩" := (map (λ '(E, ξ), (E, ⟦ ξ ⟧×⟨ k ⟩)) X).
+Notation "⟦ t ⟧×⟨ k ⟩" := (map_instance (inline k) t).
+Notation "⟦ X ⟧e⟨ k ⟩" := (map (inline_idecl k) X).
 Notation "⟦ r ⟧r⟨ k ⟩" := (inline_crule k r).
 Notation "⟦ R ⟧R⟨ k ⟩" := (map (inline_crule k) R).
 
@@ -435,7 +380,6 @@ Fixpoint inline_gctx_ufd Σ :=
     let κ := ⟦ Σ ⟧κ in
     match d with
     | Def Ξ A t => gcons c ⟦ t ⟧⟨ κ ⟩ κ
-    | _ => κ
     end
   | [] => gnil
   end
@@ -474,8 +418,9 @@ Proof.
   cbn.
   assert (e : ⟦ ξ ⟧×⟨ κ ⟩ = ⟦ ξ ⟧×⟨ κ' ⟩).
   { apply map_ext_Forall. eapply Forall_impl. 2: eassumption.
-    intros σ hσ.
-    apply map_ext_Forall. eapply Forall_impl. 2: eassumption.
+    intros o ho.
+    rewrite OnSome_onSome in ho. apply onSome_onSomeT in ho.
+    apply option_map_ext_onSomeT. eapply onSomeT_impl. 2: eassumption.
     cbn. auto.
   }
   rewrite <- e. f_equal.
@@ -489,22 +434,9 @@ Lemma inline_instance_ext Σ (ξ : instance) κ κ' :
 Proof.
   intros hξ he.
   eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
-  intros. eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
+  intros o ho. rewrite OnSome_onSome in ho. apply onSome_onSomeT in ho.
+  eapply option_map_ext_onSomeT. eapply onSomeT_impl. 2: eassumption.
   intros. eapply inline_ext. all: eassumption.
-Qed.
-
-Lemma inline_ictx_ext Σ Ξ κ κ' :
-  iwf Σ Ξ →
-  eq_gscope Σ κ κ' →
-  ⟦ Ξ ⟧e⟨ κ ⟩ = ⟦ Ξ ⟧e⟨ κ' ⟩.
-Proof.
-  intros hΞ he.
-  eapply map_ext_Forall.
-  induction hΞ as [| Ξ E ξ' Ξ' Δ R hΞ ih e hξ' ]. 1: constructor.
-  econstructor. 2: eauto.
-  f_equal.
-  eapply inline_instance_ext. 2: eassumption.
-  eapply inst_typing_gscope. eassumption.
 Qed.
 
 Lemma inline_list_ext Σ l κ κ' :
@@ -515,16 +447,6 @@ Proof.
   intros hl he.
   eapply map_ext_Forall. eapply Forall_impl. 2: eassumption.
   intros. eapply inline_ext. all: eassumption.
-Qed.
-
-Lemma inline_ctx_ext Σ Ξ Γ κ κ' :
-  wf Σ Ξ Γ →
-  eq_gscope Σ κ κ' →
-  ⟦ Γ ⟧*⟨ κ ⟩ = ⟦ Γ ⟧*⟨ κ' ⟩.
-Proof.
-  intros hΓ he.
-  eapply inline_list_ext. 2: eassumption.
-  eapply wf_gscope. eassumption.
 Qed.
 
 Lemma inline_crule_ext Σ rl κ κ' :
@@ -551,30 +473,30 @@ Proof.
   intros. eapply inline_crule_ext. all: eassumption.
 Qed.
 
-Reserved Notation "⟦ s ⟧g".
-
-Fixpoint inline_gctx (Σ : gctx) : gctx :=
-  match Σ with
-  | [] => []
-  | (c, Def Ξ A t) :: Σ => ⟦ Σ ⟧g
-  | (c, Ext Ξ Δ R) :: Σ =>
-    let κ := ⟦ Σ ⟧κ in
-    (c, Ext ⟦ Ξ ⟧e⟨ κ ⟩ ⟦ Δ ⟧*⟨ κ ⟩ ⟦ R ⟧R⟨ κ ⟩) :: ⟦ Σ ⟧g
-  end
-
-where "⟦ s ⟧g" := (inline_gctx s).
-
-Lemma inline_gctx_None (Σ : gctx) c :
-  Σ c = None →
-  ⟦ Σ ⟧g c = None.
+Lemma inline_ictx_ext Σ Ξ κ κ' :
+  iwf Σ Ξ →
+  eq_gscope Σ κ κ' →
+  ⟦ Ξ ⟧e⟨ κ ⟩ = ⟦ Ξ ⟧e⟨ κ' ⟩.
 Proof.
-  intros e.
-  induction Σ as [| [c' []] Σ ih].
-  - reflexivity.
-  - cbn in *. destruct (c =? c')%string eqn:ec. 1: discriminate.
-    eauto.
-  - cbn in *. destruct (c =? c')%string eqn:ec. 1: discriminate.
-    eauto.
+  intros hΞ he.
+  eapply map_ext_Forall.
+  induction hΞ as [| B Ξ i hΞ ih hB | rl Ξ hΞ ih hs ht ].
+  - constructor.
+  - constructor. 2: assumption.
+    cbn. f_equal. eapply inline_ext. 2: eassumption.
+    eapply typing_gscope. eassumption.
+  - constructor. 2: assumption.
+    cbn. f_equal. eapply inline_crule_ext. all: eassumption.
+Qed.
+
+Lemma inline_ctx_ext Σ Ξ Γ κ κ' :
+  wf Σ Ξ Γ →
+  eq_gscope Σ κ κ' →
+  ⟦ Γ ⟧*⟨ κ ⟩ = ⟦ Γ ⟧*⟨ κ' ⟩.
+Proof.
+  intros hΓ he.
+  eapply inline_list_ext. 2: eassumption.
+  eapply wf_gscope. eassumption.
 Qed.
 
 Lemma eq_gscope_gcons (Σ : gctx) κ c u :
@@ -593,10 +515,9 @@ Lemma gwf_gclosed Σ :
   gclosed ⟦ Σ ⟧κ.
 Proof.
   intros h.
-  induction h as [ | c' ?????? ih | c' ??????? ih ].
+  induction h as [ | c' ??????? ih ].
   all: intros c.
   - cbn. reflexivity.
-  - cbn. eauto.
   - cbn. destruct (c =? c')%string eqn:ec.
     + rewrite gcons_eq. 2: assumption.
       eapply scoped_inline. 1: assumption.
@@ -607,15 +528,11 @@ Qed.
 
 Lemma gwf_conv_unfold Σ :
   gwf Σ →
-  g_conv_unfold Σ ⟦ Σ ⟧κ ⟦ Σ ⟧g.
+  g_conv_unfold Σ ⟦ Σ ⟧κ [].
 Proof.
   intros h c Ξ' A t ec.
-  induction h as [ | c' ?????? ih | c' ??????? ih ].
+  induction h as [ | c' ??????? ih ].
   - discriminate.
-  - cbn in *. destruct (c =? c')%string eqn:e. 1: discriminate.
-    eapply conv_gweak. 1: eauto.
-    eapply extends_gcons.
-    apply inline_gctx_None. assumption.
   - cbn in *. destruct (c =? c')%string eqn:e.
     + inversion ec. subst. clear ec.
       rewrite gcons_eq. 2: assumption.
@@ -632,40 +549,14 @@ Proof.
       eauto.
 Qed.
 
-Lemma gwf_trans_gctx_ext Σ :
-  gwf Σ →
-  trans_gctx_ext Σ ⟦ Σ ⟧κ ⟦ Σ ⟧g.
-Proof.
-  intros h E Ξ' Δ R eE.
-  induction h as [ | c ?????? ih | c ??????? ih ].
-  - discriminate.
-  - cbn in *. destruct (E =? c)%string eqn:e.
-    + inversion eE. subst. reflexivity.
-    + eauto.
-  - cbn in *. destruct (E =? c)%string eqn:e. 1: discriminate.
-    rewrite ih. 2: assumption.
-    assert (eg : eq_gscope Σ ⟦ Σ ⟧κ (gcons c ⟦ t ⟧⟨ ⟦ Σ ⟧κ ⟩ ⟦ Σ ⟧κ)).
-    { eapply eq_gscope_gcons. assumption. }
-    eapply valid_ext in eE as h'. 2: assumption.
-    destruct h' as (hΞ' & hΔ & hR & hE).
-    f_equal. f_equal.
-    + eapply inline_ictx_ext. all: eassumption.
-    + eapply inline_ctx_ext. all: eassumption.
-    + eapply inline_crules_ext. all: eassumption.
-Qed.
-
 Lemma gwf_type Σ :
   gwf Σ →
-  g_type Σ ⟦ Σ ⟧κ ⟦ Σ ⟧g.
+  g_type Σ ⟦ Σ ⟧κ [].
 Proof.
   intros h.
-  induction h as [ | c' ?????? ih | c' ??????? ih ].
+  induction h as [ | c' ??????? ih ].
   all: intros c Ξ' B u ec.
   - discriminate.
-  - cbn in *. destruct (c =? c')%string eqn:e. 1: discriminate.
-    eapply typing_gweak. 1: eauto.
-    eapply extends_gcons.
-    apply inline_gctx_None. assumption.
   - cbn in *. destruct (c =? c')%string eqn:e.
     + inversion ec. subst. clear ec.
       rewrite gcons_eq. 2: assumption.
@@ -675,7 +566,6 @@ Proof.
       eapply typing_inline with (Γ := ∙).
       * eapply gwf_gclosed. assumption.
       * eapply gwf_conv_unfold. assumption.
-      * eapply gwf_trans_gctx_ext. assumption.
       * assumption.
       * assumption.
       * assumption.
@@ -692,15 +582,14 @@ Theorem inlining Ξ Σ Γ t A :
   gwf Σ →
   let κ := ⟦ Σ ⟧κ in
   Σ ;; Ξ | Γ ⊢ t : A →
-  ⟦ Σ ⟧g ;; ⟦ Ξ ⟧e⟨ κ ⟩ | ⟦ Γ ⟧*⟨ κ ⟩ ⊢ ⟦ t ⟧⟨ κ ⟩ : ⟦ A ⟧⟨ κ ⟩.
+  [] ;; ⟦ Ξ ⟧e⟨ κ ⟩ | ⟦ Γ ⟧*⟨ κ ⟩ ⊢ ⟦ t ⟧⟨ κ ⟩ : ⟦ A ⟧⟨ κ ⟩.
 Proof.
   intros hΣ κ h.
   eapply typing_inline.
   - eapply gwf_gclosed. assumption.
   - eapply gwf_conv_unfold. assumption.
-  - eapply gwf_trans_gctx_ext. assumption.
   - eapply gwf_type. assumption.
-  - eassumption.
+  - assumption.
   - assumption.
 Qed.
 
@@ -715,57 +604,6 @@ Proof.
   discriminate.
 Qed.
 
-Fixpoint only_exts (Σ : gctx) : bool :=
-  match Σ with
-  | [] => true
-  | (c, Def Ξ A t) :: Σ => false
-  | (c, Ext Ξ Δ R) :: Σ => only_exts Σ
-  end.
-
-Lemma only_exts_no_def Σ c Ξ A t :
-  only_exts Σ = true →
-  Σ c = Some (Def Ξ A t) →
-  False.
-Proof.
-  intros h hc.
-  induction Σ as [| [c' []] Σ ih] in Ξ, A, t, h, hc |- *. 1,3: discriminate.
-  cbn in *. destruct (c =? c')%string eqn:ec. 1: discriminate.
-  eauto.
-Qed.
-
-Lemma conv_noext Σ Γ u v :
-  only_exts Σ = true →
-  Σ ;; [] | Γ ⊢ u ≡ v →
-  [] ;; [] | Γ ⊢ u ≡ v.
-Proof.
-  intros hΣ h.
-  induction h using conversion_ind.
-  all: try solve [ ttconv ].
-  all: try solve [ econstructor ; eauto ].
-  - exfalso. eauto using only_exts_no_def.
-  - discriminate.
-Qed.
-
-Lemma typing_noext Σ Γ t A :
-  only_exts Σ = true →
-  Σ ;; [] | Γ ⊢ t : A →
-  [] ;; [] | Γ ⊢ t : A.
-Proof.
-  intros hΣ h.
-  induction h using typing_ind.
-  all: try solve [ tttype ].
-  - exfalso. eauto using only_exts_no_def.
-  - discriminate.
-  - econstructor. 1,3: eauto.
-    eauto using conv_noext.
-Qed.
-
-Lemma only_exts_inline Σ :
-  only_exts ⟦ Σ ⟧g = true.
-Proof.
-  induction Σ as [| [c' []] Σ ih]. all: cbn ; auto.
-Qed.
-
 Theorem conservativity Σ t A i :
   gwf Σ →
   [] ;; [] | ∙ ⊢ A : Sort i →
@@ -777,7 +615,5 @@ Proof.
   eapply inlining in ht. 2: assumption.
   cbn in ht.
   eapply typing_gscope in hA as gA. eapply inline_nil_id in gA.
-  rewrite gA in ht.
-  eapply typing_noext. 2: eassumption.
-  eapply only_exts_inline.
+  rewrite gA in ht. eassumption.
 Qed.
