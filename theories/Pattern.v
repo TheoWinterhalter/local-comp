@@ -38,6 +38,27 @@ Definition pattern_rules Ξ :=
     ictx_get Ξ n = Some (Comp rl) →
     ∃ p, rl.(cr_pat) = pat_to_term p.
 
+(** ** Matching *)
+
+Inductive matches_pat : pat → term → list term → Prop :=
+| matches_assm x : matches_pat (passm x) (assm x) [].
+
+(** Turn list into parallel substitution **)
+
+Fixpoint slist (l : list term) :=
+  match l with
+  | [] => λ _, dummy
+  | u :: l => u .: slist l
+  end.
+
+Lemma matches_pat_sound p t σ :
+  matches_pat p t σ →
+  t = (pat_to_term p) <[ slist σ ].
+Proof.
+  induction 1.
+  reflexivity.
+Qed.
+
 Definition triangle_citerion Ξ :=
   ∀ m n rl1 rl2,
     ictx_get Ξ m = Some (Comp rl1) →
@@ -219,19 +240,6 @@ Section Red.
       Forall2 (option_rel (pred_max Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ᵨ inst ξ' t'
 
-  | pred_max_rule n rl σ σ' :
-      ictx_get Ξ n = Some (Comp rl) →
-      let Θ := rl.(cr_env) in
-      let k := length Θ in
-      let lhs := rl.(cr_pat) in
-      let rhs := rl.(cr_rep) in
-      scoped k lhs = true →
-      scoped k rhs = true →
-      (∀ m, Γ ⊢ σ m ⇒ᵨ σ' m) →
-      Γ ⊢ lhs <[ σ ] ⇒ᵨ rhs <[ σ' ]
-
-  (** Congruence rules *)
-
   | pred_max_Pi A B A' B' :
       Γ ⊢ A ⇒ᵨ A' →
       Γ ,, A ⊢ B ⇒ᵨ B' →
@@ -251,6 +259,19 @@ Section Red.
   | predmax_const c ξ ξ' :
       Forall2 (option_rel (pred_max Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ᵨ const c ξ'
+
+  | pred_max_rule n rl p t σ σ' :
+      ictx_get Ξ n = Some (Comp rl) →
+      rl.(cr_pat) = pat_to_term p →
+      matches_pat p t σ →
+      Forall2 (pred Γ) σ σ' →
+      let rhs := rl.(cr_rep) in
+      (* let Θ := rl.(cr_env) in
+      let k := length Θ in
+      let lhs := rl.(cr_pat) in
+      scoped k lhs = true →
+      scoped k rhs = true → *)
+      Γ ⊢ t ⇒ᵨ rhs <[ slist σ' ]
 
   where "Γ ⊢ u ⇒ᵨ v" := (pred_max Γ u v).
 
@@ -297,14 +318,7 @@ Section Red.
       + (* Need substitution lemma for pred *) admit.
     - destruct iht as [tr [ht1 ht2]].
       admit.
-    - (* The current ∀∃ is not enough to get a substitution
-        It might be easier with an implementation of matching.
-        We could also define a ρ function instead.
-
-        We will anyway need to define matching for the rule selection thing
-        when we get more interesting patterns.
-      *)
-      admit.
+    - admit.
     - destruct ihA as [Ar [hA1 hA2]], ihB as [Br [hB1 hB2]].
       eexists. split.
       + econstructor. all: eassumption.
@@ -317,7 +331,7 @@ Section Red.
       destruct (is_lam u) eqn: eu.
       + eapply is_lam_inv in eu as (A & b & ->).
         inversion hu1.
-        1:{ exfalso. admit. }
+        2:{ exfalso. admit. }
         subst.
         eexists. split.
         * econstructor. all: eassumption.
@@ -339,28 +353,29 @@ Section Red.
     intros hu hv.
     induction hu in v, hv |- *.
     - inversion hv.
-      2:{ admit. }
+      3:{ admit. }
       2:{ discriminate. }
       subst. f_equal. 1: f_equal. all: eauto.
     - inversion hv.
-      2:{ exfalso. eapply pattern_rules_lhs_no_const. all: eassumption. }
+      (* 3:{ exfalso. eapply pattern_rules_lhs_no_const. all: eassumption. } *)
+      3: admit.
       2:{ (* Wrong, need a check *) admit. }
       subst. f_equal.
       + admit.
       + eqtwice. subst. eauto.
     - admit.
-    - inversion hv. 1: admit.
+    - inversion hv. 2: admit.
       subst. f_equal. all: eauto.
-    - inversion hv. 1: admit.
+    - inversion hv. 1,3: admit.
       subst. f_equal. all: eauto.
     - inversion hv.
-      1:{ subst. discriminate. }
+      (* 3:{ exfalso. eapply pattern_rules_lhs_no_const. all: eassumption. } *)
+      3: admit.
       1: admit.
-      subst. f_equal. all: eauto.
-    - inversion hv.
-      1:{ (* Same, make sure we have constraints *) admit. }
-      1:{ exfalso. eapply pattern_rules_lhs_no_const. all: eassumption. }
       subst. f_equal.
+      admit.
+    - (* inversion hv. 1-6: admit.
+      subst. f_equal. all: eauto. *)
       admit.
   Admitted.
 
