@@ -13,7 +13,7 @@ From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst Typing BasicMetaTheory
-  GScope Inversion Reduction.
+  GScope Inversion Reduction Confluence.
 From Stdlib Require Import Setoid Morphisms Relation_Definitions
   Relation_Operators.
 From Equations Require Import Equations.
@@ -391,12 +391,10 @@ Section Red.
       admit.
   Admitted.
 
-  Lemma diamond Γ t u v :
-    Γ ⊢ t ⇒ u →
-    Γ ⊢ t ⇒ v →
-    ∃ w, Γ ⊢ u ⇒ w ∧ Γ ⊢ v ⇒ w.
+  Lemma pred_diamond Γ :
+    diamond (pred Γ).
   Proof.
-    intros hu hv.
+    intros t u v hu hv.
     eapply triangle in hu as [w [hw ?]], hv as [? []].
     eapply pred_max_functional in hw as e. 2: eassumption.
     subst. exists w. intuition eauto.
