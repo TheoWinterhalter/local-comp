@@ -92,16 +92,18 @@ Section Red.
       Forall2 (option_rel (pred Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ inst ξ' t'
 
-  | pred_rule n rl σ σ' :
+  | pred_rule n rl p t σ σ' :
       ictx_get Ξ n = Some (Comp rl) →
-      let Θ := rl.(cr_env) in
+      rl.(cr_pat) = pat_to_term p →
+      matches_pat p t σ →
+      Forall2 (pred Γ) σ σ' →
+      let rhs := rl.(cr_rep) in
+      (* let Θ := rl.(cr_env) in
       let k := length Θ in
       let lhs := rl.(cr_pat) in
-      let rhs := rl.(cr_rep) in
       scoped k lhs = true →
-      scoped k rhs = true →
-      (∀ m, Γ ⊢ σ m ⇒ σ' m) →
-      Γ ⊢ lhs <[ σ ] ⇒ rhs <[ σ' ]
+      scoped k rhs = true → *)
+      Γ ⊢ t ⇒ rhs <[ slist σ' ]
 
   (** Congruence rules *)
 
@@ -145,17 +147,19 @@ Section Red.
         Forall2 (option_rel (P Γ)) ξ ξ' →
         P Γ (const c ξ) (inst ξ' t')
       ) →
-      (∀ Γ n rl σ σ',
+      (∀ Γ n rl p t σ σ',
         ictx_get Ξ n = Some (Comp rl) →
-        let Θ := rl.(cr_env) in
+        rl.(cr_pat) = pat_to_term p →
+        matches_pat p t σ →
+        Forall2 (pred Γ) σ σ' →
+        Forall2 (P Γ) σ σ' →
+        let rhs := rl.(cr_rep) in
+        (* let Θ := rl.(cr_env) in
         let k := length Θ in
         let lhs := rl.(cr_pat) in
-        let rhs := rl.(cr_rep) in
         scoped k lhs = true →
-        scoped k rhs = true →
-        (∀ m, Γ ⊢ σ m ⇒ σ' m) →
-        (∀ m, P Γ (σ m) (σ' m)) →
-        P Γ (lhs <[ σ]) (rhs <[ σ'])
+        scoped k rhs = true → *)
+        P Γ t (rhs <[ slist σ' ])
       ) →
       (∀ Γ A B A' B',
         Γ ⊢ A ⇒ A' →
@@ -195,6 +199,14 @@ Section Red.
       - constructor.
       - constructor. 2: eauto.
         destruct h. all: constructor ; auto.
+    }
+    3:{
+      eapply hrl. 1-4: eauto.
+      clear H1.
+      revert σ σ' H2. fix aux1 3. 
+      intros σ σ' hσ. destruct hσ.
+      - constructor.
+      - constructor. all: eauto.
     }
     2:{
       eapply hunf. 1-6: eauto.
@@ -306,7 +318,7 @@ Section Red.
     induction 1 as [
       ?????? ht iht hu ihu
     | ???????????? iht ? ihξ
-    | ????????????? ih
+    | ???????????? ih
     | ?????? ihA ? ihB
     | ?????? ihA ? iht
     | ? u ??? hu ihu ? ihv
