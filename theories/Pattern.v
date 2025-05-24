@@ -40,15 +40,17 @@ Definition pattern_rules Ξ :=
 
 (** ** Matching *)
 
-Inductive matches_pat : pat → term → list term → Prop :=
-| matches_assm x : matches_pat (passm x) (assm x) [].
+Definition match_pat (p : pat) (t : term) : option (list term) :=
+  match p, t with
+  | passm x, assm y => if x =? y then Some [] else None
+  | _, _ => None
+  end.
 
 Definition no_match Ξ t :=
-  ∀ n rl p σ,
+  ∀ n rl p,
     ictx_get Ξ n = Some (Comp rl) →
     rl.(cr_pat) = pat_to_term p →
-    matches_pat p t σ →
-    False.
+    match_pat p t = None.
 
 (** Turn list into parallel substitution **)
 
@@ -58,11 +60,15 @@ Fixpoint slist (l : list term) :=
   | u :: l => u .: slist l
   end.
 
-Lemma matches_pat_sound p t σ :
-  matches_pat p t σ →
+Lemma match_pat_sound p t σ :
+  match_pat p t = Some σ →
   t = (pat_to_term p) <[ slist σ ].
 Proof.
-  induction 1.
+  intros h.
+  induction p.
+  destruct t. all: try discriminate.
+  cbn in h. destruct (Nat.eqb_spec x a). 2: discriminate.
+  subst.
   reflexivity.
 Qed.
 
@@ -102,7 +108,7 @@ Section Red.
   | pred_rule n rl p t σ σ' :
       ictx_get Ξ n = Some (Comp rl) →
       rl.(cr_pat) = pat_to_term p →
-      matches_pat p t σ →
+      match_pat p t = Some σ →
       Forall2 (pred Γ) σ σ' →
       let rhs := rl.(cr_rep) in
       (* let Θ := rl.(cr_env) in
@@ -157,7 +163,7 @@ Section Red.
       (∀ Γ n rl p t σ σ',
         ictx_get Ξ n = Some (Comp rl) →
         rl.(cr_pat) = pat_to_term p →
-        matches_pat p t σ →
+        match_pat p t = Some σ →
         Forall2 (pred Γ) σ σ' →
         Forall2 (P Γ) σ σ' →
         let rhs := rl.(cr_rep) in
@@ -279,7 +285,7 @@ Section Red.
   | pred_max_rule n rl p t σ σ' :
       ictx_get Ξ n = Some (Comp rl) →
       rl.(cr_pat) = pat_to_term p →
-      matches_pat p t σ →
+      match_pat p t = Some σ →
       Forall2 (pred Γ) σ σ' →
       let rhs := rl.(cr_rep) in
       (* let Θ := rl.(cr_env) in
