@@ -234,6 +234,47 @@ Section Red.
     all: eauto.
   Qed.
 
+  Lemma pred_meta_r Γ u v v' :
+    Γ ⊢ u ⇒ v →
+    v = v' →
+    Γ ⊢ u ⇒ v'.
+  Proof.
+    intros ? ->. assumption.
+  Qed.
+
+  (** ** Parallel reduction is stable by substitution *)
+  (* TODO, prove the right version *)
+
+  Lemma pred_subst Γ Δ σ u v :
+    Γ ⊢ u ⇒ v →
+    Δ ⊢ u <[ σ ] ⇒ v <[ σ ].
+  Proof.
+    intros h. induction h in Δ, σ |- * using pred_ind_alt.
+    all: try solve [ rasimpl ; econstructor ; eauto ].
+    - rasimpl. eapply pred_meta_r.
+      + econstructor. all: eauto.
+      + rasimpl. reflexivity.
+    - rasimpl. eapply pred_meta_r.
+      + change @core.option_map with option_map.
+        econstructor. all: eauto.
+        * eapply inst_equations_subst_ih. 1: eassumption.
+          admit. (* Should prove it once and for all *)
+        * eapply Forall2_map_l, Forall2_map_r.
+          eapply Forall2_impl. 2: eassumption.
+          intros. eapply option_rel_map_l, option_rel_map_r. 
+          eapply option_rel_impl. 2: eassumption.
+          cbn. auto.
+      + rewrite subst_inst_closed. 2: admit.
+        reflexivity.
+    - admit. (* Stability of matching *)
+    - cbn. change @core.option_map with option_map.
+      econstructor. eapply Forall2_map_l, Forall2_map_r.
+      eapply Forall2_impl. 2: eassumption.
+      intros. eapply option_rel_map_l, option_rel_map_r. 
+      eapply option_rel_impl. 2: eassumption.
+      cbn. auto.
+  Admitted.
+
   (** ** Maximal reduct for parallel reduction *)
 
   Definition is_lam t :=
