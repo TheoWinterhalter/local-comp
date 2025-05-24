@@ -255,6 +255,16 @@ Proof.
     + eauto.
 Qed.
 
+Lemma Forall2_trans_inv A B C P R a b :
+  Forall2 (λ x y, ∃ z, P z x ∧ R z y) a b →
+  ∃ c, @Forall2 C A P c a ∧ @Forall2 C B R c b.
+Proof.
+  intros h. induction h as [| x y l l' hxy hl ih].
+  - eexists. intuition constructor.
+  - destruct hxy as (?&?&?), ih as (?&?&?).
+    eexists. intuition econstructor. all: eauto.
+Qed.
+
 Lemma Forall2_eq A u v :
   @Forall2 A A eq u v →
   u = v.
@@ -505,6 +515,16 @@ Lemma option_rel_diag [A] (R : A → A → Prop) o :
   option_rel R o o.
 Proof.
   intros h. destruct h. all: constructor ; auto.
+Qed.
+
+Lemma option_rel_trans_inv A B C P R a b :
+  option_rel (λ x y, ∃ z, P z x ∧ R z y) a b →
+  ∃ c, @option_rel C A P c a ∧ @option_rel C B R c b.
+Proof.
+  intros h. destruct h as [| x y h].
+  - exists None. intuition constructor.
+  - destruct h.
+    eexists. intuition constructor. all: eassumption.
 Qed.
 
 #[export] Instance Reflexive_option_rel A (R : relation A) :

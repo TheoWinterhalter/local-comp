@@ -511,7 +511,16 @@ Section Red.
         intros []. all: cbn. 2: constructor.
         assumption.
     - destruct iht as [tr [ht1 ht2]].
-      admit.
+      eapply Forall2_impl in ihξ.
+      2:{ intros ??. eapply option_rel_trans_inv. }
+      eapply Forall2_trans_inv in ihξ.
+      destruct ihξ as (ξᵨ & ? & ?).
+      eexists. split.
+      + econstructor. 1,2: eauto.
+        apply Forall2_flip. eapply Forall2_impl. 2: eassumption.
+        apply option_rel_flip.
+      + (* Need stability by instantiation *)
+        admit.
     - admit.
     - destruct ihA as [Ar [hA1 hA2]], ihB as [Br [hB1 hB2]].
       eexists. split.
@@ -533,8 +542,8 @@ Section Red.
           subst. econstructor. 2: assumption.
           inversion hu2. 1: admit.
           subst. assumption.
-      + (* Need to test whether something is a lhs of a rule
-          so I guess it needs to be a proper function after all.
+      + (* Maybe nomatch should be defined using somematch / firstmatch which
+        looks up the whole Ξ for rules.
         *)
         (* eexists. split.
         * econstructor. all: eassumption.
