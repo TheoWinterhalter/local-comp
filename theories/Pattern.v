@@ -243,16 +243,27 @@ Section Red.
   Qed.
 
   (** ** Parallel reduction is stable by substitution *)
-  (* TODO, prove the right version *)
 
-  Lemma pred_subst Γ Δ σ u v :
-    Γ ⊢ u ⇒ v →
-    Δ ⊢ u <[ σ ] ⇒ v <[ σ ].
+  Lemma pred_subst_up Δ A σ σ' :
+    (∀ x, Δ ⊢ σ x ⇒ σ' x) →
+    (∀ x, Δ ,, A <[ σ ] ⊢ (var 0 .: σ >> ren_term S) x ⇒ (var 0 .: σ' >> ren_term S) x).
   Proof.
-    intros h. induction h in Δ, σ |- * using pred_ind_alt.
-    all: try solve [ rasimpl ; econstructor ; eauto ].
+    intros h x.
+    destruct x.
+    - cbn. (* Missing rule *) admit.
+    - cbn. unfold core.funcomp. (* Need renaming *) admit.
+  Admitted.
+
+  Lemma pred_subst Γ Δ σ σ' u v :
+    (∀ x, Δ ⊢ σ x ⇒ σ' x) →
+    Γ ⊢ u ⇒ v →
+    Δ ⊢ u <[ σ ] ⇒ v <[ σ' ].
+  Proof.
+    intros hσ h. 
+    induction h in Δ, σ, σ', hσ |- * using pred_ind_alt.
+    all: try solve [ rasimpl ; econstructor ; eauto using pred_subst_up ].
     - rasimpl. eapply pred_meta_r.
-      + econstructor. all: eauto.
+      + econstructor. all: eauto using pred_subst_up.
       + rasimpl. reflexivity.
     - rasimpl. eapply pred_meta_r.
       + change @core.option_map with option_map.
@@ -263,7 +274,7 @@ Section Red.
           eapply Forall2_impl. 2: eassumption.
           intros. eapply option_rel_map_l, option_rel_map_r. 
           eapply option_rel_impl. 2: eassumption.
-          cbn. auto.
+          cbn. eauto using pred_subst_up.
       + rewrite subst_inst_closed. 2: admit.
         reflexivity.
     - admit. (* Stability of matching *)
@@ -272,7 +283,7 @@ Section Red.
       eapply Forall2_impl. 2: eassumption.
       intros. eapply option_rel_map_l, option_rel_map_r. 
       eapply option_rel_impl. 2: eassumption.
-      cbn. auto.
+      cbn. eauto using pred_subst_up.
   Admitted.
 
   (** ** Maximal reduct for parallel reduction *)
@@ -378,7 +389,9 @@ Section Red.
     - destruct iht as [tr [ht1 ht2]], ihu as [ur [hu1 hu2]].
       eexists. split.
       + econstructor. all: eassumption.
-      + (* Need substitution lemma for pred *) admit.
+      + eapply pred_subst. 2: eauto.
+        intros []. all: cbn. 2: admit. (* Reflexivity (on var) again *)
+        assumption.
     - destruct iht as [tr [ht1 ht2]].
       admit.
     - admit.
