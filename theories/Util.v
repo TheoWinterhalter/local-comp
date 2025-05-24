@@ -241,6 +241,27 @@ Proof.
   apply Forall2_diag. rewrite Forall_forall. auto.
 Qed.
 
+Lemma Forall2_trans A B C P R a b c :
+  @Forall2 C A P c a →
+  @Forall2 C B R c b →
+  Forall2 (λ x y, ∃ z, P z x ∧ R z y) a b.
+Proof.
+  intros ha hb.
+  induction ha in b, hb |- *.
+  - inversion hb. constructor.
+  - inversion hb. subst.
+    constructor.
+    + eexists. intuition eauto.
+    + eauto.
+Qed.
+
+Lemma Forall2_eq A u v :
+  @Forall2 A A eq u v →
+  u = v.
+Proof.
+  induction 1. all: subst ; eauto.
+Qed.
+
 (** [OnOne2] predicate *)
 
 Inductive OnOne2 {A} (R : A → A → Prop) : list A → list A → Prop :=
@@ -426,7 +447,7 @@ Proof.
 Qed.
 
 Lemma onSomeT_map [A B] (f : A → B) P o :
-  onSomeT (λ x, P (f x)) o → 
+  onSomeT (λ x, P (f x)) o →
   onSomeT P (option_map f o).
 Proof.
   intros h. destruct o. all: cbn in *. all: auto.

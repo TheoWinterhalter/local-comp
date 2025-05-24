@@ -220,7 +220,7 @@ Section Red.
     3:{
       eapply hrl. 1-4: eauto.
       clear H1.
-      revert σ σ' H2. fix aux1 3. 
+      revert σ σ' H2. fix aux1 3.
       intros σ σ' hσ. destruct hσ.
       - constructor.
       - constructor. all: eauto.
@@ -265,7 +265,7 @@ Section Red.
           admit. (* Should prove once and for all *)
         * eapply Forall2_map_l, Forall2_map_r.
           eapply Forall2_impl. 2: eassumption.
-          intros. eapply option_rel_map_l, option_rel_map_r. 
+          intros. eapply option_rel_map_l, option_rel_map_r.
           eapply option_rel_impl. 2: eassumption.
           cbn. auto.
       + rewrite ren_inst. f_equal.
@@ -278,7 +278,7 @@ Section Red.
     - cbn. change @core.option_map with option_map.
       econstructor. eapply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
-      intros. eapply option_rel_map_l, option_rel_map_r. 
+      intros. eapply option_rel_map_l, option_rel_map_r.
       eapply option_rel_impl. 2: eassumption.
       cbn. auto.
   Admitted.
@@ -298,7 +298,7 @@ Section Red.
     Γ ⊢ u ⇒ v →
     Δ ⊢ u <[ σ ] ⇒ v <[ σ' ].
   Proof.
-    intros hσ h. 
+    intros hσ h.
     induction h in Δ, σ, σ', hσ |- * using pred_ind_alt.
     all: try solve [ rasimpl ; econstructor ; eauto using pred_subst_up ].
     - rasimpl. eapply pred_meta_r.
@@ -311,7 +311,7 @@ Section Red.
           admit. (* Should prove it once and for all *)
         * eapply Forall2_map_l, Forall2_map_r.
           eapply Forall2_impl. 2: eassumption.
-          intros. eapply option_rel_map_l, option_rel_map_r. 
+          intros. eapply option_rel_map_l, option_rel_map_r.
           eapply option_rel_impl. 2: eassumption.
           cbn. eauto using pred_subst_up.
       + rewrite subst_inst_closed. 2: admit.
@@ -320,7 +320,7 @@ Section Red.
     - cbn. change @core.option_map with option_map.
       econstructor. eapply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
-      intros. eapply option_rel_map_l, option_rel_map_r. 
+      intros. eapply option_rel_map_l, option_rel_map_r.
       eapply option_rel_impl. 2: eassumption.
       cbn. eauto using pred_subst_up.
   Admitted.
@@ -372,7 +372,7 @@ Section Red.
       Γ ⊢ u ⇒ᵨ u' →
       Γ ⊢ v ⇒ᵨ v' →
       Γ ⊢ app u v ⇒ᵨ app u' v'
-    
+
   | pred_max_var x :
       Γ ⊢ var x ⇒ᵨ var x
 
@@ -380,7 +380,7 @@ Section Red.
       ictx_get Ξ n = Some (Comp rl) →
       rl.(cr_pat) = pat_to_term p →
       match_pat p t = Some σ →
-      Forall2 (pred Γ) σ σ' →
+      Forall2 (pred_max Γ) σ σ' →
       let rhs := rl.(cr_rep) in
       (* let Θ := rl.(cr_env) in
       let k := length Θ in
@@ -391,6 +391,81 @@ Section Red.
 
   where "Γ ⊢ u ⇒ᵨ v" := (pred_max Γ u v).
 
+  Lemma pred_max_ind_alt :
+    ∀ (P : list term → term → term → Prop),
+      (∀ Γ A t t' u u',
+        Γ,, A ⊢ t ⇒ᵨ t' →
+        P (Γ,, A) t t' →
+        Γ ⊢ u ⇒ᵨ u' →
+        P Γ u u' →
+        P Γ (app (lam A t) u) (t' <[ u'..])
+      ) →
+      (∀ Γ c ξ Ξ' A t ξ' t',
+        Σ c = Some (Def Ξ' A t) →
+        ∙ ⊢ t ⇒ᵨ t' →
+        P ∙ t t' →
+        Forall2 (option_rel (pred_max Γ)) ξ ξ' →
+        Forall2 (option_rel (P Γ)) ξ ξ' →
+        P Γ (const c ξ) (inst ξ' t')
+      ) →
+      (∀ Γ A B A' B',
+        Γ ⊢ A ⇒ᵨ A' →
+        P Γ A A' →
+        Γ,, A ⊢ B ⇒ᵨ B' →
+        P (Γ,, A) B B' →
+        P Γ (Pi A B) (Pi A' B')
+      ) →
+      (∀ Γ A t A' t',
+        Γ ⊢ A ⇒ᵨ A' →
+        P Γ A A' →
+        Γ,, A ⊢ t ⇒ᵨ t' →
+        P (Γ,, A) t t' →
+        P Γ (lam A t) (lam A' t')
+      ) →
+      (∀ Γ u v u' v',
+        is_lam u = false →
+        no_match Ξ (app u v) →
+        Γ ⊢ u ⇒ᵨ u' →
+        P Γ u u' →
+        Γ ⊢ v ⇒ᵨ v' →
+        P Γ v v' →
+        P Γ (app u v) (app u' v')
+      ) →
+      (∀ Γ x, P Γ (var x) (var x)) →
+      (∀ Γ n rl p t σ σ',
+        ictx_get Ξ n = Some (Comp rl) →
+        cr_pat rl = pat_to_term p →
+        match_pat p t = Some σ →
+        Forall2 (pred_max Γ) σ σ' →
+        Forall2 (P Γ) σ σ' →
+        let rhs := cr_rep rl in
+        P Γ t (rhs <[ slist σ'])
+      ) →
+      ∀ Γ u v, Γ ⊢ u ⇒ᵨ v → P Γ u v.
+  Proof.
+    intros P hbeta hunf hpi hlam happ hvar hrl.
+    fix aux 4. move aux at top.
+    intros Γ u v h. destruct h.
+    7:{
+      eapply hrl. 1-4: eauto.
+      clear H1.
+      revert σ σ' H2. fix aux1 3.
+      intros σ σ' hσ. destruct hσ.
+      - constructor.
+      - constructor. all: eauto.
+    }
+    2:{
+      eapply hunf. 1-4: eauto.
+      revert ξ ξ' H0. fix aux1 3.
+      intros ξ ξ' hh. destruct hh as [ | o o' ξ ξ' hh ].
+      - constructor.
+      - constructor. 2: eauto.
+        destruct hh. all: constructor ; eauto.
+    }
+    all: match goal with h : _ |- _ => eapply h end.
+    all: eauto.
+  Qed.
+
   Context (hpr : pattern_rules Ξ).
 
   Lemma pattern_rules_lhs_no_lam x rl σ A b :
@@ -399,7 +474,7 @@ Section Red.
     lhs <[ σ ] ≠ lam A b.
   Proof.
     intros hx lhs.
-    eapply hpr in hx as hn. fold lhs in hn. clearbody lhs. 
+    eapply hpr in hx as hn. fold lhs in hn. clearbody lhs.
     destruct hn as [p ->].
     destruct p. cbn. discriminate.
   Qed.
@@ -410,7 +485,7 @@ Section Red.
     lhs <[ σ ] ≠ const c ξ.
   Proof.
     intros hx lhs.
-    eapply hpr in hx as hn. fold lhs in hn. clearbody lhs. 
+    eapply hpr in hx as hn. fold lhs in hn. clearbody lhs.
     destruct hn as [p ->].
     destruct p. cbn. discriminate.
   Qed.
@@ -458,7 +533,7 @@ Section Red.
           subst. econstructor. 2: assumption.
           inversion hu2. 1: admit.
           subst. assumption.
-      + (* Need to test whether something is a lhs of a rule 
+      + (* Need to test whether something is a lhs of a rule
           so I guess it needs to be a proper function after all.
         *)
         (* eexists. split.
@@ -477,7 +552,7 @@ Section Red.
     u = v.
   Proof.
     intros hu hv.
-    induction hu in v, hv |- *.
+    induction hu in v, hv |- * using pred_max_ind_alt.
     - inversion hv.
       3:{ subst. admit. }
       2:{ discriminate. }
@@ -486,7 +561,12 @@ Section Red.
       (* 2:{ exfalso. eapply pattern_rules_lhs_no_const. all: eassumption. } *)
       2: admit.
       subst. f_equal.
-      + admit.
+      + eapply Forall2_eq.
+        eapply Forall2_impl, Forall2_trans. 2,3: eassumption.
+        cbn. intros ?? (? & h1 & h2).
+        destruct h1.
+        * inversion h2. reflexivity.
+        * inversion h2. subst. f_equal. eauto.
       + eqtwice. subst. eauto.
     - inversion hv. 2: admit.
       subst. f_equal. all: eauto.
@@ -497,11 +577,14 @@ Section Red.
       3: admit.
       1:{ subst. discriminate. }
       subst. f_equal. all: eauto.
-    - inversion hv. 
+    - inversion hv.
       2:{ admit. }
       reflexivity.
     - (* inversion hv. 1-6: admit.
       subst. f_equal. all: eauto. *)
+      (* To do this case, it would be nice perhaps to add the nomatch to
+        more branches to discriminate all at once.
+      *)
       admit.
   Admitted.
 
