@@ -248,6 +248,41 @@ Section Red.
 
   (** ** Parallel reduction is stable by substitution *)
 
+  Lemma pred_ren Γ Δ ρ u v :
+    Γ ⊢ u ⇒ v →
+    Δ ⊢ ρ ⋅ u ⇒ ρ ⋅ v.
+  Proof.
+    intros h.
+    induction h in Δ, ρ |- * using pred_ind_alt.
+    all: try solve [ rasimpl ; econstructor ; eauto ].
+    - rasimpl. eapply pred_meta_r.
+      + econstructor. all: eauto.
+      + rasimpl. reflexivity.
+    - rasimpl. change @core.option_map with option_map.
+      eapply pred_meta_r.
+      + econstructor. all: eauto.
+        * eapply inst_equations_ren_ih. 1: eauto.
+          admit. (* Should prove once and for all *)
+        * eapply Forall2_map_l, Forall2_map_r.
+          eapply Forall2_impl. 2: eassumption.
+          intros. eapply option_rel_map_l, option_rel_map_r. 
+          eapply option_rel_impl. 2: eassumption.
+          cbn. auto.
+      + rewrite ren_inst. f_equal.
+        rewrite closed_ren. 2: admit.
+        reflexivity.
+    - eapply pred_meta_r.
+      + econstructor. 1,2: eauto.
+        all: admit.
+      + subst rhs. admit.
+    - cbn. change @core.option_map with option_map.
+      econstructor. eapply Forall2_map_l, Forall2_map_r.
+      eapply Forall2_impl. 2: eassumption.
+      intros. eapply option_rel_map_l, option_rel_map_r. 
+      eapply option_rel_impl. 2: eassumption.
+      cbn. auto.
+  Admitted.
+
   Lemma pred_subst_up Δ A σ σ' :
     (∀ x, Δ ⊢ σ x ⇒ σ' x) →
     (∀ x, Δ ,, A <[ σ ] ⊢ (var 0 .: σ >> ren_term S) x ⇒ (var 0 .: σ' >> ren_term S) x).
@@ -255,8 +290,8 @@ Section Red.
     intros h x.
     destruct x.
     - cbn. constructor.
-    - cbn. unfold core.funcomp. (* Need renaming *) admit.
-  Admitted.
+    - cbn. unfold core.funcomp. eapply pred_ren. eauto.
+  Qed.
 
   Lemma pred_subst Γ Δ σ σ' u v :
     (∀ x, Δ ⊢ σ x ⇒ σ' x) →
