@@ -43,6 +43,13 @@ Definition pattern_rules Ξ :=
 Inductive matches_pat : pat → term → list term → Prop :=
 | matches_assm x : matches_pat (passm x) (assm x) [].
 
+Definition no_match Ξ t :=
+  ∀ n rl p σ,
+    ictx_get Ξ n = Some (Comp rl) →
+    rl.(cr_pat) = pat_to_term p →
+    matches_pat p t σ →
+    False.
+
 (** Turn list into parallel substitution **)
 
 Fixpoint slist (l : list term) :=
@@ -264,13 +271,10 @@ Section Red.
 
   | pred_max_app u v u' v' :
       is_lam u = false →
+      no_match Ξ (app u v) →
       Γ ⊢ u ⇒ᵨ u' →
       Γ ⊢ v ⇒ᵨ v' →
       Γ ⊢ app u v ⇒ᵨ app u' v'
-
-  | predmax_const c ξ ξ' :
-      Forall2 (option_rel (pred_max Γ)) ξ ξ' →
-      Γ ⊢ const c ξ ⇒ᵨ const c ξ'
 
   | pred_max_rule n rl p t σ σ' :
       ictx_get Ξ n = Some (Comp rl) →
@@ -351,9 +355,13 @@ Section Red.
           subst. econstructor. 2: assumption.
           inversion hu2. 1: admit.
           subst. assumption.
-      + eexists. split.
+      + (* Need to test whether something is a lhs of a rule 
+          so I guess it needs to be a proper function after all.
+        *)
+        (* eexists. split.
         * econstructor. all: eassumption.
-        * econstructor. all: assumption.
+        * econstructor. all: assumption. *)
+        admit.
     - admit.
   Admitted.
 
@@ -365,27 +373,24 @@ Section Red.
     intros hu hv.
     induction hu in v, hv |- *.
     - inversion hv.
-      3:{ admit. }
+      3:{ subst. admit. }
       2:{ discriminate. }
       subst. f_equal. 1: f_equal. all: eauto.
     - inversion hv.
-      (* 3:{ exfalso. eapply pattern_rules_lhs_no_const. all: eassumption. } *)
-      3: admit.
-      2:{ (* Wrong, need a check *) admit. }
+      (* 2:{ exfalso. eapply pattern_rules_lhs_no_const. all: eassumption. } *)
+      2: admit.
       subst. f_equal.
       + admit.
       + eqtwice. subst. eauto.
-    - admit.
     - inversion hv. 2: admit.
       subst. f_equal. all: eauto.
-    - inversion hv. 1,3: admit.
+    - inversion hv. 2: admit.
       subst. f_equal. all: eauto.
     - inversion hv.
       (* 3:{ exfalso. eapply pattern_rules_lhs_no_const. all: eassumption. } *)
       3: admit.
-      1: admit.
-      subst. f_equal.
-      admit.
+      1:{ subst. discriminate. }
+      subst. f_equal. all: eauto.
     - (* inversion hv. 1-6: admit.
       subst. f_equal. all: eauto. *)
       admit.
