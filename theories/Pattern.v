@@ -139,6 +139,9 @@ Section Red.
       Forall2 (option_rel (pred Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ const c ξ'
 
+  | pred_var x :
+      Γ ⊢ var x ⇒ var x
+
   where "Γ ⊢ u ⇒ v" := (pred Γ u v).
 
   Lemma pred_ind_alt :
@@ -200,9 +203,10 @@ Section Red.
         Forall2 (option_rel (P Γ)) ξ ξ' →
         P Γ (const c ξ) (const c ξ')
       ) →
+      (∀ Γ x, P Γ (var x) (var x)) →
       ∀ Γ u v, Γ ⊢ u ⇒ v → P Γ u v.
   Proof.
-    intros P hbeta hunf hrl hpi hlam happ hconst.
+    intros P hbeta hunf hrl hpi hlam happ hconst hvar.
     fix aux 4. move aux at top.
     intros Γ u v h. destruct h.
     7:{
@@ -250,7 +254,7 @@ Section Red.
   Proof.
     intros h x.
     destruct x.
-    - cbn. (* Missing rule *) admit.
+    - cbn. constructor.
     - cbn. unfold core.funcomp. (* Need renaming *) admit.
   Admitted.
 
@@ -333,6 +337,9 @@ Section Red.
       Γ ⊢ u ⇒ᵨ u' →
       Γ ⊢ v ⇒ᵨ v' →
       Γ ⊢ app u v ⇒ᵨ app u' v'
+    
+  | pred_max_var x :
+      Γ ⊢ var x ⇒ᵨ var x
 
   | pred_max_rule n rl p t σ σ' :
       ictx_get Ξ n = Some (Comp rl) →
@@ -385,12 +392,13 @@ Section Red.
     | ?????? ihA ? iht
     | ? u ??? hu ihu ? ihv
     | ???? ih
+    | ?
     ] using pred_ind_alt.
     - destruct iht as [tr [ht1 ht2]], ihu as [ur [hu1 hu2]].
       eexists. split.
       + econstructor. all: eassumption.
       + eapply pred_subst. 2: eauto.
-        intros []. all: cbn. 2: admit. (* Reflexivity (on var) again *)
+        intros []. all: cbn. 2: constructor.
         assumption.
     - destruct iht as [tr [ht1 ht2]].
       admit.
@@ -423,6 +431,9 @@ Section Red.
         * econstructor. all: assumption. *)
         admit.
     - admit.
+    - eexists. split.
+      + econstructor.
+      + constructor.
   Admitted.
 
   Lemma pred_max_functional Γ t u v :
@@ -451,6 +462,9 @@ Section Red.
       3: admit.
       1:{ subst. discriminate. }
       subst. f_equal. all: eauto.
+    - inversion hv. 
+      2:{ admit. }
+      reflexivity.
     - (* inversion hv. 1-6: admit.
       subst. f_equal. all: eauto. *)
       admit.
