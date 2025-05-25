@@ -46,6 +46,22 @@ Definition match_pat (p : pat) (t : term) : option (list term) :=
   | _, _ => None
   end.
 
+(* We run in the problem that a rule doesn't actually contain a pattern
+  but a term, so we can't perform matching.
+  Maybe we should once again go back to using equations in typing?
+  Or we embrace the implementation and store patterns in rules directly.
+*)
+(* Fixpoint find_match Ξ t :=
+  match Ξ with
+  | Comp rl :: Ξ =>
+    match match_pat rl.(cr_pat) t with
+    | Some σ => Some (length Ξ, rl, σ)
+    | None => find_match Ξ t
+    end
+  | _ :: Ξ => find_match Ξ t
+  | [] => None
+  end. *)
+
 Definition no_match Ξ t :=
   ∀ n rl p,
     ictx_get Ξ n = Some (Comp rl) →
