@@ -50,6 +50,8 @@ Definition match_pat (p : pat) (t : term) : option (list term) :=
   but a term, so we can't perform matching.
   Maybe we should once again go back to using equations in typing?
   Or we embrace the implementation and store patterns in rules directly.
+  Another option is to postulate the existent of some Ξ' which interprets to
+  a regular Ξ.
 *)
 (* Fixpoint find_match Ξ t :=
   match Ξ with
