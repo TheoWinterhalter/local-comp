@@ -72,7 +72,7 @@ Inductive idecl :=
 (** Interface *)
 Definition ictx := list idecl.
 
-(** Instances 
+(** Instances
 
   It is given by a list of terms corresponding to assumptions of an interface.
   Because an interface also contains rules, we opt for the use of [None] in
@@ -91,9 +91,11 @@ Definition instance := list (option term).
 
 *)
 
-Definition ictx_get (Ξ : ictx) (x : aref) :=
-  if length Ξ <=? x then None
-  else nth_error Ξ (length Ξ - (S x)).
+Definition lvl_get [A] (l : list A) (x : aref) :=
+  if length l <=? x then None
+  else nth_error l (length l - (S x)).
+
+Notation ictx_get Ξ x := (lvl_get (A := idecl) Ξ x).
 
 (** Global declaration *)
 Inductive gdecl :=

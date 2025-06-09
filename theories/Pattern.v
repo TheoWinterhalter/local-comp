@@ -33,10 +33,47 @@ Definition pat_to_term p :=
   | passm x => assm x
   end.
 
-Definition pattern_rules Ξ :=
-  ∀ n rl,
-    ictx_get Ξ n = Some (Comp rl) →
-    ∃ p, rl.(cr_pat) = pat_to_term p.
+Record prule := {
+  pr_env : ctx ;
+  pr_pat : pat ;
+  pr_sub : nat → term ;
+  pr_rep : term ;
+  pr_typ : term
+}.
+
+Definition prule_crule (rl : prule) : crule := {|
+  cr_env := rl.(pr_env) ;
+  cr_pat := pat_to_term rl.(pr_pat) ;
+  cr_sub := rl.(pr_sub) ;
+  cr_rep := rl.(pr_rep) ;
+  cr_typ := rl.(pr_typ)
+|}.
+
+Inductive pdecl :=
+| pAssm (A : term)
+| pComp (rl : prule).
+
+Definition pctx := list pdecl.
+
+Notation pctx_get Ξ x := (lvl_get (A := pdecl) Ξ x).
+
+Lemma lvl_get_map [A B] (f : A → B) l x :
+  lvl_get (map f l) x = option_map f (lvl_get l x).
+Proof.
+  unfold lvl_get. rewrite !length_map.
+  destruct (_ <=? _) eqn: e.
+  - reflexivity.
+  - apply nth_error_map.
+Qed.
+
+Definition pdecl_idecl (d : pdecl) : idecl :=
+  match d with
+  | pAssm A => Assm A
+  | pComp rl => Comp (prule_crule rl)
+  end.
+
+Definition pctx_ictx (Ξ : pctx) : ictx :=
+  map pdecl_idecl Ξ.
 
 (** ** Matching *)
 
@@ -46,29 +83,19 @@ Definition match_pat (p : pat) (t : term) : option (list term) :=
   | _, _ => None
   end.
 
-(* We run in the problem that a rule doesn't actually contain a pattern
-  but a term, so we can't perform matching.
-  Maybe we should once again go back to using equations in typing?
-  Or we embrace the implementation and store patterns in rules directly.
-  Another option is to postulate the existent of some Ξ' which interprets to
-  a regular Ξ.
-*)
-(* Fixpoint find_match Ξ t :=
+Fixpoint find_match Ξ t :=
   match Ξ with
-  | Comp rl :: Ξ =>
-    match match_pat rl.(cr_pat) t with
+  | pComp rl :: Ξ =>
+    match match_pat rl.(pr_pat) t with
     | Some σ => Some (length Ξ, rl, σ)
     | None => find_match Ξ t
     end
   | _ :: Ξ => find_match Ξ t
   | [] => None
-  end. *)
+  end.
 
 Definition no_match Ξ t :=
-  ∀ n rl p,
-    ictx_get Ξ n = Some (Comp rl) →
-    rl.(cr_pat) = pat_to_term p →
-    match_pat p t = None.
+  find_match Ξ t = None.
 
 (** Turn list into parallel substitution **)
 
@@ -92,9 +119,9 @@ Qed.
 
 Definition triangle_citerion Ξ :=
   ∀ m n rl1 rl2,
-    ictx_get Ξ m = Some (Comp rl1) →
-    ictx_get Ξ n = Some (Comp rl2) →
-    rl1.(cr_pat) = rl2.(cr_pat) →
+    pctx_get Ξ m = Some (pComp rl1) →
+    pctx_get Ξ n = Some (pComp rl2) →
+    rl1.(pr_pat) = rl2.(pr_pat) →
     m = n.
 
 (** ** Parallel reduction *)
@@ -104,7 +131,7 @@ Section Red.
   Reserved Notation "Γ ⊢ u ⇒ v"
     (at level 80, u, v at next level).
 
-  Context (Σ : gctx) (Ξ : ictx).
+  Context (Σ : gctx) (Ξ : pctx).
 
   Inductive pred (Γ : ctx) : term → term → Prop :=
 
@@ -117,18 +144,17 @@ Section Red.
 
   | pred_unfold c ξ Ξ' A t ξ' t' :
       Σ c = Some (Def Ξ' A t) →
-      inst_equations Σ Ξ Γ ξ Ξ' →
+      inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
       closed t = true →
       ∙ ⊢ t ⇒ t' →
       Forall2 (option_rel (pred Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ inst ξ' t'
 
-  | pred_rule n rl p t σ σ' :
-      ictx_get Ξ n = Some (Comp rl) →
-      rl.(cr_pat) = pat_to_term p →
-      match_pat p t = Some σ →
+  | pred_rule n rl t σ σ' :
+      pctx_get Ξ n = Some (pComp rl) →
+      match_pat rl.(pr_pat) t = Some σ →
       Forall2 (pred Γ) σ σ' →
-      let rhs := rl.(cr_rep) in
+      let rhs := rl.(pr_rep) in
       (* let Θ := rl.(cr_env) in
       let k := length Θ in
       let lhs := rl.(cr_pat) in
@@ -173,7 +199,7 @@ Section Red.
       ) →
       (∀ Γ c ξ Ξ' A t ξ' t',
         Σ c = Some (Def Ξ' A t) →
-        inst_equations Σ Ξ Γ ξ Ξ' →
+        inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
         closed t = true →
         ∙ ⊢ t ⇒ t' →
         P ∙ t t' →
@@ -181,13 +207,12 @@ Section Red.
         Forall2 (option_rel (P Γ)) ξ ξ' →
         P Γ (const c ξ) (inst ξ' t')
       ) →
-      (∀ Γ n rl p t σ σ',
-        ictx_get Ξ n = Some (Comp rl) →
-        rl.(cr_pat) = pat_to_term p →
-        match_pat p t = Some σ →
+      (∀ Γ n rl t σ σ',
+        pctx_get Ξ n = Some (pComp rl) →
+        match_pat rl.(pr_pat) t = Some σ →
         Forall2 (pred Γ) σ σ' →
         Forall2 (P Γ) σ σ' →
-        let rhs := rl.(cr_rep) in
+        let rhs := rl.(pr_rep) in
         (* let Θ := rl.(cr_env) in
         let k := length Θ in
         let lhs := rl.(cr_pat) in
@@ -237,8 +262,8 @@ Section Red.
     }
     3:{
       eapply hrl. 1-4: eauto.
-      clear H1.
-      revert σ σ' H2. fix aux1 3.
+      clear H0.
+      revert σ σ' H1. fix aux1 3.
       intros σ σ' hσ. destruct hσ.
       - constructor.
       - constructor. all: eauto.
@@ -394,12 +419,11 @@ Section Red.
   | pred_max_var x :
       Γ ⊢ var x ⇒ᵨ var x
 
-  | pred_max_rule n rl p t σ σ' :
-      ictx_get Ξ n = Some (Comp rl) →
-      rl.(cr_pat) = pat_to_term p →
-      match_pat p t = Some σ →
+  | pred_max_rule n rl t σ σ' :
+      pctx_get Ξ n = Some (pComp rl) →
+      match_pat rl.(pr_pat) t = Some σ →
       Forall2 (pred_max Γ) σ σ' →
-      let rhs := rl.(cr_rep) in
+      let rhs := rl.(pr_rep) in
       (* let Θ := rl.(cr_env) in
       let k := length Θ in
       let lhs := rl.(cr_pat) in
@@ -450,13 +474,12 @@ Section Red.
         P Γ (app u v) (app u' v')
       ) →
       (∀ Γ x, P Γ (var x) (var x)) →
-      (∀ Γ n rl p t σ σ',
-        ictx_get Ξ n = Some (Comp rl) →
-        cr_pat rl = pat_to_term p →
-        match_pat p t = Some σ →
+      (∀ Γ n rl t σ σ',
+        pctx_get Ξ n = Some (pComp rl) →
+        match_pat rl.(pr_pat) t = Some σ →
         Forall2 (pred_max Γ) σ σ' →
         Forall2 (P Γ) σ σ' →
-        let rhs := cr_rep rl in
+        let rhs := rl.(pr_rep) in
         P Γ t (rhs <[ slist σ'])
       ) →
       ∀ Γ u v, Γ ⊢ u ⇒ᵨ v → P Γ u v.
@@ -466,8 +489,8 @@ Section Red.
     intros Γ u v h. destruct h.
     7:{
       eapply hrl. 1-4: eauto.
-      clear H1.
-      revert σ σ' H2. fix aux1 3.
+      clear H0.
+      revert σ σ' H1. fix aux1 3.
       intros σ σ' hσ. destruct hσ.
       - constructor.
       - constructor. all: eauto.
@@ -484,27 +507,15 @@ Section Red.
     all: eauto.
   Qed.
 
-  Context (hpr : pattern_rules Ξ).
-
-  Lemma pattern_rules_lhs_no_lam x rl σ A b :
-    ictx_get Ξ x = Some (Comp rl) →
-    let lhs := rl.(cr_pat) in
-    lhs <[ σ ] ≠ lam A b.
+  Lemma pat_no_lam p σ A b :
+    (pat_to_term p) <[ σ ] ≠ lam A b.
   Proof.
-    intros hx lhs.
-    eapply hpr in hx as hn. fold lhs in hn. clearbody lhs.
-    destruct hn as [p ->].
     destruct p. cbn. discriminate.
   Qed.
 
-  Lemma pattern_rules_lhs_no_const x rl σ c ξ :
-    ictx_get Ξ x = Some (Comp rl) →
-    let lhs := rl.(cr_pat) in
-    lhs <[ σ ] ≠ const c ξ.
+  Lemma pat_no_const p σ c ξ :
+    (pat_to_term p) <[ σ ] ≠ const c ξ.
   Proof.
-    intros hx lhs.
-    eapply hpr in hx as hn. fold lhs in hn. clearbody lhs.
-    destruct hn as [p ->].
     destruct p. cbn. discriminate.
   Qed.
 
@@ -515,7 +526,7 @@ Section Red.
     induction 1 as [
       ?????? ht iht hu ihu
     | ???????????? iht ? ihξ
-    | ???????????? ih
+    | ?????????? ih
     | ?????? ihA ? ihB
     | ?????? ihA ? iht
     | ? u ??? hu ihu ? ihv
@@ -552,7 +563,7 @@ Section Red.
       destruct (is_lam u) eqn: eu.
       + eapply is_lam_inv in eu as (A & b & ->).
         inversion hu1.
-        2:{ exfalso. admit. }
+        2:{ exfalso. subst.  admit. }
         subst.
         eexists. split.
         * econstructor. all: eassumption.

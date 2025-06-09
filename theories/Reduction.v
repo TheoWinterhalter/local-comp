@@ -323,7 +323,7 @@ Proof.
   cbn.
   unfold inst_iget in h.
   specialize (h x).
-  destruct ictx_get as [[]|] eqn: eg.
+  destruct (ictx_get _ _) as [[]|] eqn: eg.
   3:{
     unfold ictx_get in eg. destruct (_ <=? _) eqn: e1.
     - rewrite Nat.leb_le in e1. rewrite <- e in e1.
@@ -335,7 +335,7 @@ Proof.
     specialize (heq _ _ eg). cbn in heq. intuition congruence.
   }
   specialize h with (1 := eq_refl).
-  unfold iget in h. rewrite hx in h. 
+  unfold iget in h. rewrite hx in h.
   eexists. intuition eauto.
 Qed.
 

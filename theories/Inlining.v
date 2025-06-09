@@ -255,7 +255,7 @@ Section Inline.
     intros ih.
     intros x rl hx.
     rewrite ictx_get_map in hx.
-    destruct ictx_get as [[| rl']|] eqn:hx'. 1,3: discriminate.
+    destruct (ictx_get _ _) as [[| rl']|] eqn:hx'. 1,3: discriminate.
     cbn in hx. inversion hx. subst. clear hx.
     specialize (ih _ _ hx') as (hx & hl & hr & ih).
     cbn. rewrite nth_error_map, hx. cbn.
@@ -293,7 +293,7 @@ Section Inline.
       rewrite cr_pat_inline, cr_rep_inline.
       eapply conv_red.
       + apply ictx_get_comp_inline. eassumption.
-      + cbn. eapply scoped_inline. rewrite length_map. assumption. 
+      + cbn. eapply scoped_inline. rewrite length_map. assumption.
       + cbn. eapply scoped_inline. rewrite length_map. assumption.
     - cbn. eapply conv_insts.
       apply Forall2_map_l, Forall2_map_r.
@@ -319,9 +319,9 @@ Section Inline.
     intros (he & ih & e).
     split. 2: split.
     - eauto using inst_equations_inline_ih, inst_equations_prop, conv_inline.
-    - intros x A hx. 
+    - intros x A hx.
       rewrite ictx_get_map in hx.
-      destruct ictx_get as [[]|] eqn: hx'. 2,3: discriminate.
+      destruct (ictx_get _ _) as [[]|] eqn: hx'. 2,3: discriminate.
       cbn in hx. inversion hx. subst. clear hx.
       specialize (ih _ _ hx') as [hc ih].
       split.
