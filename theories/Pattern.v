@@ -508,15 +508,70 @@ Section Red.
   Qed.
 
   Lemma pat_no_lam p σ A b :
-    (pat_to_term p) <[ σ ] ≠ lam A b.
+    lam A b ≠ (pat_to_term p) <[ σ ].
   Proof.
     destruct p. cbn. discriminate.
   Qed.
 
   Lemma pat_no_const p σ c ξ :
-    (pat_to_term p) <[ σ ] ≠ const c ξ.
+    const c ξ ≠ (pat_to_term p) <[ σ ].
   Proof.
     destruct p. cbn. discriminate.
+  Qed.
+
+  Lemma pat_no_var p σ x :
+    var x ≠ (pat_to_term p) <[ σ ].
+  Proof.
+    destruct p. cbn. discriminate.
+  Qed.
+
+  Lemma match_pat_not_lam p A b σ :
+    match_pat p (lam A b) = Some σ →
+    False.
+  Proof.
+    intros h%match_pat_sound.
+    eapply pat_no_lam. eassumption.
+  Qed.
+
+  Lemma match_pat_not_const p c ξ σ :
+    match_pat p (const c ξ) = Some σ →
+    False.
+  Proof.
+    intros h%match_pat_sound.
+    eapply pat_no_const. eassumption.
+  Qed.
+
+  Lemma match_pat_not_var p x σ :
+    match_pat p (var x) = Some σ →
+    False.
+  Proof.
+    intros h%match_pat_sound.
+    eapply pat_no_var. eassumption.
+  Qed.
+
+  Lemma lvl_get_In [A] l n a :
+    lvl_get (A := A) l n = Some a →
+    In a l.
+  Proof.
+    intros e.
+    unfold lvl_get in e.
+    destruct (_ <=? _). 1: discriminate.
+    eapply nth_error_In. eassumption.
+  Qed.
+
+  Lemma no_match_no_match_pat t n rl σ :
+    no_match Ξ t →
+    pctx_get Ξ n = Some (pComp rl) →
+    match_pat rl.(pr_pat) t = Some σ →
+    False.
+  Proof.
+    intros ht hn hm.
+    unfold no_match in ht.
+    eapply lvl_get_In in hn.
+    induction Ξ as [| [| rl'] Ξ' ih]. 1: contradiction.
+    - cbn in *. intuition discriminate.
+    - cbn in *. destruct match_pat eqn: e. 1: discriminate.
+      intuition congruence.
   Qed.
 
   Lemma triangle Γ t u :
@@ -596,8 +651,7 @@ Section Red.
       2:{ discriminate. }
       subst. f_equal. 1: f_equal. all: eauto.
     - inversion hv.
-      (* 2:{ exfalso. eapply pattern_rules_lhs_no_const. all: eassumption. } *)
-      2: admit.
+      2:{ exfalso. subst. eapply match_pat_not_const. eassumption. }
       subst. f_equal.
       + eapply Forall2_eq.
         eapply Forall2_impl, Forall2_trans. 2,3: eassumption.
@@ -611,12 +665,11 @@ Section Red.
     - inversion hv. 2: admit.
       subst. f_equal. all: eauto.
     - inversion hv.
-      (* 3:{ exfalso. eapply pattern_rules_lhs_no_const. all: eassumption. } *)
-      3: admit.
+      3:{ exfalso. eapply no_match_no_match_pat. all: eassumption. }
       1:{ subst. discriminate. }
       subst. f_equal. all: eauto.
     - inversion hv.
-      2:{ admit. }
+      2:{ exfalso. eapply match_pat_not_var. eassumption. }
       reflexivity.
     - (* inversion hv. 1-6: admit.
       subst. f_equal. all: eauto. *)
