@@ -7,7 +7,7 @@
 
 *)
 
-From Stdlib Require Import Utf8 String List Arith.
+From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import AST SubstNotations RAsimpl AST_rasimpl.
 From LocalComp Require Import Util BasicAST.
 
@@ -96,6 +96,29 @@ Definition lvl_get [A] (l : list A) (x : aref) :=
   else nth_error l (length l - (S x)).
 
 Notation ictx_get Ξ x := (lvl_get (A := idecl) Ξ x).
+
+Lemma lvl_get_weak [A] d l n a :
+  lvl_get (A := A) l n = Some a →
+  lvl_get (d :: l) n = Some a.
+Proof.
+  unfold lvl_get. cbn - ["<=?"].
+  destruct (_ <=? _) eqn: e. 1: congruence.
+  rewrite Nat.leb_gt in e.
+  intro h.
+  destruct (_ <=? _) eqn: e'. 1:{ rewrite Nat.leb_le in e'. lia. }
+  replace (length l - n) with (S (length l - (S n))) by lia.
+  cbn. assumption.
+Qed.
+
+Lemma lvl_get_last [A] (a : A) l :
+  lvl_get (a :: l) (length l) = Some a.
+Proof.
+  unfold lvl_get. cbn - ["<=?"].
+  destruct (_ <=? _) eqn: e.
+  1:{ rewrite Nat.leb_le in e. lia. }
+  replace (length l - length l) with 0 by lia.
+  reflexivity.
+Qed.
 
 (** Global declaration *)
 Inductive gdecl :=

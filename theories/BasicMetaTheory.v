@@ -387,7 +387,7 @@ Qed.
 
 Lemma lift_ren_instance :
   ∀ ρ ξ,
-    lift_instance (ren_instance ρ ξ) = 
+    lift_instance (ren_instance ρ ξ) =
     ren_instance (upRen_term_term ρ) (lift_instance ξ).
 Proof.
   intros ρ ξ.
@@ -536,10 +536,10 @@ Lemma inst_equations_ren_ih Σ Ξ Γ Δ ρ ξ Ξ' :
   inst_equations Σ Ξ Δ (ren_instance ρ ξ) Ξ'.
 Proof.
   intros h ih.
-  intros x rl hx m Θ. cbn.   
+  intros x rl hx m Θ. cbn.
   rewrite nth_error_map.
   rewrite liftn_ren_instance.
-  specialize (ih _ _ hx) as (e & hl & hr & ih). 
+  specialize (ih _ _ hx) as (e & hl & hr & ih).
   fold m Θ in hl, hr, ih.
   specialize ih with (ρ := uprens m ρ).
   (* 2:{
@@ -1149,7 +1149,7 @@ Proof.
   - cbn in *. apply All_forallb. apply forallb_All in ht.
     move ht at top. eapply All_prod in ht. 2: eassumption.
     eapply All_impl. 2: eassumption.
-    cbn. intros ? [h1 h2]. apply onSomeb_onSome, onSomeT_onSome. 
+    cbn. intros ? [h1 h2]. apply onSomeb_onSome, onSomeT_onSome.
     apply onSomeb_onSome, onSome_onSomeT in h2.
     eapply onSomeT_prod in h1. 2: eassumption.
     eapply onSomeT_impl. 2: eassumption.
@@ -1608,13 +1608,7 @@ Lemma ictx_get_weak d Ξ M i :
   ictx_get Ξ M = Some i →
   ictx_get (d :: Ξ) M = Some i.
 Proof.
-  unfold ictx_get. cbn - ["<=?"].
-  destruct (_ <=? _) eqn: e. 1: congruence.
-  rewrite Nat.leb_gt in e.
-  intro h.
-  destruct (_ <=? _) eqn: e'. 1:{ rewrite Nat.leb_le in e'. lia. }
-  replace (length Ξ - M) with (S (length Ξ - (S M))) by lia.
-  cbn. assumption.
+  apply lvl_get_weak.
 Qed.
 
 Lemma conv_eweak Σ Ξ d Γ u v :
@@ -1926,7 +1920,7 @@ Proof.
   intros hΞ e.
   induction hΞ as [| B Ξ i hΞ ih hB | rl Ξ hΞ ih hs ht ].
   - destruct x. all: discriminate.
-  - eapply ictx_get_case in e as eh. destruct eh as [[-> eh] | eh]. 
+  - eapply ictx_get_case in e as eh. destruct eh as [[-> eh] | eh].
     + inversion eh. subst.
       eexists. eapply typing_eweak. eassumption.
     + specialize (ih eh) as [].
@@ -1946,9 +1940,9 @@ Proof.
   induction hΞ as [| B Ξ i hΞ ih hB | rl' Ξ hΞ ih hs ht ].
   - destruct x. all: discriminate.
   - eapply ictx_get_case in e as eh. destruct eh as [[-> eh] | eh].
-    1: discriminate. 
+    1: discriminate.
     intuition eauto using equation_typing_eweak.
-  - eapply ictx_get_case in e as eh. destruct eh as [[-> eh] | eh]. 
+  - eapply ictx_get_case in e as eh. destruct eh as [[-> eh] | eh].
     + inversion eh. subst.
       intuition eauto using equation_typing_eweak.
     + specialize (ih eh) as [].

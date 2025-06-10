@@ -117,6 +117,21 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma find_match_sound Ξ t n rl σ :
+  find_match Ξ t = Some (n, rl, σ) →
+  pctx_get Ξ n = Some (pComp rl) ∧
+  match_pat rl.(pr_pat) t = Some σ.
+Proof.
+  intros h.
+  induction Ξ as [| [A|rl'] Ξ ih].
+  - discriminate.
+  - cbn in h. erewrite lvl_get_weak. all: intuition eauto.
+  - cbn in h. destruct match_pat eqn: e.
+    + inversion h. subst.
+      rewrite lvl_get_last. intuition eauto.
+    + erewrite lvl_get_weak. all: intuition eauto.
+Qed.
+
 Definition triangle_citerion Ξ :=
   ∀ m n rl1 rl2,
     pctx_get Ξ m = Some (pComp rl1) →
@@ -389,22 +404,26 @@ Section Red.
 
   Inductive pred_max Γ : term → term → Prop :=
   | pred_max_beta A t t' u u' :
+      no_match Ξ (app (lam A t) u) →
       Γ ,, A ⊢ t ⇒ᵨ t' →
       Γ ⊢ u ⇒ᵨ u' →
       Γ ⊢ app (lam A t) u ⇒ᵨ t' <[ u' .. ]
 
   | pred_max_unfold c ξ Ξ' A t ξ' t' :
+      no_match Ξ (const c ξ) →
       Σ c = Some (Def Ξ' A t) →
       ∙ ⊢ t ⇒ᵨ t' →
       Forall2 (option_rel (pred_max Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ᵨ inst ξ' t'
 
   | pred_max_Pi A B A' B' :
+      no_match Ξ (Pi A B) →
       Γ ⊢ A ⇒ᵨ A' →
       Γ ,, A ⊢ B ⇒ᵨ B' →
       Γ ⊢ Pi A B ⇒ᵨ Pi A' B'
 
   | pred_max_lam A t A' t' :
+      no_match Ξ (lam A t) →
       Γ ⊢ A ⇒ᵨ A' →
       Γ ,, A ⊢ t ⇒ᵨ t' →
       Γ ⊢ lam A t ⇒ᵨ lam A' t'
@@ -417,6 +436,7 @@ Section Red.
       Γ ⊢ app u v ⇒ᵨ app u' v'
 
   | pred_max_var x :
+      no_match Ξ (var x) →
       Γ ⊢ var x ⇒ᵨ var x
 
   | pred_max_rule n rl t σ σ' :
@@ -436,6 +456,7 @@ Section Red.
   Lemma pred_max_ind_alt :
     ∀ (P : list term → term → term → Prop),
       (∀ Γ A t t' u u',
+        no_match Ξ (app (lam A t) u) →
         Γ,, A ⊢ t ⇒ᵨ t' →
         P (Γ,, A) t t' →
         Γ ⊢ u ⇒ᵨ u' →
@@ -443,6 +464,7 @@ Section Red.
         P Γ (app (lam A t) u) (t' <[ u'..])
       ) →
       (∀ Γ c ξ Ξ' A t ξ' t',
+        no_match Ξ (const c ξ) →
         Σ c = Some (Def Ξ' A t) →
         ∙ ⊢ t ⇒ᵨ t' →
         P ∙ t t' →
@@ -451,6 +473,7 @@ Section Red.
         P Γ (const c ξ) (inst ξ' t')
       ) →
       (∀ Γ A B A' B',
+        no_match Ξ (Pi A B) →
         Γ ⊢ A ⇒ᵨ A' →
         P Γ A A' →
         Γ,, A ⊢ B ⇒ᵨ B' →
@@ -458,6 +481,7 @@ Section Red.
         P Γ (Pi A B) (Pi A' B')
       ) →
       (∀ Γ A t A' t',
+        no_match Ξ (lam A t) →
         Γ ⊢ A ⇒ᵨ A' →
         P Γ A A' →
         Γ,, A ⊢ t ⇒ᵨ t' →
@@ -473,7 +497,10 @@ Section Red.
         P Γ v v' →
         P Γ (app u v) (app u' v')
       ) →
-      (∀ Γ x, P Γ (var x) (var x)) →
+      (∀ Γ x,
+        no_match Ξ (var x) →
+        P Γ (var x) (var x)
+      ) →
       (∀ Γ n rl t σ σ',
         pctx_get Ξ n = Some (pComp rl) →
         match_pat rl.(pr_pat) t = Some σ →
@@ -496,8 +523,9 @@ Section Red.
       - constructor. all: eauto.
     }
     2:{
-      eapply hunf. 1-4: eauto.
-      revert ξ ξ' H0. fix aux1 3.
+      eapply hunf. 1-5: eauto.
+      clear H.
+      revert ξ ξ' H1. fix aux1 3.
       intros ξ ξ' hh. destruct hh as [ | o o' ξ ξ' hh ].
       - constructor.
       - constructor. 2: eauto.
@@ -509,6 +537,18 @@ Section Red.
 
   Lemma pat_no_lam p σ A b :
     lam A b ≠ (pat_to_term p) <[ σ ].
+  Proof.
+    destruct p. cbn. discriminate.
+  Qed.
+
+  Lemma pat_no_beta p σ A b u :
+    app (lam A b) u ≠ (pat_to_term p) <[ σ ].
+  Proof.
+    destruct p. cbn. discriminate.
+  Qed.
+
+  Lemma pat_no_Pi p σ A B :
+    Pi A B ≠ (pat_to_term p) <[ σ ].
   Proof.
     destruct p. cbn. discriminate.
   Qed.
@@ -533,12 +573,63 @@ Section Red.
     eapply pat_no_lam. eassumption.
   Qed.
 
+  Lemma match_pat_not_beta p A b u σ :
+    match_pat p (app (lam A b) u) = Some σ →
+    False.
+  Proof.
+    intros h%match_pat_sound.
+    eapply pat_no_beta. eassumption.
+  Qed.
+
+  Lemma match_pat_not_Pi p A B σ :
+    match_pat p (Pi A B) = Some σ →
+    False.
+  Proof.
+    intros h%match_pat_sound.
+    eapply pat_no_Pi. eassumption.
+  Qed.
+
+  Lemma prove_no_match t :
+    (∀ p σ, match_pat p t = Some σ → False) →
+    no_match Ξ t.
+  Proof.
+    intros h.
+    unfold no_match.
+    destruct find_match as [[[]]|] eqn: e. 2: reflexivity.
+    exfalso. eapply find_match_sound in e.
+    eapply h. intuition eauto.
+  Qed.
+
+  Lemma no_match_lam A t :
+    no_match Ξ (lam A t).
+  Proof.
+    eapply prove_no_match. eauto using match_pat_not_lam.
+  Qed.
+
+  Lemma no_match_beta A t u :
+    no_match Ξ (app (lam A t) u).
+  Proof.
+    eapply prove_no_match. eauto using match_pat_not_beta.
+  Qed.
+
+  Lemma no_match_Pi A B :
+    no_match Ξ (Pi A B).
+  Proof.
+    eapply prove_no_match. eauto using match_pat_not_Pi.
+  Qed.
+
   Lemma match_pat_not_const p c ξ σ :
     match_pat p (const c ξ) = Some σ →
     False.
   Proof.
     intros h%match_pat_sound.
     eapply pat_no_const. eassumption.
+  Qed.
+
+  Lemma no_match_const c ξ :
+    no_match Ξ (const c ξ).
+  Proof.
+    eapply prove_no_match. eauto using match_pat_not_const.
   Qed.
 
   Lemma match_pat_not_var p x σ :
@@ -549,6 +640,13 @@ Section Red.
     eapply pat_no_var. eassumption.
   Qed.
 
+  Lemma no_match_var x :
+    no_match Ξ (var x).
+  Proof.
+    eapply prove_no_match. eauto using match_pat_not_var.
+  Qed.
+
+  (* TODO MOVE *)
   Lemma lvl_get_In [A] l n a :
     lvl_get (A := A) l n = Some a →
     In a l.
@@ -590,7 +688,8 @@ Section Red.
     ] using pred_ind_alt.
     - destruct iht as [tr [ht1 ht2]], ihu as [ur [hu1 hu2]].
       eexists. split.
-      + econstructor. all: eassumption.
+      + econstructor. 2,3: eassumption.
+        apply no_match_beta.
       + eapply pred_subst. 2: eauto.
         intros []. all: cbn. 2: constructor.
         assumption.
@@ -600,7 +699,8 @@ Section Red.
       eapply Forall2_trans_inv in ihξ.
       destruct ihξ as (ξᵨ & ? & ?).
       eexists. split.
-      + econstructor. 1,2: eauto.
+      + econstructor. 2,3: eauto.
+        1: apply no_match_const.
         apply Forall2_flip. eapply Forall2_impl. 2: eassumption.
         apply option_rel_flip.
       + (* Need stability by instantiation *)
@@ -608,34 +708,37 @@ Section Red.
     - admit.
     - destruct ihA as [Ar [hA1 hA2]], ihB as [Br [hB1 hB2]].
       eexists. split.
-      + econstructor. all: eassumption.
+      + econstructor. 2-3: eassumption.
+        apply no_match_Pi.
       + econstructor. all: eauto. admit.
     - destruct ihA as [Ar [hA1 hA2]], iht as [tr [ht1 ht2]].
       eexists. split.
-      + econstructor. all: eassumption.
+      + econstructor. 2-3: eassumption.
+        apply no_match_lam.
       + econstructor. all: eauto. admit.
     - destruct ihu as [ur [hu1 hu2]], ihv as [vr [hv1 hv2]].
       destruct (is_lam u) eqn: eu.
       + eapply is_lam_inv in eu as (A & b & ->).
         inversion hu1.
-        2:{ exfalso. subst.  admit. }
+        2:{ exfalso. subst. eapply match_pat_not_lam. eassumption. }
         subst.
         eexists. split.
-        * econstructor. all: eassumption.
-        * inversion hu. 1: admit.
+        * econstructor. 2-3: eassumption.
+          apply no_match_beta.
+        * inversion hu.
+          1:{ exfalso. subst. eapply match_pat_not_lam. eassumption. }
           subst. econstructor. 2: assumption.
-          inversion hu2. 1: admit.
+          inversion hu2.
+          1:{ exfalso. subst. eapply match_pat_not_lam. eassumption. }
           subst. assumption.
-      + (* Maybe nomatch should be defined using somematch / firstmatch which
-        looks up the whole Ξ for rules.
-        *)
-        (* eexists. split.
-        * econstructor. all: eassumption.
-        * econstructor. all: assumption. *)
-        admit.
+      + destruct (find_match Ξ (app u v)) eqn:e.
+        * admit.
+        * eexists. split.
+          -- econstructor. all: eauto.
+          -- econstructor. all: assumption.
     - admit.
     - eexists. split.
-      + econstructor.
+      + econstructor. apply no_match_var.
       + constructor.
   Admitted.
 
@@ -671,11 +774,9 @@ Section Red.
     - inversion hv.
       2:{ exfalso. eapply match_pat_not_var. eassumption. }
       reflexivity.
-    - (* inversion hv. 1-6: admit.
-      subst. f_equal. all: eauto. *)
-      (* To do this case, it would be nice perhaps to add the nomatch to
-        more branches to discriminate all at once.
-      *)
+    - inversion hv. 1-6: exfalso ; subst ; eapply no_match_no_match_pat ; eauto.
+      subst.
+      (* Here we have to use the triangle *)
       admit.
   Admitted.
 
