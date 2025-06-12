@@ -768,7 +768,7 @@ Section Red.
     u = v.
   Proof.
     intros hu hv.
-    induction hu as [ | | | | | | ??????? h ??? ] in v, hv |- * using pred_max_ind_alt.
+    induction hu as [ | | | | | | ??????? h ? ihσ ? ] in v, hv |- * using pred_max_ind_alt.
     - inversion hv.
       3:{ exfalso. eapply no_match_no_match_pat. all: eassumption. }
       2: discriminate.
@@ -801,9 +801,11 @@ Section Red.
       eapply triangle_match in h as ht. 2-4: eassumption.
       destruct ht as [-> ->].
       eqtwice.
-      (* Would need IH for σ there it seems. *)
-      admit.
-  Admitted.
+      apply ext_term. intros ?. f_equal.
+      apply Forall2_eq.
+      eapply Forall2_impl, Forall2_trans. 2,3: eassumption.
+      cbn. intros ?? (? & h1 & h2). eauto.
+  Qed.
 
   Lemma pred_diamond Γ :
     diamond (pred Γ).
