@@ -672,6 +672,26 @@ Section Red.
       intuition congruence.
   Qed.
 
+  Context (htri : triangle_citerion Ξ).
+
+  Lemma triangle_match n m rl rl' t σ σ' :
+    pctx_get Ξ n = Some (pComp rl) →
+    match_pat rl.(pr_pat) t = Some σ →
+    pctx_get Ξ m = Some (pComp rl') →
+    match_pat rl'.(pr_pat) t = Some σ' →
+    rl = rl' ∧ σ = σ'.
+  Proof.
+    intros hn h hm h'.
+    eapply htri in hn as e. specialize (e hm).
+    eapply match_pat_sound in h as e1, h' as e2.
+    destruct rl.(pr_pat). cbn in e1. subst.
+    destruct rl'.(pr_pat). cbn in e2. inversion e2. subst.
+    specialize (e eq_refl). subst.
+    eqtwice. subst.
+    eqtwice. subst.
+    intuition reflexivity.
+  Qed.
+
   Lemma triangle Γ t u :
     Γ ⊢ t ⇒ u →
     ∃ tᵨ, Γ ⊢ t ⇒ᵨ tᵨ ∧ Γ ⊢ u ⇒ tᵨ.
@@ -748,10 +768,10 @@ Section Red.
     u = v.
   Proof.
     intros hu hv.
-    induction hu in v, hv |- * using pred_max_ind_alt.
+    induction hu as [ | | | | | | ??????? h ??? ] in v, hv |- * using pred_max_ind_alt.
     - inversion hv.
-      3:{ subst. admit. }
-      2:{ discriminate. }
+      3:{ exfalso. eapply no_match_no_match_pat. all: eassumption. }
+      2: discriminate.
       subst. f_equal. 1: f_equal. all: eauto.
     - inversion hv.
       2:{ exfalso. subst. eapply match_pat_not_const. eassumption. }
@@ -763,9 +783,11 @@ Section Red.
         * inversion h2. reflexivity.
         * inversion h2. subst. f_equal. eauto.
       + eqtwice. subst. eauto.
-    - inversion hv. 2: admit.
+    - inversion hv.
+      2:{ exfalso. eapply no_match_no_match_pat. all: eassumption. }
       subst. f_equal. all: eauto.
-    - inversion hv. 2: admit.
+    - inversion hv.
+      2:{ exfalso. eapply no_match_no_match_pat. all: eassumption. }
       subst. f_equal. all: eauto.
     - inversion hv.
       3:{ exfalso. eapply no_match_no_match_pat. all: eassumption. }
@@ -776,7 +798,10 @@ Section Red.
       reflexivity.
     - inversion hv. 1-6: exfalso ; subst ; eapply no_match_no_match_pat ; eauto.
       subst.
-      (* Here we have to use the triangle *)
+      eapply triangle_match in h as ht. 2-4: eassumption.
+      destruct ht as [-> ->].
+      eqtwice.
+      (* Would need IH for σ there it seems. *)
       admit.
   Admitted.
 
