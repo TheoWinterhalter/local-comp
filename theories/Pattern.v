@@ -161,6 +161,7 @@ Section Red.
       Σ c = Some (Def Ξ' A t) →
       inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
       closed t = true →
+      closed t' = true →
       ∙ ⊢ t ⇒ t' →
       Forall2 (option_rel (pred Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ inst ξ' t'
@@ -216,6 +217,7 @@ Section Red.
         Σ c = Some (Def Ξ' A t) →
         inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
         closed t = true →
+        closed t' = true →
         ∙ ⊢ t ⇒ t' →
         P ∙ t t' →
         Forall2 (option_rel (pred Γ)) ξ ξ' →
@@ -284,9 +286,9 @@ Section Red.
       - constructor. all: eauto.
     }
     2:{
-      eapply hunf. 1-6: eauto.
+      eapply hunf. 1-7: eauto.
       clear H0.
-      revert ξ ξ' H2. fix aux1 3.
+      revert ξ ξ' H3. fix aux1 3.
       intros ξ ξ' hh. destruct hh as [ | o o' ξ ξ' hh ].
       - constructor.
       - constructor. 2: eauto.
@@ -351,6 +353,29 @@ Section Red.
     - cbn. unfold core.funcomp. eapply pred_ren. eauto.
   Qed.
 
+  Lemma match_pat_subst p t l σ :
+    match_pat p t = Some l →
+    match_pat p (t <[ σ ]) = Some (map (subst_term σ) l).
+  Proof.
+    intro h.
+    destruct p, t. all: try discriminate.
+    cbn in *. destruct (_ =? _). 2: discriminate.
+    inversion h.
+    reflexivity.
+  Qed.
+
+  Lemma slist_subst l σ :
+    pointwise_relation _ eq
+      (slist l >> subst_term σ) (slist (map (subst_term σ) l)).
+  Proof.
+    intros x. unfold core.funcomp.
+    induction l as [| u l ih] in x |- *.
+    - cbn. reflexivity.
+    - cbn. destruct x.
+      + cbn. reflexivity.
+      + cbn. eauto.
+  Qed.
+
   Lemma pred_subst Γ Δ σ σ' u v :
     (∀ x, Δ ⊢ σ x ⇒ σ' x) →
     Γ ⊢ u ⇒ v →
@@ -365,23 +390,28 @@ Section Red.
     - rasimpl. eapply pred_meta_r.
       + change @core.option_map with option_map.
         econstructor. all: eauto.
-        * eapply inst_equations_subst_ih. 1: eassumption.
-          admit. (* Should prove it once and for all *)
+        * eauto using inst_equations_subst_ih, inst_equations_prop, conv_subst.
         * eapply Forall2_map_l, Forall2_map_r.
           eapply Forall2_impl. 2: eassumption.
           intros. eapply option_rel_map_l, option_rel_map_r.
           eapply option_rel_impl. 2: eassumption.
           cbn. eauto using pred_subst_up.
-      + rewrite subst_inst_closed. 2: admit.
+      + rewrite subst_inst_closed. 2: assumption.
         reflexivity.
-    - admit. (* Stability of matching *)
+    - rasimpl. setoid_rewrite slist_subst.
+      econstructor.
+      + eassumption.
+      + eapply match_pat_subst. eassumption.
+      + apply Forall2_map_l, Forall2_map_r. eapply Forall2_impl. 2: eassumption.
+        cbn. eauto.
     - cbn. change @core.option_map with option_map.
       econstructor. eapply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
       intros. eapply option_rel_map_l, option_rel_map_r.
       eapply option_rel_impl. 2: eassumption.
       cbn. eauto using pred_subst_up.
-  Admitted.
+    - cbn. eauto.
+  Qed.
 
   (** ** Maximal reduct for parallel reduction *)
 
@@ -698,7 +728,7 @@ Section Red.
   Proof.
     induction 1 as [
       ?????? ht iht hu ihu
-    | ???????????? iht ? ihξ
+    | ????????????? iht ? ihξ
     | ?????????? ih
     | ?????? ihA ? ihB
     | ?????? ihA ? iht
