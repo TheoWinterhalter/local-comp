@@ -308,6 +308,29 @@ Section Red.
 
   (** ** Parallel reduction is stable by substitution *)
 
+  Lemma match_pat_ren p t l ρ :
+    match_pat p t = Some l →
+    match_pat p (ρ ⋅ t) = Some (map (ren_term ρ) l).
+  Proof.
+    intro h.
+    destruct p, t. all: try discriminate.
+    cbn in *. destruct (_ =? _). 2: discriminate.
+    inversion h.
+    reflexivity.
+  Qed.
+
+  Lemma slist_ren l ρ :
+    pointwise_relation _ eq
+      (slist l >> ren_term ρ) (slist (map (ren_term ρ) l)).
+  Proof.
+    intros x. unfold core.funcomp.
+    induction l as [| u l ih] in x |- *.
+    - cbn. reflexivity.
+    - cbn. destruct x.
+      + cbn. reflexivity.
+      + cbn. eauto.
+  Qed.
+
   Lemma pred_ren Γ Δ ρ u v :
     Γ ⊢ u ⇒ v →
     Δ ⊢ ρ ⋅ u ⇒ ρ ⋅ v.
@@ -321,27 +344,28 @@ Section Red.
     - rasimpl. change @core.option_map with option_map.
       eapply pred_meta_r.
       + econstructor. all: eauto.
-        * eapply inst_equations_ren_ih. 1: eauto.
-          admit. (* Should prove once and for all *)
+        * eauto using inst_equations_ren_ih, inst_equations_prop, conv_ren.
         * eapply Forall2_map_l, Forall2_map_r.
           eapply Forall2_impl. 2: eassumption.
           intros. eapply option_rel_map_l, option_rel_map_r.
           eapply option_rel_impl. 2: eassumption.
           cbn. auto.
       + rewrite ren_inst. f_equal.
-        rewrite closed_ren. 2: admit.
+        rewrite closed_ren. 2: assumption.
         reflexivity.
-    - eapply pred_meta_r.
-      + econstructor. 1,2: eauto.
-        all: admit.
-      + subst rhs. admit.
+    - rasimpl. setoid_rewrite slist_ren.
+      econstructor.
+      + eassumption.
+      + eapply match_pat_ren. eassumption.
+      + apply Forall2_map_l, Forall2_map_r. eapply Forall2_impl. 2: eassumption.
+        cbn. eauto.
     - cbn. change @core.option_map with option_map.
       econstructor. eapply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
       intros. eapply option_rel_map_l, option_rel_map_r.
       eapply option_rel_impl. 2: eassumption.
       cbn. auto.
-  Admitted.
+  Qed.
 
   Lemma pred_subst_up Δ A σ σ' :
     (∀ x, Δ ⊢ σ x ⇒ σ' x) →
