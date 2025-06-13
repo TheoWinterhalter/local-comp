@@ -157,14 +157,12 @@ Section Red.
       Γ ⊢ u ⇒ u' →
       Γ ⊢ app (lam A t) u ⇒ t' <[ u' .. ]
 
-  | pred_unfold c ξ Ξ' A t ξ' t' :
+  | pred_unfold c ξ Ξ' A t ξ' :
       Σ c = Some (Def Ξ' A t) →
       inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
       closed t = true →
-      closed t' = true →
-      ∙ ⊢ t ⇒ t' →
       Forall2 (option_rel (pred Γ)) ξ ξ' →
-      Γ ⊢ const c ξ ⇒ inst ξ' t'
+      Γ ⊢ const c ξ ⇒ inst ξ' t
 
   | pred_rule n rl t σ σ' :
       pctx_get Ξ n = Some (pComp rl) →
@@ -213,16 +211,13 @@ Section Red.
         P Γ u u' →
         P Γ (app (lam A t) u) (t' <[ u'..])
       ) →
-      (∀ Γ c ξ Ξ' A t ξ' t',
+      (∀ Γ c ξ Ξ' A t ξ',
         Σ c = Some (Def Ξ' A t) →
         inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
         closed t = true →
-        closed t' = true →
-        ∙ ⊢ t ⇒ t' →
-        P ∙ t t' →
         Forall2 (option_rel (pred Γ)) ξ ξ' →
         Forall2 (option_rel (P Γ)) ξ ξ' →
-        P Γ (const c ξ) (inst ξ' t')
+        P Γ (const c ξ) (inst ξ' t)
       ) →
       (∀ Γ n rl t σ σ',
         pctx_get Ξ n = Some (pComp rl) →
@@ -286,9 +281,9 @@ Section Red.
       - constructor. all: eauto.
     }
     2:{
-      eapply hunf. 1-7: eauto.
+      eapply hunf. 1-4: eauto.
       clear H0.
-      revert ξ ξ' H3. fix aux1 3.
+      revert ξ ξ' H2. fix aux1 3.
       intros ξ ξ' hh. destruct hh as [ | o o' ξ ξ' hh ].
       - constructor.
       - constructor. 2: eauto.
@@ -463,12 +458,11 @@ Section Red.
       Γ ⊢ u ⇒ᵨ u' →
       Γ ⊢ app (lam A t) u ⇒ᵨ t' <[ u' .. ]
 
-  | pred_max_unfold c ξ Ξ' A t ξ' t' :
+  | pred_max_unfold c ξ Ξ' A t ξ' :
       no_match Ξ (const c ξ) →
       Σ c = Some (Def Ξ' A t) →
-      ∙ ⊢ t ⇒ᵨ t' →
       Forall2 (option_rel (pred_max Γ)) ξ ξ' →
-      Γ ⊢ const c ξ ⇒ᵨ inst ξ' t'
+      Γ ⊢ const c ξ ⇒ᵨ inst ξ' t
 
   | pred_max_Pi A B A' B' :
       no_match Ξ (Pi A B) →
@@ -517,14 +511,12 @@ Section Red.
         P Γ u u' →
         P Γ (app (lam A t) u) (t' <[ u'..])
       ) →
-      (∀ Γ c ξ Ξ' A t ξ' t',
+      (∀ Γ c ξ Ξ' A t ξ',
         no_match Ξ (const c ξ) →
         Σ c = Some (Def Ξ' A t) →
-        ∙ ⊢ t ⇒ᵨ t' →
-        P ∙ t t' →
         Forall2 (option_rel (pred_max Γ)) ξ ξ' →
         Forall2 (option_rel (P Γ)) ξ ξ' →
-        P Γ (const c ξ) (inst ξ' t')
+        P Γ (const c ξ) (inst ξ' t)
       ) →
       (∀ Γ A B A' B',
         no_match Ξ (Pi A B) →
@@ -577,7 +569,7 @@ Section Red.
       - constructor. all: eauto.
     }
     2:{
-      eapply hunf. 1-5: eauto.
+      eapply hunf. 1-3: eauto.
       clear H.
       revert ξ ξ' H1. fix aux1 3.
       intros ξ ξ' hh. destruct hh as [ | o o' ξ ξ' hh ].
@@ -767,7 +759,7 @@ Section Red.
   Proof.
     induction 1 as [
       ?????? ht iht hu ihu
-    | ????????????? iht ? ihξ
+    | ????????? iht ? ihξ
     | ???????? hσ ih ?
     | ?????? ihA ? ihB
     | ?????? ihA ? iht
@@ -782,8 +774,7 @@ Section Red.
       + eapply pred_subst. 2: eauto.
         intros []. all: cbn. 2: constructor.
         assumption.
-    - destruct iht as [tr [ht1 ht2]].
-      eapply Forall2_impl in ihξ.
+    - eapply Forall2_impl in ihξ.
       2:{ intros ??. eapply option_rel_trans_inv. }
       eapply Forall2_trans_inv in ihξ.
       destruct ihξ as (ξᵨ & ? & ?).
@@ -844,11 +835,13 @@ Section Red.
       eexists. split.
       + econstructor.
         * apply no_match_const.
-        * (* Missing assumption *) admit.
-        * (* Even weirder actually *) admit.
+        * (* Missing assumption, should branch on it *) admit.
         * eapply Forall2_impl. 2: eassumption.
           cbn. intros ??. apply option_rel_flip.
       + econstructor. all: admit.
+        (* Here branching isn't enough, hard to recover closedness and
+          inst_equations
+        *)
     - eexists. split.
       + econstructor. apply no_match_var.
       + constructor.
