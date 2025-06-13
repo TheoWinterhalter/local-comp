@@ -619,6 +619,12 @@ Section Red.
     destruct p. cbn. discriminate.
   Qed.
 
+  Lemma pat_no_app p σ u v :
+    (app u v) ≠ (pat_to_term p) <[ σ ].
+  Proof.
+    destruct p. cbn. discriminate.
+  Qed.
+
   Lemma match_pat_not_lam p A b σ :
     match_pat p (lam A b) = Some σ →
     False.
@@ -700,6 +706,15 @@ Section Red.
     eapply prove_no_match. eauto using match_pat_not_var.
   Qed.
 
+  (* Not yet *)
+  Lemma match_pat_not_app p u v σ :
+    match_pat p (app u v) = Some σ →
+    False.
+  Proof.
+    intros h%match_pat_sound.
+    eapply pat_no_app. eassumption.
+  Qed.
+
   (* TODO MOVE *)
   Lemma lvl_get_In [A] l n a :
     lvl_get (A := A) l n = Some a →
@@ -753,11 +768,11 @@ Section Red.
     induction 1 as [
       ?????? ht iht hu ihu
     | ????????????? iht ? ihξ
-    | ?????????? ih
+    | ???????? hσ ih ?
     | ?????? ihA ? ihB
     | ?????? ihA ? iht
     | ? u ??? hu ihu ? ihv
-    | ???? ih
+    | ???? hξ ih
     | ?
     ] using pred_ind_alt.
     - destruct iht as [tr [ht1 ht2]], ihu as [ur [hu1 hu2]].
@@ -779,7 +794,15 @@ Section Red.
         apply option_rel_flip.
       + (* Need stability by instantiation *)
         admit.
-    - admit.
+    - eapply Forall2_trans_inv in ih as (σᵨ & ih%Forall2_flip & hr%Forall2_flip).
+      eexists. split.
+      + econstructor. all: eassumption.
+      + eapply pred_subst. 2: admit. (* refl *)
+        intros x. clear ih hσ. induction hr in x |- *.
+        * cbn. admit. (* refl *)
+        * cbn. destruct x.
+          -- cbn. assumption.
+          -- cbn. eauto.
     - destruct ihA as [Ar [hA1 hA2]], ihB as [Br [hB1 hB2]].
       eexists. split.
       + econstructor. 2-3: eassumption.
@@ -805,12 +828,27 @@ Section Red.
           inversion hu2.
           1:{ exfalso. subst. eapply match_pat_not_lam. eassumption. }
           subst. assumption.
-      + destruct (find_match Ξ (app u v)) eqn:e.
-        * admit.
+      + destruct (find_match Ξ (app u v)) as [[[] ?]|] eqn:e.
+        * (* For now we conclude by contradiction, later have some match_pat
+            property.
+          *)
+          exfalso.
+          eapply find_match_sound in e.
+          eapply match_pat_not_app. intuition eauto.
         * eexists. split.
           -- econstructor. all: eauto.
           -- econstructor. all: assumption.
-    - admit.
+    - eapply Forall2_impl in ih.
+      2:{ intros ??. eapply option_rel_trans_inv. }
+      eapply Forall2_trans_inv in ih as (ξᵨ & ?%Forall2_flip & ?).
+      eexists. split.
+      + econstructor.
+        * apply no_match_const.
+        * (* Missing assumption *) admit.
+        * (* Even weirder actually *) admit.
+        * eapply Forall2_impl. 2: eassumption.
+          cbn. intros ??. apply option_rel_flip.
+      + econstructor. all: admit.
     - eexists. split.
       + econstructor. apply no_match_var.
       + constructor.
