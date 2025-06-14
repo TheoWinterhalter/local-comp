@@ -159,6 +159,11 @@ Section Red.
 
   | pred_unfold c ξ Ξ' A t ξ' :
       Σ c = Some (Def Ξ' A t) →
+      (* We have this assumption only for inlining
+        maybe we could avoid it somehow and recover it for well typed terms?
+        Or we add it to the congruence rule as well.
+        Neither option seems nice.
+      *)
       inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
       closed t = true →
       Forall2 (option_rel (pred Γ)) ξ ξ' →
