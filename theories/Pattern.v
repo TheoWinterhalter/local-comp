@@ -209,6 +209,9 @@ Section Red.
   | pred_var x :
       Γ ⊢ var x ⇒ var x
 
+  | pred_sort s :
+      Γ ⊢ Sort s ⇒ Sort s
+
   where "Γ ⊢ u ⇒ v" := (pred Γ u v).
 
   Lemma pred_ind_alt :
@@ -272,9 +275,10 @@ Section Red.
         P Γ (const c ξ) (const c ξ')
       ) →
       (∀ Γ x, P Γ (var x) (var x)) →
+      (∀ Γ s, P Γ (Sort s) (Sort s)) →
       ∀ Γ u v, Γ ⊢ u ⇒ v → P Γ u v.
   Proof.
-    intros P hbeta hunf hrl hpi hlam happ hconst hvar.
+    intros P hbeta hunf hrl hpi hlam happ hconst hvar hsort.
     fix aux 4. move aux at top.
     intros Γ u v h. destruct h.
     7:{
@@ -505,6 +509,10 @@ Section Red.
       no_match Ξ (var x) →
       Γ ⊢ var x ⇒ᵨ var x
 
+  | pred_max_sort s :
+      no_match Ξ (Sort s) →
+      Γ ⊢ Sort s ⇒ᵨ Sort s
+
   | pred_max_rule n rl t σ σ' :
       pctx_get Ξ n = Some (pComp rl) →
       match_pat rl.(pr_pat) t = Some σ →
@@ -565,6 +573,10 @@ Section Red.
         no_match Ξ (var x) →
         P Γ (var x) (var x)
       ) →
+      (∀ Γ s,
+        no_match Ξ (Sort s) →
+        P Γ (Sort s) (Sort s)
+      ) →
       (∀ Γ n rl t σ σ',
         pctx_get Ξ n = Some (pComp rl) →
         match_pat rl.(pr_pat) t = Some σ →
@@ -575,10 +587,10 @@ Section Red.
       ) →
       ∀ Γ u v, Γ ⊢ u ⇒ᵨ v → P Γ u v.
   Proof.
-    intros P hbeta hunf hpi hlam happ hvar hrl.
+    intros P hbeta hunf hpi hlam happ hvar hsort hrl.
     fix aux 4. move aux at top.
     intros Γ u v h. destruct h.
-    7:{
+    8:{
       eapply hrl. 1-4: eauto.
       clear H0.
       revert σ σ' H1. fix aux1 3.
@@ -625,6 +637,12 @@ Section Red.
 
   Lemma pat_no_var p σ x :
     var x ≠ (pat_to_term p) <[ σ ].
+  Proof.
+    destruct p. cbn. discriminate.
+  Qed.
+
+  Lemma pat_no_sort p σ s :
+    Sort s ≠ (pat_to_term p) <[ σ ].
   Proof.
     destruct p. cbn. discriminate.
   Qed.
@@ -716,6 +734,20 @@ Section Red.
     eapply prove_no_match. eauto using match_pat_not_var.
   Qed.
 
+  Lemma match_pat_not_sort p s σ :
+    match_pat p (Sort s) = Some σ →
+    False.
+  Proof.
+    intros h%match_pat_sound.
+    eapply pat_no_sort. eassumption.
+  Qed.
+
+  Lemma no_match_sort s :
+    no_match Ξ (Sort s).
+  Proof.
+    eapply prove_no_match. eauto using match_pat_not_sort.
+  Qed.
+
   (* Not yet *)
   Lemma match_pat_not_app p u v σ :
     match_pat p (app u v) = Some σ →
@@ -784,6 +816,7 @@ Section Red.
     | ? u ??? hu ihu ? ihv
     | ??????????? hξ ih
     | ?
+    | ?
     ] using pred_ind_alt.
     - destruct iht as [tr [ht1 ht2]], ihu as [ur [hu1 hu2]].
       eexists. split.
@@ -808,7 +841,7 @@ Section Red.
       + econstructor. all: eassumption.
       + eapply pred_subst. 2: admit. (* refl *)
         intros x. clear ih hσ. induction hr in x |- *.
-        * cbn. admit. (* refl *)
+        * cbn. constructor.
         * cbn. destruct x.
           -- cbn. assumption.
           -- cbn. eauto.
@@ -861,6 +894,9 @@ Section Red.
     - eexists. split.
       + econstructor. apply no_match_var.
       + constructor.
+    - eexists. split.
+      + econstructor. apply no_match_sort.
+      + constructor.
   Admitted.
 
   Lemma pred_max_functional Γ t u v :
@@ -869,7 +905,7 @@ Section Red.
     u = v.
   Proof.
     intros hu hv.
-    induction hu as [ | | | | | | ??????? h ? ihσ ? ] in v, hv |- * using pred_max_ind_alt.
+    induction hu as [ | | | | | | | ??????? h ? ihσ ? ] in v, hv |- * using pred_max_ind_alt.
     - inversion hv.
       3:{ exfalso. eapply no_match_no_match_pat. all: eassumption. }
       2: discriminate.
@@ -897,7 +933,10 @@ Section Red.
     - inversion hv.
       2:{ exfalso. eapply match_pat_not_var. eassumption. }
       reflexivity.
-    - inversion hv. 1-6: exfalso ; subst ; eapply no_match_no_match_pat ; eauto.
+    - inversion hv.
+      2:{ exfalso. eapply match_pat_not_sort. eassumption. }
+      reflexivity.
+    - inversion hv. 1-7: exfalso ; subst ; eapply no_match_no_match_pat ; eauto.
       subst.
       eapply triangle_match in h as ht. 2-4: eassumption.
       destruct ht as [-> ->].
