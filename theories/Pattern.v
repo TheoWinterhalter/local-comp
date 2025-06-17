@@ -212,6 +212,9 @@ Section Red.
   | pred_sort s :
       Γ ⊢ Sort s ⇒ Sort s
 
+  | pred_assm x :
+      Γ ⊢ assm x ⇒ assm x
+
   where "Γ ⊢ u ⇒ v" := (pred Γ u v).
 
   Lemma pred_ind_alt :
@@ -276,9 +279,10 @@ Section Red.
       ) →
       (∀ Γ x, P Γ (var x) (var x)) →
       (∀ Γ s, P Γ (Sort s) (Sort s)) →
+      (∀ Γ x, P Γ (assm x) (assm x)) →
       ∀ Γ u v, Γ ⊢ u ⇒ v → P Γ u v.
   Proof.
-    intros P hbeta hunf hrl hpi hlam happ hconst hvar hsort.
+    intros P hbeta hunf hrl hpi hlam happ hconst hvar hsort hassm.
     fix aux 4. move aux at top.
     intros Γ u v h. destruct h.
     7:{
@@ -513,6 +517,10 @@ Section Red.
       no_match Ξ (Sort s) →
       Γ ⊢ Sort s ⇒ᵨ Sort s
 
+  | pred_max_assm x :
+      no_match Ξ (assm x) →
+      Γ ⊢ assm x ⇒ᵨ assm x
+
   | pred_max_rule n rl t σ σ' :
       pctx_get Ξ n = Some (pComp rl) →
       match_pat rl.(pr_pat) t = Some σ →
@@ -577,6 +585,10 @@ Section Red.
         no_match Ξ (Sort s) →
         P Γ (Sort s) (Sort s)
       ) →
+      (∀ Γ x,
+        no_match Ξ (assm x) →
+        P Γ (assm x) (assm x)
+      ) →
       (∀ Γ n rl t σ σ',
         pctx_get Ξ n = Some (pComp rl) →
         match_pat rl.(pr_pat) t = Some σ →
@@ -587,10 +599,10 @@ Section Red.
       ) →
       ∀ Γ u v, Γ ⊢ u ⇒ᵨ v → P Γ u v.
   Proof.
-    intros P hbeta hunf hpi hlam happ hvar hsort hrl.
+    intros P hbeta hunf hpi hlam happ hvar hsort hassm hrl.
     fix aux 4. move aux at top.
     intros Γ u v h. destruct h.
-    8:{
+    9:{
       eapply hrl. 1-4: eauto.
       clear H0.
       revert σ σ' H1. fix aux1 3.
@@ -817,6 +829,7 @@ Section Red.
     | ??????????? hξ ih
     | ?
     | ?
+    | ?
     ] using pred_ind_alt.
     - destruct iht as [tr [ht1 ht2]], ihu as [ur [hu1 hu2]].
       eexists. split.
@@ -905,7 +918,7 @@ Section Red.
     u = v.
   Proof.
     intros hu hv.
-    induction hu as [ | | | | | | | ??????? h ? ihσ ? ] in v, hv |- * using pred_max_ind_alt.
+    induction hu as [ | | | | | | | | ??????? h ? ihσ ? ] in v, hv |- * using pred_max_ind_alt.
     - inversion hv.
       3:{ exfalso. eapply no_match_no_match_pat. all: eassumption. }
       2: discriminate.
@@ -936,7 +949,10 @@ Section Red.
     - inversion hv.
       2:{ exfalso. eapply match_pat_not_sort. eassumption. }
       reflexivity.
-    - inversion hv. 1-7: exfalso ; subst ; eapply no_match_no_match_pat ; eauto.
+    - inversion hv.
+      2:{ exfalso. subst. eauto using no_match_no_match_pat. }
+      reflexivity.
+    - inversion hv. 1-8: exfalso ; subst ; eapply no_match_no_match_pat ; eauto.
       subst.
       eapply triangle_match in h as ht. 2-4: eassumption.
       destruct ht as [-> ->].
