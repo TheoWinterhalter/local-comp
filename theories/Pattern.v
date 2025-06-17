@@ -198,7 +198,10 @@ Section Red.
       Γ ⊢ v ⇒ v' →
       Γ ⊢ app u v ⇒ app u' v'
 
-  | pred_const c ξ ξ' :
+  | pred_const c ξ ξ' Ξ' A t :
+      Σ c = Some (Def Ξ' A t) →
+      inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
+      closed t = true →
       Forall2 (option_rel (pred Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ const c ξ'
 
@@ -258,7 +261,10 @@ Section Red.
         P Γ v v' →
         P Γ (app u v) (app u' v')
       ) →
-      (∀ Γ c ξ ξ',
+      (∀ Γ c ξ ξ' Ξ' A t,
+        Σ c = Some (Def Ξ' A t) →
+        inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
+        closed t = true →
         Forall2 (option_rel (pred Γ)) ξ ξ' →
         Forall2 (option_rel (P Γ)) ξ ξ' →
         P Γ (const c ξ) (const c ξ')
@@ -270,8 +276,9 @@ Section Red.
     fix aux 4. move aux at top.
     intros Γ u v h. destruct h.
     7:{
-      eapply hconst. 1: assumption.
-      revert ξ ξ' H. fix aux1 3.
+      eapply hconst. 1-4: eassumption.
+      clear H0.
+      revert ξ ξ' H2. fix aux1 3.
       intros ξ ξ' h. destruct h as [ | o o' ξ ξ' h ].
       - constructor.
       - constructor. 2: eauto.
@@ -360,7 +367,9 @@ Section Red.
       + apply Forall2_map_l, Forall2_map_r. eapply Forall2_impl. 2: eassumption.
         cbn. eauto.
     - cbn. change @core.option_map with option_map.
-      econstructor. eapply Forall2_map_l, Forall2_map_r.
+      econstructor. 1,3: eassumption.
+      1:{ eauto using inst_equations_ren_ih, inst_equations_prop, conv_ren. }
+      eapply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
       intros. eapply option_rel_map_l, option_rel_map_r.
       eapply option_rel_impl. 2: eassumption.
@@ -429,7 +438,9 @@ Section Red.
       + apply Forall2_map_l, Forall2_map_r. eapply Forall2_impl. 2: eassumption.
         cbn. eauto.
     - cbn. change @core.option_map with option_map.
-      econstructor. eapply Forall2_map_l, Forall2_map_r.
+      econstructor. 1,3: eassumption.
+      1: eauto using inst_equations_subst_ih, inst_equations_prop, conv_subst.
+      eapply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
       intros. eapply option_rel_map_l, option_rel_map_r.
       eapply option_rel_impl. 2: eassumption.
@@ -769,7 +780,7 @@ Section Red.
     | ?????? ihA ? ihB
     | ?????? ihA ? iht
     | ? u ??? hu ihu ? ihv
-    | ???? hξ ih
+    | ?????????? hξ ih
     | ?
     ] using pred_ind_alt.
     - destruct iht as [tr [ht1 ht2]], ihu as [ur [hu1 hu2]].
@@ -840,13 +851,12 @@ Section Red.
       eexists. split.
       + econstructor.
         * apply no_match_const.
-        * (* Missing assumption, should branch on it *) admit.
+        * eassumption.
         * eapply Forall2_impl. 2: eassumption.
           cbn. intros ??. apply option_rel_flip.
-      + econstructor. all: admit.
-        (* Here branching isn't enough, hard to recover closedness and
-          inst_equations
-        *)
+      + econstructor. 1,3: eassumption.
+        1: admit.
+        eauto using Forall2_flip, Forall2_impl, option_rel_flip, option_rel_impl.
     - eexists. split.
       + econstructor. apply no_match_var.
       + constructor.
