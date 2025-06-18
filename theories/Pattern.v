@@ -857,10 +857,7 @@ Section Red.
     - eapply Forall2_trans_inv in ih as (σᵨ & ih%Forall2_flip & hr%Forall2_flip).
       eexists. split.
       + econstructor. all: eassumption.
-      + eapply pred_subst. 2: admit. (* refl *)
-        (* reflexivity will only hold up to constants being well formed
-          which is a serious problem isn't it?
-        *)
+      + eapply pred_subst. 2: eassumption.
         intros x. clear ih hσ. induction hr in x |- *.
         * cbn. constructor.
         * cbn. destruct x.
