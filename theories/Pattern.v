@@ -566,7 +566,14 @@ Section Red.
         (* eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst. *)
         admit.
       + admit.
-      + admit.
+      + apply Forall2_map_l, Forall2_map_r. apply Forall2_diag.
+        eapply Forall_impl. 2: eassumption.
+        intros o ho. apply option_rel_map_l, option_rel_map_r.
+        apply option_rel_diag.
+        rewrite OnSome_onSome in * |- *. apply onSomeT_onSome.
+        eapply onSome_onSomeT in ho.
+        eapply onSomeT_impl. 2: eassumption.
+        cbn. auto.
     - cbn. rewrite 2!iget_ren.
       eapply pred_ren.
       unfold iget. destruct (nth_error ξ _) as [o1 |] eqn:e1.
@@ -583,6 +590,24 @@ Section Red.
       destruct ho. 1: constructor.
       eassumption.
   Admitted.
+
+  (* It would great to be able to get rid of this annoying condition in
+    the congruence rule for const, which means also getting rid of it in
+    the unfold rule.
+
+    But in an undirected environment, there is no way to use something like
+    good_constrs above because conversion has transitivity and there is no
+    reason it would be preserved.
+
+    Removing it from pred would mean we can't show equivalence probably?
+    Unless we show pred preserves being good somehow?
+    Maybe it's easier to do than showing it preserves typing so the loop stays
+    broken (no problem with injectivity typically).
+
+    Maybe that's the way to go, that and getting rid of contexts.
+    It doesn't seem worth the trouble just to be able to support lets in the
+    future.
+  *)
 
 (* End Red.
 
