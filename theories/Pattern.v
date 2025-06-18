@@ -463,6 +463,34 @@ Section Red.
     - cbn. eauto.
   Qed.
 
+  Lemma pred_inst Γ ξ ξ' t :
+    Forall2 (option_rel (pred Γ)) ξ ξ' →
+    Γ ⊢ inst ξ t ⇒ inst ξ' t.
+  Proof.
+    intros h.
+    induction t using term_rect in ξ, ξ', h |- *.
+    all: try solve [ cbn ; constructor ; eauto ].
+    - cbn. econstructor. 1: eauto.
+      admit. (* Maybe I'll just get rid of contexts for now *)
+    - admit.
+    - cbn. (* econstructor. *)
+      (* For this one, I need to know t is a nice term *)
+      admit.
+    - cbn. unfold iget. destruct (nth_error ξ _) as [o1 |] eqn:e1.
+      2:{
+        destruct (nth_error ξ' _) eqn:e2.
+        1:{
+          eapply nth_error_None in e1. eapply Forall2_length in h.
+          rewrite h in e1. rewrite <- nth_error_None in e1. congruence.
+        }
+        constructor.
+      }
+      eapply Forall2_nth_error_l in e1 as e2. 2: eassumption.
+      destruct e2 as (o2 & e2 & ho). rewrite e2.
+      destruct ho. 1: constructor.
+      assumption.
+  Admitted.
+
 (* End Red.
 
 Notation "Σ ;; Ξ | Γ ⊢ u ⇒ v" :=
