@@ -463,6 +463,45 @@ Section Red.
     - cbn. eauto.
   Qed.
 
+(* End Red.
+
+Notation "Σ ;; Ξ | Γ ⊢ u ⇒ v" :=
+  (pred Σ Ξ Γ u v)
+  (at level 80, u, v at next level).
+
+Lemma pred_inst Σ Ξ Ξ' Γ Δ u v ξ :
+  inst_equations Σ (pctx_ictx Ξ) Δ ξ (pctx_ictx Ξ') →
+  Σ ;; Ξ' | Γ ⊢ u ⇒ v →
+  let rξ := liftn (length Γ) ξ in
+  Σ ;; Ξ | Δ ,,, ctx_inst ξ Γ ⊢ inst rξ u ⇒ inst rξ v.
+Proof.
+  intros hξ h. cbn.
+  induction h using pred_ind_alt in Ξ, Δ, ξ, hξ |- *.
+  all: try solve [ cbn ; econstructor ; eauto ].
+  - cbn. rewrite subst_inst with (m := S (length Γ)). 2: auto.
+    eapply pred_meta_r.
+    + constructor. 2: eauto.
+      rewrite lift_liftn. apply IHh1. assumption.
+    + cbn. apply ext_term. intros []. all: reflexivity.
+  - cbn. eapply pred_meta_r.
+    1:{
+      eapply pred_unfold. 1,3: eassumption.
+      - eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst.
+      - apply Forall2_map_l, Forall2_map_r.
+        eapply Forall2_impl. 2: eassumption.
+        intros l l' h.
+        apply option_rel_map_l, option_rel_map_r.
+        eapply option_rel_impl. 2: eassumption.
+        cbn. auto.
+    }
+    rewrite inst_inst. reflexivity.
+  - erewrite ext_term_scoped. 3: eapply eq_subst_trunc. 2: admit.
+    erewrite subst_inst. 2: eapply trunc_bounds.
+    (* eapply pred_subst. eapply hξ. eassumption. *)
+    admit.
+    (* We probably need something like inst_equations but for pred rather than
+      conv. *) *)
+
   (** ** Maximal reduct for parallel reduction *)
 
   Definition is_lam t :=
@@ -853,6 +892,7 @@ Section Red.
         apply Forall2_flip. eapply Forall2_impl. 2: eassumption.
         apply option_rel_flip.
       + (* Need stability by instantiation *)
+        (* It's not exactly that actually because reduction happens in ξ *)
         admit.
     - eapply Forall2_trans_inv in ih as (σᵨ & ih%Forall2_flip & hr%Forall2_flip).
       eexists. split.
@@ -978,12 +1018,3 @@ Section Red.
   Qed.
 
 End Red.
-
-Notation "Σ ;; Ξ | Γ ⊢ u ⇒ v" :=
-  (pred Σ Ξ Γ u v)
-  (at level 80, u, v at next level).
-
-(* Not really needed *)
-(* Notation "Σ ;; Ξ | Γ ⊢ u ⇒ᵨ v" :=
-  (pred_max Σ Ξ Γ u v)
-  (at level 80, u, v at next level). *)
