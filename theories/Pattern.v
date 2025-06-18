@@ -463,19 +463,108 @@ Section Red.
     - cbn. eauto.
   Qed.
 
+  (** A property weaker than typing stating all const are well behaved **)
+  Inductive good_consts (Γ : ctx) : term → Prop :=
+  | gc_var x : good_consts Γ (var x)
+  | gc_Sort s : good_consts Γ (Sort s)
+  | gc_Pi A B :
+      good_consts Γ A →
+      good_consts (Γ ,, A) B →
+      good_consts Γ (Pi A B)
+  | gc_lam A b :
+      good_consts Γ A →
+      good_consts (Γ ,, A) b →
+      good_consts Γ (lam A b)
+  | gc_app u v :
+      good_consts Γ u →
+      good_consts Γ v →
+      good_consts Γ (app u v)
+  | gc_const c ξ Ξ' A t :
+      Σ c = Some (Def Ξ' A t) →
+      inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
+      closed t = true →
+      Forall (OnSome (good_consts Γ)) ξ →
+      good_consts Γ (const c ξ)
+  | gc_assm x : good_consts Γ (assm x).
+
+  Section good_consts_ind.
+
+    Context (P : ctx → term → Prop).
+    Context (hvar : ∀ Γ x, P Γ (var x)).
+    Context (hsort : ∀ Γ s, P Γ (Sort s)).
+    Context (hpi :
+      ∀ Γ A B,
+        good_consts Γ A →
+        P Γ A →
+        good_consts (Γ,, A) B →
+        P (Γ,, A) B →
+        P Γ (Pi A B)
+    ).
+    Context (hlam :
+      ∀ Γ A b,
+        good_consts Γ A →
+        P Γ A →
+        good_consts (Γ,, A) b →
+        P (Γ,, A) b →
+        P Γ (lam A b)
+    ).
+    Context (happ :
+      ∀ Γ u v,
+        good_consts Γ u →
+        P Γ u →
+        good_consts Γ v →
+        P Γ v →
+        P Γ (app u v)
+    ).
+    Context (hconst :
+      ∀ Γ c ξ Ξ' A t,
+        Σ c = Some (Def Ξ' A t) →
+        inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
+        closed t = true →
+        Forall (OnSome (good_consts Γ)) ξ →
+        Forall (OnSome (P Γ)) ξ →
+        P Γ (const c ξ)
+    ).
+    Context (hassm : ∀ Γ x, P Γ (assm x)).
+
+    Lemma good_consts_ind_alt :
+      ∀ Γ t, good_consts Γ t → P Γ t.
+    Proof.
+      fix aux 3. move aux at top.
+      intros Γ t h. destruct h.
+      6:{
+        eapply hconst. all: eauto.
+        clear H0.
+        revert ξ H2. fix aux1 2.
+        intros ξ h. destruct h as [| u ξ hu hξ].
+        - constructor.
+        - constructor. 2: eauto.
+          destruct hu.
+          + constructor.
+          + constructor. eauto.
+      }
+      all: match goal with h : _ |- _ => eapply h end.
+      all: eauto.
+    Qed.
+
+  End good_consts_ind.
+
   Lemma pred_inst Γ ξ ξ' t :
     Forall2 (option_rel (pred Γ)) ξ ξ' →
+    good_consts Γ t →
     Γ ⊢ inst ξ t ⇒ inst ξ' t.
   Proof.
-    intros h.
-    induction t using term_rect in ξ, ξ', h |- *.
+    intros h ht.
+    induction ht using good_consts_ind_alt in ξ, ξ', h |- *.
     all: try solve [ cbn ; constructor ; eauto ].
     - cbn. econstructor. 1: eauto.
       admit. (* Maybe I'll just get rid of contexts for now *)
     - admit.
-    - cbn. (* econstructor. *)
-      (* For this one, I need to know t is a nice term *)
-      admit.
+    - cbn. econstructor. all: eauto.
+      + eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst.
+        admit.
+      + admit.
+      + admit.
     - cbn. unfold iget. destruct (nth_error ξ _) as [o1 |] eqn:e1.
       2:{
         destruct (nth_error ξ' _) eqn:e2.
