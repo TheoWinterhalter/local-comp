@@ -549,23 +549,27 @@ Section Red.
 
   End good_consts_ind.
 
-  Lemma pred_inst Γ ξ ξ' t :
-    Forall2 (option_rel (pred Γ)) ξ ξ' →
+  Lemma pred_inst Γ Δ ξ ξ' t :
+    Forall2 (option_rel (pred Δ)) ξ ξ' →
     good_consts Γ t →
-    Γ ⊢ inst ξ t ⇒ inst ξ' t.
+    Δ ,,, ctx_inst ξ Γ ⊢ inst (liftn (length Γ) ξ) t ⇒ inst (liftn (length Γ) ξ') t.
   Proof.
     intros h ht.
-    induction ht using good_consts_ind_alt in ξ, ξ', h |- *.
+    induction ht using good_consts_ind_alt in Δ, ξ, ξ', h |- *.
     all: try solve [ cbn ; constructor ; eauto ].
     - cbn. econstructor. 1: eauto.
-      admit. (* Maybe I'll just get rid of contexts for now *)
-    - admit.
+      rewrite 2!lift_liftn. eapply IHht2. assumption.
+    - cbn. econstructor. 1: eauto.
+      rewrite 2!lift_liftn. eapply IHht2. assumption.
     - cbn. econstructor. all: eauto.
-      + eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst.
+      + (* eapply inst_equations_inst_ih. all: eauto. *)
+        (* eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst. *)
         admit.
       + admit.
       + admit.
-    - cbn. unfold iget. destruct (nth_error ξ _) as [o1 |] eqn:e1.
+    - cbn. rewrite 2!iget_ren.
+      eapply pred_ren.
+      unfold iget. destruct (nth_error ξ _) as [o1 |] eqn:e1.
       2:{
         destruct (nth_error ξ' _) eqn:e2.
         1:{
@@ -577,7 +581,7 @@ Section Red.
       eapply Forall2_nth_error_l in e1 as e2. 2: eassumption.
       destruct e2 as (o2 & e2 & ho). rewrite e2.
       destruct ho. 1: constructor.
-      assumption.
+      eassumption.
   Admitted.
 
 (* End Red.
