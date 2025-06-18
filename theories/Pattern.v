@@ -174,8 +174,9 @@ Section Red.
       match_pat rl.(pr_pat) t = Some σ →
       Forall2 (pred Γ) σ σ' →
       let rhs := rl.(pr_rep) in
-      (* let Θ := rl.(cr_env) in
-      let k := length Θ in
+      let Θ := rl.(pr_env) in
+      Θ ⊢ rhs ⇒ rhs → (* Artefact of the proof *)
+      (* let k := length Θ in
       let lhs := rl.(cr_pat) in
       scoped k lhs = true →
       scoped k rhs = true → *)
@@ -240,8 +241,10 @@ Section Red.
         Forall2 (pred Γ) σ σ' →
         Forall2 (P Γ) σ σ' →
         let rhs := rl.(pr_rep) in
-        (* let Θ := rl.(cr_env) in
-        let k := length Θ in
+        let Θ := rl.(pr_env) in
+        Θ ⊢ rhs ⇒ rhs →
+        P Θ rhs rhs →
+        (* let k := length Θ in
         let lhs := rl.(cr_pat) in
         scoped k lhs = true →
         scoped k rhs = true → *)
@@ -295,7 +298,7 @@ Section Red.
         destruct h. all: constructor ; auto.
     }
     3:{
-      eapply hrl. 1-4: eauto.
+      eapply hrl. 1-3,5,6: eauto.
       clear H0.
       revert σ σ' H1. fix aux1 3.
       intros σ σ' hσ. destruct hσ.
@@ -376,6 +379,7 @@ Section Red.
       + eapply match_pat_ren. eassumption.
       + apply Forall2_map_l, Forall2_map_r. eapply Forall2_impl. 2: eassumption.
         cbn. eauto.
+      + assumption.
     - cbn. change @core.option_map with option_map.
       econstructor. 1,4: eassumption.
       1,2: eauto using inst_equations_ren_ih, inst_equations_prop, conv_ren.
@@ -447,6 +451,7 @@ Section Red.
       + eapply match_pat_subst. eassumption.
       + apply Forall2_map_l, Forall2_map_r. eapply Forall2_impl. 2: eassumption.
         cbn. eauto.
+      + auto.
     - cbn. change @core.option_map with option_map.
       econstructor. 1,4: eassumption.
       1,2: eauto using inst_equations_subst_ih, inst_equations_prop, conv_subst.
@@ -853,6 +858,9 @@ Section Red.
       eexists. split.
       + econstructor. all: eassumption.
       + eapply pred_subst. 2: admit. (* refl *)
+        (* reflexivity will only hold up to constants being well formed
+          which is a serious problem isn't it?
+        *)
         intros x. clear ih hσ. induction hr in x |- *.
         * cbn. constructor.
         * cbn. destruct x.
