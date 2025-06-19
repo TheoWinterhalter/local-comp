@@ -5,10 +5,6 @@
   Those will be achieved with some assumptions on the reduction relation,
   namely confluence and type preservation.
 
-  TODO:
-  - Check that reduction as defined below is suitable for the usual proofs of
-    confluence.
-
 *)
 
 From Stdlib Require Import Utf8 String List Arith Lia.

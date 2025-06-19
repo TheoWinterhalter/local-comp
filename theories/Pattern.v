@@ -13,7 +13,7 @@ From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst Typing BasicMetaTheory
-  GScope Inversion Reduction Confluence.
+  GScope Inversion Confluence Reduction.
 From Stdlib Require Import Setoid Morphisms Relation_Definitions
   Relation_Operators.
 From Equations Require Import Equations.
@@ -1125,5 +1125,36 @@ Section Red.
     apply diamond_confluent.
     apply pred_diamond.
   Qed.
+
+  #[export] Instance Reflexive_pred Γ :
+    Reflexive (pred Γ).
+  Proof.
+    intros t.
+    apply pred_refl.
+  Qed.
+
+  (** ** Sandwishing reduction *)
+
+  Lemma red1_pred Γ u v :
+    (* Σ ;; pctx_ictx Ξ | Γ ⊢ u ↦ v → *)
+    red1 Σ (pctx_ictx Ξ) Γ u v →
+    Γ ⊢ u ⇒ v.
+  Proof.
+    intros h.
+    induction h using red1_ind_alt.
+    all: try solve [ econstructor ; eauto using pred_refl ].
+    - econstructor. 1,2: eassumption.
+      apply Forall2_diag. rewrite Forall_forall.
+      intros o h. apply option_rel_diag. rewrite OnSome_onSome.
+      destruct o. all: cbn. 2: trivial.
+      apply pred_refl.
+    - eapply pred_meta_r.
+      + econstructor. all: admit.
+      + admit.
+    - econstructor.
+      eapply OnOne2_refl_Forall2. 1: exact _.
+      eapply OnOne2_impl. 2: eassumption.
+      intros ??. apply some_rel_option_rel.
+  Admitted.
 
 End Red.
