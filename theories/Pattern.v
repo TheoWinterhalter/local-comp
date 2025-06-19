@@ -192,9 +192,7 @@ Section Red.
       Γ ⊢ v ⇒ v' →
       Γ ⊢ app u v ⇒ app u' v'
 
-  | pred_const c ξ ξ' Ξ' A t :
-      Σ c = Some (Def Ξ' A t) →
-      closed t = true →
+  | pred_const c ξ ξ' :
       Forall2 (option_rel (pred Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ const c ξ'
 
@@ -259,9 +257,7 @@ Section Red.
         P Γ v v' →
         P Γ (app u v) (app u' v')
       ) →
-      (∀ Γ c ξ ξ' Ξ' A t,
-        Σ c = Some (Def Ξ' A t) →
-        closed t = true →
+      (∀ Γ c ξ ξ',
         Forall2 (option_rel (pred Γ)) ξ ξ' →
         Forall2 (option_rel (P Γ)) ξ ξ' →
         P Γ (const c ξ) (const c ξ')
@@ -275,8 +271,8 @@ Section Red.
     fix aux 4. move aux at top.
     intros Γ u v h. destruct h.
     7:{
-      eapply hconst. 1-3: eassumption.
-      revert ξ ξ' H1. fix aux1 3.
+      eapply hconst. 1: assumption.
+      revert ξ ξ' H. fix aux1 3.
       intros ξ ξ' h. destruct h as [ | o o' ξ ξ' h ].
       - constructor.
       - constructor. 2: eauto.
@@ -363,7 +359,7 @@ Section Red.
       + apply Forall2_map_l, Forall2_map_r. eapply Forall2_impl. 2: eassumption.
         cbn. eauto.
     - cbn. change @core.option_map with option_map.
-      econstructor. 1,2: eassumption.
+      econstructor.
       eapply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
       intros. eapply option_rel_map_l, option_rel_map_r.
@@ -432,7 +428,7 @@ Section Red.
       + apply Forall2_map_l, Forall2_map_r. eapply Forall2_impl. 2: eassumption.
         cbn. eauto.
     - cbn. change @core.option_map with option_map.
-      econstructor. 1,2: eassumption.
+      econstructor.
       eapply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
       intros. eapply option_rel_map_l, option_rel_map_r.
@@ -462,10 +458,6 @@ Section Red.
     induction t using term_rect in Γ, ξ, ξ', h |- *.
     all: try solve [ cbn ; constructor ; eauto using lift_instance_pred ].
     - cbn. econstructor.
-      (* I need data I don't have
-        but now it's decidable, so maybe I use that instead.
-      *)
-      1,2: admit.
       apply Forall2_map_l, Forall2_map_r.
       apply Forall2_diag. apply All_Forall.
       eapply All_impl. 2: eassumption.
@@ -487,7 +479,7 @@ Section Red.
       destruct e2 as (o2 & e2 & ho). rewrite e2.
       destruct ho. 1: constructor.
       assumption.
-  Admitted.
+  Qed.
 
   (** ** Maximal reduct for parallel reduction *)
 
@@ -846,6 +838,21 @@ Section Red.
     intuition reflexivity.
   Qed.
 
+  Definition cst_def c :=
+    match Σ c with
+    | Some (Def Ξ' A t) => if closed t then Some (Ξ', A, t) else None
+    | _ => None
+    end.
+
+  Lemma cst_def_Some c Ξ' A t :
+    cst_def c = Some (Ξ', A, t) →
+    Σ c = Some (Def Ξ' A t) ∧ closed t = true.
+  Proof.
+    unfold cst_def. destruct (Σ c) as [[] |]. 2: discriminate.
+    destruct (closed _) eqn: e. 2: discriminate.
+    intuition congruence.
+  Qed.
+
   Lemma triangle Γ t u :
     Γ ⊢ t ⇒ u →
     ∃ tᵨ, Γ ⊢ t ⇒ᵨ tᵨ ∧ Γ ⊢ u ⇒ tᵨ.
@@ -857,7 +864,7 @@ Section Red.
     | ?????? ihA ? ihB
     | ?????? ihA ? iht
     | ? u ??? hu ihu ? ihv
-    | ????????? hξ ih
+    | ? c ?? hξ ih
     | ?
     | ?
     | ?
@@ -928,14 +935,16 @@ Section Red.
     - eapply Forall2_impl in ih.
       2:{ intros ??. eapply option_rel_trans_inv. }
       eapply Forall2_trans_inv in ih as (ξᵨ & ?%Forall2_flip & ?).
-      eexists. split.
-      + econstructor.
-        * apply no_match_const.
-        * eassumption.
-        * eapply Forall2_impl. 2: eassumption.
+      (* Testing whether the constant is defined properly *)
+      destruct (cst_def c) as [[[Ξ' A] t] |] eqn: ec.
+      + eapply cst_def_Some in ec as e.
+        eexists. split.
+        * econstructor. 1: apply no_match_const. 1: intuition eauto.
+          eapply Forall2_impl. 2: eassumption.
           cbn. intros ??. apply option_rel_flip.
-      + econstructor. 1,2: eassumption.
-        eauto using Forall2_flip, Forall2_impl, option_rel_flip, option_rel_impl.
+        * econstructor. 1,2: intuition eauto.
+          eauto using Forall2_flip, Forall2_impl, option_rel_flip, option_rel_impl.
+      + admit. (* Need to add case to predmax *)
     - eexists. split.
       + econstructor. apply no_match_var.
       + constructor.
