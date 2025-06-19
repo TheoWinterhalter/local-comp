@@ -1119,4 +1119,11 @@ Section Red.
     subst. exists w. intuition eauto.
   Qed.
 
+  Lemma pred_confluence Γ :
+    confluent (pred Γ).
+  Proof.
+    apply diamond_confluent.
+    apply pred_diamond.
+  Qed.
+
 End Red.
