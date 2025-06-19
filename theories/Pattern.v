@@ -1199,3 +1199,21 @@ Proof.
     eapply OnOne2_impl. 2: eassumption.
     intros ??. apply some_rel_option_rel.
 Qed.
+
+Lemma pred_red Σ Ξ Γ u v :
+  Σ ;; Ξ | Γ ⊢ u ⇒ v →
+  Σ ;; pctx_ictx Ξ | Γ ⊢ u ↦* v.
+Proof.
+  intros h.
+  induction h using pred_ind_alt.
+  - etransitivity.
+    + constructor. econstructor.
+    + (* Closure by subst *) admit.
+      (* Alternatively, I could reduce first in the subterms *)
+  - admit. (* Here we will need good_cstrs unless we change red first
+      Probably best to do it on the red side and at the boundary with
+      conversion.
+    *)
+  - admit.
+  - admit.
+Admitted.
