@@ -306,6 +306,49 @@ Section Red.
     intros ? ->. assumption.
   Qed.
 
+  (** ** Parallel reduction is reflexive *)
+
+  Lemma pred_refl Γ t :
+    Γ ⊢ t ⇒ t.
+  Proof.
+    induction t using term_rect in Γ |- *.
+    all: try solve [ econstructor ; eauto ].
+    econstructor. apply Forall2_diag. apply All_Forall.
+    eapply All_impl. 2: eassumption.
+    intros o ho. apply option_rel_diag. rewrite OnSome_onSome.
+    apply onSomeT_onSome. eapply onSomeT_impl. 2: eassumption.
+    auto.
+  Qed.
+
+  (** ** Parallel reduction doesn't care about contexts
+
+    This can feel a bit silly, but we would need to care about contexts if we
+    were to extend the theory with let bindings.
+    In the meantime, we allow ourselves to forget about the context from time to
+    time.
+
+  *)
+
+  Lemma pred_ctx_irr Γ Δ u v :
+    Γ ⊢ u ⇒ v →
+    Δ ⊢ u ⇒ v.
+  Proof.
+    intros h.
+    induction h in Δ |- * using pred_ind_alt.
+    all: try solve [ econstructor ; eauto ].
+    - econstructor. 1,2: eassumption.
+      eapply Forall2_impl. 2: eassumption.
+      intros. eapply option_rel_impl. 2: eassumption.
+      auto.
+    - econstructor. 1,2: eassumption.
+      eapply Forall2_impl. 2: eassumption.
+      auto.
+    - econstructor.
+      eapply Forall2_impl. 2: eassumption.
+      intros. eapply option_rel_impl. 2: eassumption.
+      auto.
+  Qed.
+
   (** ** Parallel reduction is stable by substitution *)
 
   Lemma match_pat_ren p t l ρ :
@@ -885,13 +928,14 @@ Section Red.
         1: apply no_match_const.
         apply Forall2_flip. eapply Forall2_impl. 2: eassumption.
         apply option_rel_flip.
-      + (* Need stability by instantiation *)
-        (* It's not exactly that actually because reduction happens in ξ *)
-        admit.
+      + apply pred_inst.
+        apply Forall2_flip. eapply Forall2_impl. 2: eassumption.
+        intros. apply option_rel_flip. eapply option_rel_impl. 2: eassumption.
+        auto.
     - eapply Forall2_trans_inv in ih as (σᵨ & ih%Forall2_flip & hr%Forall2_flip).
       eexists. split.
       + econstructor. all: eassumption.
-      + eapply pred_subst. 2: admit. (* refl *)
+      + eapply pred_subst. 2: apply pred_refl.
         intros x. clear ih hσ. induction hr in x |- *.
         * cbn. constructor.
         * cbn. destruct x.
@@ -901,12 +945,14 @@ Section Red.
       eexists. split.
       + econstructor. 2-3: eassumption.
         apply no_match_Pi.
-      + econstructor. all: eauto. admit.
+      + econstructor. 1: eauto.
+        eapply pred_ctx_irr. eauto.
     - destruct ihA as [Ar [hA1 hA2]], iht as [tr [ht1 ht2]].
       eexists. split.
       + econstructor. 2-3: eassumption.
         apply no_match_lam.
-      + econstructor. all: eauto. admit.
+      + econstructor. 1: eauto.
+        eapply pred_ctx_irr. eauto.
     - destruct ihu as [ur [hu1 hu2]], ihv as [vr [hv1 hv2]].
       destruct (is_lam u) eqn: eu.
       + eapply is_lam_inv in eu as (A & b & ->).
