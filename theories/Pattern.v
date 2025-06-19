@@ -159,12 +159,6 @@ Section Red.
 
   | pred_unfold c ξ Ξ' A t ξ' :
       Σ c = Some (Def Ξ' A t) →
-      (* We have this assumption only for inlining
-        maybe we could avoid it somehow and recover it for well typed terms?
-        Or we add it to the congruence rule as well.
-        Neither option seems nice.
-      *)
-      inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
       closed t = true →
       Forall2 (option_rel (pred Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ inst ξ' t
@@ -174,8 +168,7 @@ Section Red.
       match_pat rl.(pr_pat) t = Some σ →
       Forall2 (pred Γ) σ σ' →
       let rhs := rl.(pr_rep) in
-      let Θ := rl.(pr_env) in
-      Θ ⊢ rhs ⇒ rhs → (* Artefact of the proof *)
+      (* let Θ := rl.(pr_env) in *)
       (* let k := length Θ in
       let lhs := rl.(cr_pat) in
       scoped k lhs = true →
@@ -201,8 +194,6 @@ Section Red.
 
   | pred_const c ξ ξ' Ξ' A t :
       Σ c = Some (Def Ξ' A t) →
-      inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
-      inst_equations Σ (pctx_ictx Ξ) Γ ξ' Ξ' →
       closed t = true →
       Forall2 (option_rel (pred Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ const c ξ'
@@ -229,7 +220,6 @@ Section Red.
       ) →
       (∀ Γ c ξ Ξ' A t ξ',
         Σ c = Some (Def Ξ' A t) →
-        inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
         closed t = true →
         Forall2 (option_rel (pred Γ)) ξ ξ' →
         Forall2 (option_rel (P Γ)) ξ ξ' →
@@ -241,9 +231,7 @@ Section Red.
         Forall2 (pred Γ) σ σ' →
         Forall2 (P Γ) σ σ' →
         let rhs := rl.(pr_rep) in
-        let Θ := rl.(pr_env) in
-        Θ ⊢ rhs ⇒ rhs →
-        P Θ rhs rhs →
+        (* let Θ := rl.(pr_env) in *)
         (* let k := length Θ in
         let lhs := rl.(cr_pat) in
         scoped k lhs = true →
@@ -273,8 +261,6 @@ Section Red.
       ) →
       (∀ Γ c ξ ξ' Ξ' A t,
         Σ c = Some (Def Ξ' A t) →
-        inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
-        inst_equations Σ (pctx_ictx Ξ) Γ ξ' Ξ' →
         closed t = true →
         Forall2 (option_rel (pred Γ)) ξ ξ' →
         Forall2 (option_rel (P Γ)) ξ ξ' →
@@ -289,16 +275,15 @@ Section Red.
     fix aux 4. move aux at top.
     intros Γ u v h. destruct h.
     7:{
-      eapply hconst. 1-5: eassumption.
-      clear H0 H1.
-      revert ξ ξ' H3. fix aux1 3.
+      eapply hconst. 1-3: eassumption.
+      revert ξ ξ' H1. fix aux1 3.
       intros ξ ξ' h. destruct h as [ | o o' ξ ξ' h ].
       - constructor.
       - constructor. 2: eauto.
         destruct h. all: constructor ; auto.
     }
     3:{
-      eapply hrl. 1-3,5,6: eauto.
+      eapply hrl. 1-3: eauto.
       clear H0.
       revert σ σ' H1. fix aux1 3.
       intros σ σ' hσ. destruct hσ.
@@ -306,9 +291,8 @@ Section Red.
       - constructor. all: eauto.
     }
     2:{
-      eapply hunf. 1-4: eauto.
-      clear H0.
-      revert ξ ξ' H2. fix aux1 3.
+      eapply hunf. 1-3: eauto.
+      revert ξ ξ' H1. fix aux1 3.
       intros ξ ξ' hh. destruct hh as [ | o o' ξ ξ' hh ].
       - constructor.
       - constructor. 2: eauto.
@@ -363,13 +347,12 @@ Section Red.
       + rasimpl. reflexivity.
     - rasimpl. change @core.option_map with option_map.
       eapply pred_meta_r.
-      + econstructor. all: eauto.
-        * eauto using inst_equations_ren_ih, inst_equations_prop, conv_ren.
-        * eapply Forall2_map_l, Forall2_map_r.
-          eapply Forall2_impl. 2: eassumption.
-          intros. eapply option_rel_map_l, option_rel_map_r.
-          eapply option_rel_impl. 2: eassumption.
-          cbn. auto.
+      + econstructor. 1,2: eauto.
+        eapply Forall2_map_l, Forall2_map_r.
+        eapply Forall2_impl. 2: eassumption.
+        intros. eapply option_rel_map_l, option_rel_map_r.
+        eapply option_rel_impl. 2: eassumption.
+        cbn. auto.
       + rewrite ren_inst. f_equal.
         rewrite closed_ren. 2: assumption.
         reflexivity.
@@ -379,10 +362,8 @@ Section Red.
       + eapply match_pat_ren. eassumption.
       + apply Forall2_map_l, Forall2_map_r. eapply Forall2_impl. 2: eassumption.
         cbn. eauto.
-      + assumption.
     - cbn. change @core.option_map with option_map.
-      econstructor. 1,4: eassumption.
-      1,2: eauto using inst_equations_ren_ih, inst_equations_prop, conv_ren.
+      econstructor. 1,2: eassumption.
       eapply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
       intros. eapply option_rel_map_l, option_rel_map_r.
@@ -436,13 +417,12 @@ Section Red.
       + rasimpl. reflexivity.
     - rasimpl. eapply pred_meta_r.
       + change @core.option_map with option_map.
-        econstructor. all: eauto.
-        * eauto using inst_equations_subst_ih, inst_equations_prop, conv_subst.
-        * eapply Forall2_map_l, Forall2_map_r.
-          eapply Forall2_impl. 2: eassumption.
-          intros. eapply option_rel_map_l, option_rel_map_r.
-          eapply option_rel_impl. 2: eassumption.
-          cbn. eauto using pred_subst_up.
+        econstructor. 1,2: eauto.
+        eapply Forall2_map_l, Forall2_map_r.
+        eapply Forall2_impl. 2: eassumption.
+        intros. eapply option_rel_map_l, option_rel_map_r.
+        eapply option_rel_impl. 2: eassumption.
+        cbn. eauto using pred_subst_up.
       + rewrite subst_inst_closed. 2: assumption.
         reflexivity.
     - rasimpl. setoid_rewrite slist_subst.
@@ -451,10 +431,8 @@ Section Red.
       + eapply match_pat_subst. eassumption.
       + apply Forall2_map_l, Forall2_map_r. eapply Forall2_impl. 2: eassumption.
         cbn. eauto.
-      + auto.
     - cbn. change @core.option_map with option_map.
-      econstructor. 1,4: eassumption.
-      1,2: eauto using inst_equations_subst_ih, inst_equations_prop, conv_subst.
+      econstructor. 1,2: eassumption.
       eapply Forall2_map_l, Forall2_map_r.
       eapply Forall2_impl. 2: eassumption.
       intros. eapply option_rel_map_l, option_rel_map_r.
@@ -463,120 +441,40 @@ Section Red.
     - cbn. eauto.
   Qed.
 
-  (** A property weaker than typing stating all const are well behaved **)
-  Inductive good_consts (Γ : ctx) : term → Prop :=
-  | gc_var x : good_consts Γ (var x)
-  | gc_Sort s : good_consts Γ (Sort s)
-  | gc_Pi A B :
-      good_consts Γ A →
-      good_consts (Γ ,, A) B →
-      good_consts Γ (Pi A B)
-  | gc_lam A b :
-      good_consts Γ A →
-      good_consts (Γ ,, A) b →
-      good_consts Γ (lam A b)
-  | gc_app u v :
-      good_consts Γ u →
-      good_consts Γ v →
-      good_consts Γ (app u v)
-  | gc_const c ξ Ξ' A t :
-      Σ c = Some (Def Ξ' A t) →
-      inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
-      closed t = true →
-      Forall (OnSome (good_consts Γ)) ξ →
-      good_consts Γ (const c ξ)
-  | gc_assm x : good_consts Γ (assm x).
-
-  Section good_consts_ind.
-
-    Context (P : ctx → term → Prop).
-    Context (hvar : ∀ Γ x, P Γ (var x)).
-    Context (hsort : ∀ Γ s, P Γ (Sort s)).
-    Context (hpi :
-      ∀ Γ A B,
-        good_consts Γ A →
-        P Γ A →
-        good_consts (Γ,, A) B →
-        P (Γ,, A) B →
-        P Γ (Pi A B)
-    ).
-    Context (hlam :
-      ∀ Γ A b,
-        good_consts Γ A →
-        P Γ A →
-        good_consts (Γ,, A) b →
-        P (Γ,, A) b →
-        P Γ (lam A b)
-    ).
-    Context (happ :
-      ∀ Γ u v,
-        good_consts Γ u →
-        P Γ u →
-        good_consts Γ v →
-        P Γ v →
-        P Γ (app u v)
-    ).
-    Context (hconst :
-      ∀ Γ c ξ Ξ' A t,
-        Σ c = Some (Def Ξ' A t) →
-        inst_equations Σ (pctx_ictx Ξ) Γ ξ Ξ' →
-        closed t = true →
-        Forall (OnSome (good_consts Γ)) ξ →
-        Forall (OnSome (P Γ)) ξ →
-        P Γ (const c ξ)
-    ).
-    Context (hassm : ∀ Γ x, P Γ (assm x)).
-
-    Lemma good_consts_ind_alt :
-      ∀ Γ t, good_consts Γ t → P Γ t.
-    Proof.
-      fix aux 3. move aux at top.
-      intros Γ t h. destruct h.
-      6:{
-        eapply hconst. all: eauto.
-        clear H0.
-        revert ξ H2. fix aux1 2.
-        intros ξ h. destruct h as [| u ξ hu hξ].
-        - constructor.
-        - constructor. 2: eauto.
-          destruct hu.
-          + constructor.
-          + constructor. eauto.
-      }
-      all: match goal with h : _ |- _ => eapply h end.
-      all: eauto.
-    Qed.
-
-  End good_consts_ind.
-
-  Lemma pred_inst Γ Δ ξ ξ' t :
-    Forall2 (option_rel (pred Δ)) ξ ξ' →
-    good_consts Γ t →
-    Δ ,,, ctx_inst ξ Γ ⊢ inst (liftn (length Γ) ξ) t ⇒ inst (liftn (length Γ) ξ') t.
+  Lemma lift_instance_pred Γ A ξ ξ' :
+    Forall2 (option_rel (pred Γ)) ξ ξ' →
+    Forall2 (option_rel (pred (Γ ,, inst ξ A))) (lift_instance ξ) (lift_instance ξ').
   Proof.
-    intros h ht.
-    induction ht using good_consts_ind_alt in Δ, ξ, ξ', h |- *.
-    all: try solve [ cbn ; constructor ; eauto ].
-    - cbn. econstructor. 1: eauto.
-      rewrite 2!lift_liftn. eapply IHht2. assumption.
-    - cbn. econstructor. 1: eauto.
-      rewrite 2!lift_liftn. eapply IHht2. assumption.
-    - cbn. econstructor. all: eauto.
-      + (* eapply inst_equations_inst_ih. all: eauto. *)
-        (* eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst. *)
-        admit.
-      + admit.
-      + apply Forall2_map_l, Forall2_map_r. apply Forall2_diag.
-        eapply Forall_impl. 2: eassumption.
-        intros o ho. apply option_rel_map_l, option_rel_map_r.
-        apply option_rel_diag.
-        rewrite OnSome_onSome in * |- *. apply onSomeT_onSome.
-        eapply onSome_onSomeT in ho.
-        eapply onSomeT_impl. 2: eassumption.
-        cbn. auto.
-    - cbn. rewrite 2!iget_ren.
-      eapply pred_ren.
-      unfold iget. destruct (nth_error ξ _) as [o1 |] eqn:e1.
+    intros h.
+    apply Forall2_map_l, Forall2_map_r.
+    eapply Forall2_impl. 2: eassumption.
+    intros o o' ho.
+    apply option_rel_map_l, option_rel_map_r.
+    eapply option_rel_impl. 2: eassumption.
+    intros. eauto using pred_ren.
+  Qed.
+
+  Lemma pred_inst Γ ξ ξ' t :
+    Forall2 (option_rel (pred Γ)) ξ ξ' →
+    Γ ⊢ inst ξ t ⇒ inst ξ' t.
+  Proof.
+    intros h.
+    induction t using term_rect in Γ, ξ, ξ', h |- *.
+    all: try solve [ cbn ; constructor ; eauto using lift_instance_pred ].
+    - cbn. econstructor.
+      (* I need data I don't have
+        but now it's decidable, so maybe I use that instead.
+      *)
+      1,2: admit.
+      apply Forall2_map_l, Forall2_map_r.
+      apply Forall2_diag. apply All_Forall.
+      eapply All_impl. 2: eassumption.
+      intros.
+      apply option_rel_map_l, option_rel_map_r.
+      apply option_rel_diag. rewrite OnSome_onSome. apply onSomeT_onSome.
+      eapply onSomeT_impl. 2: eassumption.
+      cbn. intros. eauto.
+    - cbn. unfold iget. destruct (nth_error ξ _) as [o1 |] eqn:e1.
       2:{
         destruct (nth_error ξ' _) eqn:e2.
         1:{
@@ -588,65 +486,8 @@ Section Red.
       eapply Forall2_nth_error_l in e1 as e2. 2: eassumption.
       destruct e2 as (o2 & e2 & ho). rewrite e2.
       destruct ho. 1: constructor.
-      eassumption.
+      assumption.
   Admitted.
-
-  (* It would great to be able to get rid of this annoying condition in
-    the congruence rule for const, which means also getting rid of it in
-    the unfold rule.
-
-    But in an undirected environment, there is no way to use something like
-    good_constrs above because conversion has transitivity and there is no
-    reason it would be preserved.
-
-    Removing it from pred would mean we can't show equivalence probably?
-    Unless we show pred preserves being good somehow?
-    Maybe it's easier to do than showing it preserves typing so the loop stays
-    broken (no problem with injectivity typically).
-
-    Maybe that's the way to go, that and getting rid of contexts.
-    It doesn't seem worth the trouble just to be able to support lets in the
-    future.
-  *)
-
-(* End Red.
-
-Notation "Σ ;; Ξ | Γ ⊢ u ⇒ v" :=
-  (pred Σ Ξ Γ u v)
-  (at level 80, u, v at next level).
-
-Lemma pred_inst Σ Ξ Ξ' Γ Δ u v ξ :
-  inst_equations Σ (pctx_ictx Ξ) Δ ξ (pctx_ictx Ξ') →
-  Σ ;; Ξ' | Γ ⊢ u ⇒ v →
-  let rξ := liftn (length Γ) ξ in
-  Σ ;; Ξ | Δ ,,, ctx_inst ξ Γ ⊢ inst rξ u ⇒ inst rξ v.
-Proof.
-  intros hξ h. cbn.
-  induction h using pred_ind_alt in Ξ, Δ, ξ, hξ |- *.
-  all: try solve [ cbn ; econstructor ; eauto ].
-  - cbn. rewrite subst_inst with (m := S (length Γ)). 2: auto.
-    eapply pred_meta_r.
-    + constructor. 2: eauto.
-      rewrite lift_liftn. apply IHh1. assumption.
-    + cbn. apply ext_term. intros []. all: reflexivity.
-  - cbn. eapply pred_meta_r.
-    1:{
-      eapply pred_unfold. 1,3: eassumption.
-      - eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst.
-      - apply Forall2_map_l, Forall2_map_r.
-        eapply Forall2_impl. 2: eassumption.
-        intros l l' h.
-        apply option_rel_map_l, option_rel_map_r.
-        eapply option_rel_impl. 2: eassumption.
-        cbn. auto.
-    }
-    rewrite inst_inst. reflexivity.
-  - erewrite ext_term_scoped. 3: eapply eq_subst_trunc. 2: admit.
-    erewrite subst_inst. 2: eapply trunc_bounds.
-    (* eapply pred_subst. eapply hξ. eassumption. *)
-    admit.
-    (* We probably need something like inst_equations but for pred rather than
-      conv. *) *)
 
   (** ** Maximal reduct for parallel reduction *)
 
@@ -1011,12 +852,12 @@ Proof.
   Proof.
     induction 1 as [
       ?????? ht iht hu ihu
-    | ????????? iht ? ihξ
+    | ????????? iht ihξ
     | ???????? hσ ih ?
     | ?????? ihA ? ihB
     | ?????? ihA ? iht
     | ? u ??? hu ihu ? ihv
-    | ??????????? hξ ih
+    | ????????? hξ ih
     | ?
     | ?
     | ?
@@ -1033,7 +874,7 @@ Proof.
       eapply Forall2_trans_inv in ihξ.
       destruct ihξ as (ξᵨ & ? & ?).
       eexists. split.
-      + econstructor. 2,3: eauto.
+      + econstructor. 2: eauto.
         1: apply no_match_const.
         apply Forall2_flip. eapply Forall2_impl. 2: eassumption.
         apply option_rel_flip.
@@ -1043,7 +884,7 @@ Proof.
     - eapply Forall2_trans_inv in ih as (σᵨ & ih%Forall2_flip & hr%Forall2_flip).
       eexists. split.
       + econstructor. all: eassumption.
-      + eapply pred_subst. 2: eassumption.
+      + eapply pred_subst. 2: admit. (* refl *)
         intros x. clear ih hσ. induction hr in x |- *.
         * cbn. constructor.
         * cbn. destruct x.
@@ -1093,7 +934,7 @@ Proof.
         * eassumption.
         * eapply Forall2_impl. 2: eassumption.
           cbn. intros ??. apply option_rel_flip.
-      + econstructor. 1-3: eassumption.
+      + econstructor. 1,2: eassumption.
         eauto using Forall2_flip, Forall2_impl, option_rel_flip, option_rel_impl.
     - eexists. split.
       + econstructor. apply no_match_var.

@@ -515,3 +515,95 @@ Section Injectivity.
   Admitted.
 
 End Injectivity.
+
+(** A property weaker than typing stating all const are well behaved **)
+Section good_consts.
+
+  Context (Σ : gctx) (Ξ : ictx).
+
+  Inductive good_consts (Γ : ctx) : term → Prop :=
+  | gc_var x : good_consts Γ (var x)
+  | gc_Sort s : good_consts Γ (Sort s)
+  | gc_Pi A B :
+      good_consts Γ A →
+      good_consts (Γ ,, A) B →
+      good_consts Γ (Pi A B)
+  | gc_lam A b :
+      good_consts Γ A →
+      good_consts (Γ ,, A) b →
+      good_consts Γ (lam A b)
+  | gc_app u v :
+      good_consts Γ u →
+      good_consts Γ v →
+      good_consts Γ (app u v)
+  | gc_const c ξ Ξ' A t :
+      Σ c = Some (Def Ξ' A t) →
+      inst_equations Σ Ξ Γ ξ Ξ' →
+      closed t = true →
+      Forall (OnSome (good_consts Γ)) ξ →
+      good_consts Γ (const c ξ)
+  | gc_assm x : good_consts Γ (assm x).
+
+  Section good_consts_ind.
+
+    Context (P : ctx → term → Prop).
+    Context (hvar : ∀ Γ x, P Γ (var x)).
+    Context (hsort : ∀ Γ s, P Γ (Sort s)).
+    Context (hpi :
+      ∀ Γ A B,
+        good_consts Γ A →
+        P Γ A →
+        good_consts (Γ,, A) B →
+        P (Γ,, A) B →
+        P Γ (Pi A B)
+    ).
+    Context (hlam :
+      ∀ Γ A b,
+        good_consts Γ A →
+        P Γ A →
+        good_consts (Γ,, A) b →
+        P (Γ,, A) b →
+        P Γ (lam A b)
+    ).
+    Context (happ :
+      ∀ Γ u v,
+        good_consts Γ u →
+        P Γ u →
+        good_consts Γ v →
+        P Γ v →
+        P Γ (app u v)
+    ).
+    Context (hconst :
+      ∀ Γ c ξ Ξ' A t,
+        Σ c = Some (Def Ξ' A t) →
+        inst_equations Σ Ξ Γ ξ Ξ' →
+        closed t = true →
+        Forall (OnSome (good_consts Γ)) ξ →
+        Forall (OnSome (P Γ)) ξ →
+        P Γ (const c ξ)
+    ).
+    Context (hassm : ∀ Γ x, P Γ (assm x)).
+
+    Lemma good_consts_ind_alt :
+      ∀ Γ t, good_consts Γ t → P Γ t.
+    Proof.
+      fix aux 3. move aux at top.
+      intros Γ t h. destruct h.
+      6:{
+        eapply hconst. all: eauto.
+        clear H0.
+        revert ξ H2. fix aux1 2.
+        intros ξ h. destruct h as [| u ξ hu hξ].
+        - constructor.
+        - constructor. 2: eauto.
+          destruct hu.
+          + constructor.
+          + constructor. eauto.
+      }
+      all: match goal with h : _ |- _ => eapply h end.
+      all: eauto.
+    Qed.
+
+  End good_consts_ind.
+
+End good_consts.
