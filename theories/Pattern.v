@@ -1141,6 +1141,38 @@ Notation "Σ ;; Ξ | Γ ⊢ u ⇒ v" :=
 
 (** ** Sandwishing reduction *)
 
+Lemma ictx_get_pctx Ξ n rl :
+  ictx_get (pctx_ictx Ξ) n = Some (Comp rl) →
+  ∃ rl',
+    pctx_get Ξ n = Some (pComp rl') ∧
+    rl = prule_crule rl'.
+Proof.
+  intros e. unfold pctx_ictx in e.
+  rewrite lvl_get_map in e.
+  destruct (pctx_get _ _) as [[] |] eqn: e'. 1,3: discriminate.
+  cbn in e. inversion e.
+  eexists. intuition eauto.
+Qed.
+
+Lemma match_pat_lhs rl σ :
+  let lhs := (prule_crule rl).(cr_pat) in
+  let Θ := (prule_crule rl).(cr_env) in
+  let k := length Θ in
+  match_pat rl.(pr_pat) (lhs <[ σ ]) = Some (listify k σ).
+Proof.
+  intros lhs Θ k.
+Admitted.
+
+Lemma eq_subst_listify k σ :
+  eq_subst_on k (slist (listify k σ)) σ.
+Proof.
+  intros x h.
+  induction k as [| k ih] in x, h, σ |- *. 1: lia.
+  cbn. destruct x as [| x].
+  - reflexivity.
+  - cbn. apply (ih (S >> σ)). lia.
+Qed.
+
 Lemma red1_pred Σ Ξ Γ u v :
   Σ ;; pctx_ictx Ξ | Γ ⊢ u ↦ v →
   Σ ;; Ξ | Γ ⊢ u ⇒ v.
@@ -1153,11 +1185,17 @@ Proof.
     intros o h. apply option_rel_diag. rewrite OnSome_onSome.
     destruct o. all: cbn. 2: trivial.
     apply pred_refl.
-  - eapply pred_meta_r.
-    + econstructor. all: admit.
-    + admit.
+  - eapply ictx_get_pctx in H as h. destruct h as (rl' & hn & ->).
+    eapply pred_meta_r.
+    + econstructor.
+      * eassumption.
+      * eapply match_pat_lhs.
+      * apply Forall2_diag. apply Forall_forall.
+        intros. apply pred_refl.
+    + eapply ext_term_scoped. 1: eassumption.
+      apply eq_subst_listify.
   - econstructor.
     eapply OnOne2_refl_Forall2. 1: exact _.
     eapply OnOne2_impl. 2: eassumption.
     intros ??. apply some_rel_option_rel.
-Admitted.
+Qed.
