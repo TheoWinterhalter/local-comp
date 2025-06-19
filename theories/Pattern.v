@@ -540,6 +540,20 @@ Section Red.
     intros _. eexists _,_. reflexivity.
   Qed.
 
+  Definition cst_def c :=
+    match Σ c with
+    | Some (Def Ξ' A t) => if closed t then Some (Ξ', A, t) else None
+    | _ => None
+    end.
+
+  Lemma cst_def_Some c Ξ' A t :
+    cst_def c = Some (Ξ', A, t) ↔ Σ c = Some (Def Ξ' A t) ∧ closed t = true.
+  Proof.
+    unfold cst_def. destruct (Σ c) as [[] |]. 2: intuition congruence.
+    destruct (closed _) eqn: e. 2: intuition congruence.
+    intuition congruence.
+  Qed.
+
   Reserved Notation "Γ ⊢ u ⇒ᵨ v"
     (at level 80, u, v at next level).
 
@@ -552,7 +566,7 @@ Section Red.
 
   | pred_max_unfold c ξ Ξ' A t ξ' :
       no_match Ξ (const c ξ) →
-      Σ c = Some (Def Ξ' A t) →
+      cst_def c = Some (Ξ', A, t) →
       Forall2 (option_rel (pred_max Γ)) ξ ξ' →
       Γ ⊢ const c ξ ⇒ᵨ inst ξ' t
 
@@ -574,6 +588,12 @@ Section Red.
       Γ ⊢ u ⇒ᵨ u' →
       Γ ⊢ v ⇒ᵨ v' →
       Γ ⊢ app u v ⇒ᵨ app u' v'
+
+  | pred_max_const c ξ ξ' :
+      no_match Ξ (const c ξ) →
+      cst_def c = None →
+      Forall2 (option_rel (pred_max Γ)) ξ ξ' →
+      Γ ⊢ const c ξ ⇒ᵨ const c ξ'
 
   | pred_max_var x :
       no_match Ξ (var x) →
@@ -613,7 +633,7 @@ Section Red.
       ) →
       (∀ Γ c ξ Ξ' A t ξ',
         no_match Ξ (const c ξ) →
-        Σ c = Some (Def Ξ' A t) →
+        cst_def c = Some (Ξ', A, t) →
         Forall2 (option_rel (pred_max Γ)) ξ ξ' →
         Forall2 (option_rel (P Γ)) ξ ξ' →
         P Γ (const c ξ) (inst ξ' t)
@@ -643,6 +663,13 @@ Section Red.
         P Γ v v' →
         P Γ (app u v) (app u' v')
       ) →
+      (∀ Γ c ξ ξ',
+        no_match Ξ (const c ξ) →
+        cst_def c = None →
+        Forall2 (option_rel (pred_max Γ)) ξ ξ' →
+        Forall2 (option_rel (P Γ)) ξ ξ' →
+        P Γ (const c ξ) (const c ξ')
+      ) →
       (∀ Γ x,
         no_match Ξ (var x) →
         P Γ (var x) (var x)
@@ -665,16 +692,25 @@ Section Red.
       ) →
       ∀ Γ u v, Γ ⊢ u ⇒ᵨ v → P Γ u v.
   Proof.
-    intros P hbeta hunf hpi hlam happ hvar hsort hassm hrl.
+    intros P hbeta hunf hpi hlam happ hcst hvar hsort hassm hrl.
     fix aux 4. move aux at top.
     intros Γ u v h. destruct h.
-    9:{
+    10:{
       eapply hrl. 1-4: eauto.
       clear H0.
       revert σ σ' H1. fix aux1 3.
       intros σ σ' hσ. destruct hσ.
       - constructor.
       - constructor. all: eauto.
+    }
+    6:{
+      eapply hcst. 1-3: assumption.
+      clear H.
+      revert ξ ξ' H1. fix aux1 3.
+      intros ξ ξ' hh. destruct hh as [ | o o' ξ ξ' hh ].
+      - constructor.
+      - constructor. 2: eauto.
+        destruct hh. all: constructor ; eauto.
     }
     2:{
       eapply hunf. 1-3: eauto.
@@ -861,6 +897,16 @@ Section Red.
       intuition congruence.
   Qed.
 
+  Lemma match_pat_assm_inv p x σ :
+    match_pat p (assm x) = Some σ →
+    p = passm x ∧ σ = [].
+  Proof.
+    intros h.
+    destruct p. cbn in h.
+    destruct (_ =? _) eqn: e. 2: discriminate.
+    rewrite Nat.eqb_eq in e. inversion h. intuition congruence.
+  Qed.
+
   Context (htri : triangle_citerion Ξ).
 
   Lemma triangle_match n m rl rl' t σ σ' :
@@ -879,21 +925,6 @@ Section Red.
     eqtwice. subst.
     eqtwice. subst.
     intuition reflexivity.
-  Qed.
-
-  Definition cst_def c :=
-    match Σ c with
-    | Some (Def Ξ' A t) => if closed t then Some (Ξ', A, t) else None
-    | _ => None
-    end.
-
-  Lemma cst_def_Some c Ξ' A t :
-    cst_def c = Some (Ξ', A, t) →
-    Σ c = Some (Def Ξ' A t) ∧ closed t = true.
-  Proof.
-    unfold cst_def. destruct (Σ c) as [[] |]. 2: discriminate.
-    destruct (closed _) eqn: e. 2: discriminate.
-    intuition congruence.
   Qed.
 
   Lemma triangle Γ t u :
@@ -924,7 +955,7 @@ Section Red.
       eapply Forall2_trans_inv in ihξ.
       destruct ihξ as (ξᵨ & ? & ?).
       eexists. split.
-      + econstructor. 2: eauto.
+      + econstructor. 2: rewrite cst_def_Some ; eauto.
         1: apply no_match_const.
         apply Forall2_flip. eapply Forall2_impl. 2: eassumption.
         apply option_rel_flip.
@@ -990,14 +1021,31 @@ Section Red.
           cbn. intros ??. apply option_rel_flip.
         * econstructor. 1,2: intuition eauto.
           eauto using Forall2_flip, Forall2_impl, option_rel_flip, option_rel_impl.
-      + admit. (* Need to add case to predmax *)
+      + eexists. split.
+        * eapply pred_max_const. 2: eassumption.
+          1: apply no_match_const.
+          eauto using Forall2_flip, Forall2_impl, option_rel_flip, option_rel_impl.
+        * econstructor.
+          eauto using Forall2_flip, Forall2_impl, option_rel_flip, option_rel_impl.
     - eexists. split.
       + econstructor. apply no_match_var.
       + constructor.
     - eexists. split.
       + econstructor. apply no_match_sort.
       + constructor.
-  Admitted.
+    - destruct (find_match Ξ (assm x)) as [[[] ?] |] eqn: e.
+      + eapply find_match_sound in e as h. destruct h as (en & ep).
+        eapply match_pat_assm_inv in ep as h. destruct h as [? ->].
+        eexists. split.
+        * eapply pred_max_rule. 1,2: eassumption.
+          constructor.
+        * econstructor. 1,2: eassumption.
+          constructor.
+      + eexists. split.
+        * econstructor. assumption.
+        * constructor.
+    Unshelve. constructor.
+  Qed.
 
   Lemma pred_max_functional Γ t u v :
     Γ ⊢ t ⇒ᵨ u →
@@ -1005,13 +1053,15 @@ Section Red.
     u = v.
   Proof.
     intros hu hv.
-    induction hu as [ | | | | | | | | ??????? h ? ihσ ? ] in v, hv |- * using pred_max_ind_alt.
+    induction hu as [ | | | | | | | | | ??????? h ? ihσ ? ] in v, hv |- *
+    using pred_max_ind_alt.
     - inversion hv.
       3:{ exfalso. eapply no_match_no_match_pat. all: eassumption. }
       2: discriminate.
       subst. f_equal. 1: f_equal. all: eauto.
     - inversion hv.
-      2:{ exfalso. subst. eapply match_pat_not_const. eassumption. }
+      3:{ exfalso. subst. eapply match_pat_not_const. eassumption. }
+      2: congruence.
       subst. f_equal.
       + eapply Forall2_eq.
         eapply Forall2_impl, Forall2_trans. 2,3: eassumption.
@@ -1031,6 +1081,16 @@ Section Red.
       1:{ subst. discriminate. }
       subst. f_equal. all: eauto.
     - inversion hv.
+      1: congruence.
+      2:{ exfalso. subst. eauto using no_match_no_match_pat. }
+      subst. f_equal.
+      eapply Forall2_eq.
+      eapply Forall2_impl, Forall2_trans. 2,3: eassumption.
+      cbn. intros ?? (? & h1 & h2).
+      destruct h1.
+      + inversion h2. reflexivity.
+      + inversion h2. subst. f_equal. eauto.
+    - inversion hv.
       2:{ exfalso. eapply match_pat_not_var. eassumption. }
       reflexivity.
     - inversion hv.
@@ -1039,7 +1099,7 @@ Section Red.
     - inversion hv.
       2:{ exfalso. subst. eauto using no_match_no_match_pat. }
       reflexivity.
-    - inversion hv. 1-8: exfalso ; subst ; eapply no_match_no_match_pat ; eauto.
+    - inversion hv. 1-9: exfalso ; subst ; eapply no_match_no_match_pat ; eauto.
       subst.
       eapply triangle_match in h as ht. 2-4: eassumption.
       destruct ht as [-> ->].
