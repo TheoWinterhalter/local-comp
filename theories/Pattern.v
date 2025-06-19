@@ -1133,28 +1133,31 @@ Section Red.
     apply pred_refl.
   Qed.
 
-  (** ** Sandwishing reduction *)
-
-  Lemma red1_pred Γ u v :
-    (* Σ ;; pctx_ictx Ξ | Γ ⊢ u ↦ v → *)
-    red1 Σ (pctx_ictx Ξ) Γ u v →
-    Γ ⊢ u ⇒ v.
-  Proof.
-    intros h.
-    induction h using red1_ind_alt.
-    all: try solve [ econstructor ; eauto using pred_refl ].
-    - econstructor. 1,2: eassumption.
-      apply Forall2_diag. rewrite Forall_forall.
-      intros o h. apply option_rel_diag. rewrite OnSome_onSome.
-      destruct o. all: cbn. 2: trivial.
-      apply pred_refl.
-    - eapply pred_meta_r.
-      + econstructor. all: admit.
-      + admit.
-    - econstructor.
-      eapply OnOne2_refl_Forall2. 1: exact _.
-      eapply OnOne2_impl. 2: eassumption.
-      intros ??. apply some_rel_option_rel.
-  Admitted.
-
 End Red.
+
+Notation "Σ ;; Ξ | Γ ⊢ u ⇒ v" :=
+  (pred Σ Ξ Γ u v)
+  (at level 80, u, v at next level).
+
+(** ** Sandwishing reduction *)
+
+Lemma red1_pred Σ Ξ Γ u v :
+  Σ ;; pctx_ictx Ξ | Γ ⊢ u ↦ v →
+  Σ ;; Ξ | Γ ⊢ u ⇒ v.
+Proof.
+  intros h.
+  induction h using red1_ind_alt.
+  all: try solve [ econstructor ; eauto using pred_refl ].
+  - econstructor. 1,2: eassumption.
+    apply Forall2_diag. rewrite Forall_forall.
+    intros o h. apply option_rel_diag. rewrite OnSome_onSome.
+    destruct o. all: cbn. 2: trivial.
+    apply pred_refl.
+  - eapply pred_meta_r.
+    + econstructor. all: admit.
+    + admit.
+  - econstructor.
+    eapply OnOne2_refl_Forall2. 1: exact _.
+    eapply OnOne2_impl. 2: eassumption.
+    intros ??. apply some_rel_option_rel.
+Admitted.
