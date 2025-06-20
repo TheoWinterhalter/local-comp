@@ -86,6 +86,15 @@ Proof.
   intros. apply rst_step. eauto.
 Qed.
 
+Lemma clos_refl_trans_incl A R R' :
+  inclusion A R R' →
+  inclusion A (clos_refl_trans A R) (clos_refl_trans A R').
+Proof.
+  intros hR x y h.
+  eapply rt_step_ind with (f := λ x, x). 2: eassumption.
+  intros. apply rt_step. eauto.
+Qed.
+
 #[export] Instance Reflexive_eta A (R : relation A) :
   Reflexive R →
   Reflexive (λ x y, R x y).
@@ -291,6 +300,19 @@ Proof.
       intros. eapply rst_step. constructor. assumption.
 Qed.
 
+Lemma Forall2_rt_OnOne2 A (R : relation A) l l' :
+  Forall2 R l l' →
+  clos_refl_trans _ (OnOne2 R) l l'.
+Proof.
+  intros h.
+  induction h as [| x y l l' h hl ih].
+  - apply rt_refl.
+  - eapply rt_trans.
+    + apply rt_step. constructor. eassumption.
+    + eapply rt_step_ind. 2: eassumption.
+      intros. eapply rt_step. constructor. assumption.
+Qed.
+
 Lemma OnOne2_rst_comm A R l l' :
   OnOne2 (clos_refl_sym_trans A R) l l' →
   clos_refl_sym_trans _ (OnOne2 R) l l'.
@@ -301,6 +323,18 @@ Proof.
     intros. apply rst_step. constructor. assumption.
   - eapply rst_step_ind. 2: eassumption.
     intros. apply rst_step. constructor. assumption.
+Qed.
+
+Lemma OnOne2_rt_comm A R l l' :
+  OnOne2 (clos_refl_trans A R) l l' →
+  clos_refl_trans _ (OnOne2 R) l l'.
+Proof.
+  intros h.
+  induction h as [| x l l' hl ih].
+  - eapply rt_step_ind with (f := λ z, z :: l). 2: eassumption.
+    intros. apply rt_step. constructor. assumption.
+  - eapply rt_step_ind. 2: eassumption.
+    intros. apply rt_step. constructor. assumption.
 Qed.
 
 Lemma OnOne2_refl_Forall2 A (R : relation A) :
@@ -584,6 +618,15 @@ Proof.
   - apply rst_step. constructor. assumption.
 Qed.
 
+Lemma option_rel_rt_some_rel A (R : relation A) a b :
+  option_rel R a b →
+  clos_refl_trans _ (some_rel R) a b.
+Proof.
+  intros h. destruct h.
+  - apply rt_refl.
+  - apply rt_step. constructor. assumption.
+Qed.
+
 Lemma some_rel_rst_comm A R x y :
   some_rel (clos_refl_sym_trans A R) x y →
   clos_refl_sym_trans _ (some_rel R) x y.
@@ -591,6 +634,15 @@ Proof.
   intros h. destruct h.
   eapply rst_step_ind. 2: eassumption.
   intros. apply rst_step. constructor. assumption.
+Qed.
+
+Lemma some_rel_rt_comm A R x y :
+  some_rel (clos_refl_trans A R) x y →
+  clos_refl_trans _ (some_rel R) x y.
+Proof.
+  intros h. destruct h.
+  eapply rt_step_ind. 2: eassumption.
+  intros. apply rt_step. constructor. assumption.
 Qed.
 
 Lemma some_rel_option_rel A B (R : A → B → Prop) a b :

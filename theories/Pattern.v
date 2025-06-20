@@ -1200,20 +1200,43 @@ Proof.
     intros ??. apply some_rel_option_rel.
 Qed.
 
+Lemma red_const Σ Ξ Γ c ξ ξ' :
+  Forall2 (option_rel (red Σ Ξ Γ)) ξ ξ' →
+  Σ ;; Ξ | Γ ⊢ const c ξ ↦* const c ξ'.
+Proof.
+  intros hξ.
+  eapply Forall2_impl in hξ. 2: eapply option_rel_rt_some_rel.
+  eapply Forall2_impl in hξ.
+  2:{ eapply clos_refl_trans_incl. intros ??. eapply some_rel_rt_comm. }
+  eapply Forall2_impl in hξ. 2: eapply Operators_Properties.clos_rt_idempotent.
+  eapply Forall2_rt_OnOne2 in hξ.
+  eapply clos_refl_trans_incl in hξ.
+  2:{ intros ??. eapply OnOne2_rt_comm. }
+  eapply Operators_Properties.clos_rt_idempotent in hξ.
+  eapply rt_step_ind. 2: eassumption.
+  intros. apply rt_step.
+  constructor. assumption.
+Qed.
+
 Lemma pred_red Σ Ξ Γ u v :
   Σ ;; Ξ | Γ ⊢ u ⇒ v →
   Σ ;; pctx_ictx Ξ | Γ ⊢ u ↦* v.
 Proof.
   intros h.
   induction h using pred_ind_alt.
-  - etransitivity.
+  - etransitivity. 2: etransitivity.
+    + eapply red_ind with (f := λ x, app _ x). 2: eassumption.
+      cbn. intros. constructor. constructor. assumption.
+    + eapply red_ind with (f := λ x, app (lam _ x) _). 2: eassumption.
+      cbn. intros. constructor. constructor. constructor. assumption.
     + constructor. econstructor.
-    + (* Closure by subst *) admit.
-      (* Alternatively, I could reduce first in the subterms *)
-  - admit. (* Here we will need good_cstrs unless we change red first
-      Probably best to do it on the red side and at the boundary with
-      conversion.
-    *)
+  - etransitivity.
+    + eapply red_const. eassumption.
+    + constructor. econstructor. 1,3: eassumption.
+      admit. (* Here we will need good_cstrs unless we change red first
+        Probably best to do it on the red side and at the boundary with
+        conversion.
+      *)
   - admit.
   - admit.
 Admitted.
