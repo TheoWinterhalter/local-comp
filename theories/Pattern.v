@@ -1161,6 +1161,13 @@ Lemma match_pat_lhs rl σ :
   match_pat rl.(pr_pat) (lhs <[ σ ]) = Some (listify k σ).
 Proof.
   intros lhs Θ k.
+  cbn in lhs. destruct rl.(pr_pat).
+  subst lhs. cbn.
+  rewrite Nat.eqb_refl.
+  (* This is not correct presently, we need something weaker *)
+  (* Or we need to change the rules so that scoping is tight, or even 0
+    since we currently have very weak rules.
+  *)
 Admitted.
 
 Lemma eq_subst_listify k σ :
