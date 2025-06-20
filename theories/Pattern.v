@@ -1244,6 +1244,37 @@ Proof.
         Probably best to do it on the red side and at the boundary with
         conversion.
       *)
-  - admit.
-  - admit.
+  - eapply match_pat_sound in H0 as e. subst.
+    (* We're going to have to prove substitutivity then? *)
+    admit.
+  - etransitivity.
+    + eapply red_ind with (f := λ x, Pi _ x). 2: eassumption.
+      cbn. intros. repeat constructor. assumption.
+    + eapply red_ind with (f := λ x, Pi x _). 2: eassumption.
+      cbn. intros. repeat constructor. assumption.
+  - etransitivity.
+    + eapply red_ind with (f := λ x, lam _ x). 2: eassumption.
+      cbn. intros. repeat constructor. assumption.
+    + eapply red_ind with (f := λ x, lam x _). 2: eassumption.
+      cbn. intros. repeat constructor. assumption.
+  - etransitivity.
+    + eapply red_ind with (f := λ x, app _ x). 2: eassumption.
+      cbn. intros. repeat constructor. assumption.
+    + eapply red_ind with (f := λ x, app x _). 2: eassumption.
+      cbn. intros. repeat constructor. assumption.
+  - apply red_const. assumption.
+  - apply rt_refl.
+  - apply rt_refl.
+  - apply rt_refl.
 Admitted.
+
+Lemma red_confluence Σ Ξ :
+  triangle_citerion Ξ →
+  red_confluent Σ (pctx_ictx Ξ).
+Proof.
+  intros h Γ.
+  eapply sandwish.
+  - intros ??. apply red1_pred.
+  - intros ??. apply pred_red.
+  - apply pred_confluence. assumption.
+Qed.
