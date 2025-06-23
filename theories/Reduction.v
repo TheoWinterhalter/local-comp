@@ -438,49 +438,6 @@ Proof.
   - apply conv_sym. eapply red_conv. all: eassumption.
 Qed.
 
-(** * Context reduction *)
-
-(* Reserved Notation "Σ ;; Ξ | Γ ↦* Δ" (at level 80).
-
-Inductive red_ctx (Σ : gctx) (Ξ : ictx) : ctx → ctx → Prop :=
-| red_nil : Σ ;; Ξ | ∙ ↦* ∙
-| red_cons Γ Δ A B :
-    Σ ;; Ξ | Γ ↦* Δ →
-    Σ ;; Ξ | Γ ⊢ A ↦* B →
-    Σ ;; Ξ | Γ ,, A ↦* Δ ,, B
-
-where "Σ ;; Ξ | Γ ↦* Δ" := (red_ctx Σ Ξ Γ Δ). *)
-
-(* Lemma red_ctx_red1 Σ Ξ Γ Δ u v :
-  Σ ;; Ξ | Δ ↦* Γ →
-  Σ ;; Ξ | Γ ⊢ u ↦ v →
-  Σ ;; Ξ | Δ ⊢ u ↦* v.
-Proof.
-  intros hctx h.
-  induction h in Δ, hctx using red1_ind_alt.
-  all: try solve [ apply rt_step ; econstructor ; eauto ].
-  - apply rt_step. econstructor. all: eauto.
-    intros ?.
-    (* This would require context conversion for conversion *)
-    (* So it might be all worthless in the end *)
-    admit.
-  - eapply red_ind with (f := λ x, Pi x _). 2: eauto.
-    intros. apply rt_step. econstructor. assumption.
-  - eapply red_ind.
-    2:{ eapply IHh. econstructor. 1: eassumption. apply rt_refl. }
-    intros. apply rt_step. econstructor. assumption.
-  - eapply red_ind with (f := λ x, lam x _). 2: eauto.
-    intros. apply rt_step. econstructor. assumption.
-  - eapply red_ind.
-    2:{ eapply IHh. econstructor. 1: eassumption. apply rt_refl. }
-    intros. apply rt_step. econstructor. assumption.
-  - eapply red_ind with (f := λ x, app x _). 2: eauto.
-    intros. apply rt_step. econstructor. assumption.
-  - eapply red_ind. 2: eauto.
-    intros. apply rt_step. econstructor. assumption.
-  - admit.
-Abort. *)
-
 (** * Injectivity of Π
 
   The key component to subject reduction.
@@ -548,9 +505,8 @@ Section Injectivity.
       destruct IHh2 as (A'' & B'' & -> & hA' & hB').
       eexists _,_. intuition eauto.
       + etransitivity. all: eassumption.
-      + etransitivity. 1: eassumption.
-        (* Would need context conversion *)
-  Admitted.
+      + etransitivity. all: eassumption.
+  Qed.
 
   Lemma join_pi_inv A B A' B' :
     Σ ;; Ξ ⊢ Pi A B ⋈ Pi A' B' →
