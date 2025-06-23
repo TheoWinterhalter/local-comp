@@ -47,14 +47,14 @@ Lemma type_var_inv Σ Ξ Γ x A :
   Σ ;; Ξ | Γ ⊢ var x : A →
   ∃ B,
     nth_error Γ x = Some B ∧
-    Σ ;; Ξ | Γ ⊢ (plus (S x)) ⋅ B ≡ A.
+    Σ ;; Ξ ⊢ (plus (S x)) ⋅ B ≡ A.
 Proof.
   intros h. invtac h.
 Qed.
 
 Lemma type_sort_inv Σ Ξ Γ i A :
   Σ ;; Ξ | Γ ⊢ Sort i : A →
-  Σ ;; Ξ | Γ ⊢ Sort (S i) ≡ A.
+  Σ ;; Ξ ⊢ Sort (S i) ≡ A.
 Proof.
   intros h. invtac h.
 Qed.
@@ -64,7 +64,7 @@ Lemma type_pi_inv Σ Ξ Γ A B T :
   ∃ i j,
     Σ ;; Ξ | Γ ⊢ A : Sort i ∧
     Σ ;; Ξ | Γ ,, A ⊢ B : Sort j ∧
-    Σ ;; Ξ | Γ ⊢ Sort (max i j) ≡ T.
+    Σ ;; Ξ ⊢ Sort (max i j) ≡ T.
 Proof.
   intros h. invtac h.
 Qed.
@@ -75,7 +75,7 @@ Lemma type_lam_inv Σ Ξ Γ A t T :
     Σ ;; Ξ | Γ ⊢ A : Sort i ∧
     Σ ;; Ξ | Γ ,, A ⊢ B : Sort j ∧
     Σ ;; Ξ | Γ ,, A ⊢ t : B ∧
-    Σ ;; Ξ | Γ ⊢ Pi A B ≡ T.
+    Σ ;; Ξ ⊢ Pi A B ≡ T.
 Proof.
   intros h. invtac h.
 Qed.
@@ -87,7 +87,7 @@ Lemma type_app_inv Σ Ξ Γ u v T :
     Σ ;; Ξ | Γ ⊢ v : A ∧
     Σ ;; Ξ | Γ ⊢ A : Sort i ∧
     Σ ;; Ξ | Γ ,, A ⊢ B : Sort j ∧
-    Σ ;; Ξ | Γ ⊢ B <[ v .. ] ≡ T.
+    Σ ;; Ξ ⊢ B <[ v .. ] ≡ T.
 Proof.
   intros h. invtac h.
 Qed.
@@ -98,7 +98,7 @@ Lemma type_const_inv Σ Ξ Γ c ξ T :
     Σ c = Some (Def Ξ' A t) ∧
     inst_typing Σ Ξ Γ ξ Ξ' ∧
     closed A = true ∧
-    Σ ;; Ξ | Γ ⊢ inst ξ A ≡ T.
+    Σ ;; Ξ ⊢ inst ξ A ≡ T.
 Proof.
   intros h. invtac h.
 Qed.
@@ -108,7 +108,7 @@ Lemma type_assm_inv Σ Ξ Γ x T :
   ∃ A,
     ictx_get Ξ x = Some (Assm A) ∧
     closed A = true ∧
-    Σ ;; Ξ | Γ ⊢ A ≡ T.
+    Σ ;; Ξ ⊢ A ≡ T.
 Proof.
   intros h. invtac h.
 Qed.
