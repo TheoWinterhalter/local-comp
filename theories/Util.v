@@ -281,6 +281,24 @@ Proof.
   induction 1. all: subst ; eauto.
 Qed.
 
+Fixpoint rForall [A] (P : A → Prop) l :=
+  match l with
+  | [] => True
+  | x :: l => P x ∧ rForall P l
+  end.
+
+Lemma rForall_Forall A P l :
+  @rForall A P l ↔ Forall P l.
+Proof.
+  split.
+  - intros h. induction l.
+    + constructor.
+    + cbn in h. econstructor ; intuition eauto.
+  - intros h. induction h. all: cbn.
+    + constructor.
+    + intuition eauto.
+Qed.
+
 (** [OnOne2] predicate *)
 
 Inductive OnOne2 {A} (R : A → A → Prop) : list A → list A → Prop :=

@@ -344,40 +344,101 @@ Qed.
     Σ ;; Ξ | Γ ⊢ lhs <[ σ ] : A →
     ∃ θ, lhs <[ σ ] = lhs' <[ θ ]. *)
 
+Section const_eqs.
+
+  Context (Σ : gctx) (Ξ : ictx).
+
+  Fixpoint const_eqs (Γ : ctx) t {struct t} :=
+    match t with
+    | var x => True
+    | Sort s => True
+    | Pi A B => const_eqs Γ A ∧ const_eqs (Γ ,, A) B
+    | lam A b => const_eqs Γ A ∧ const_eqs (Γ ,, A) b
+    | app u v => const_eqs Γ u ∧ const_eqs Γ v
+    | const c ξ =>
+        rForall (onSome (const_eqs Γ)) ξ ∧
+        (∃ Ξ' A t, Σ c = Some (Def Ξ' A t) ∧ inst_equations Σ Ξ Γ ξ Ξ')
+    | assm x => True
+    end.
+
+End const_eqs.
+
 Lemma red1_conv Σ Ξ Γ u v :
+  const_eqs Σ Ξ Γ u →
   Σ ;; Ξ | Γ ⊢ u ↦ v →
   Σ ;; Ξ | Γ ⊢ u ≡ v.
 Proof.
-  intros h.
+  intros hu h.
   induction h using red1_ind_alt.
-  all: try solve [ ttconv ].
-  - econstructor. (* Need good_const *) 1,3: eassumption. admit.
+  all: try solve [ cbn in hu ; intuition ttconv ].
+  - cbn in hu. destruct hu as (? & ? & ? & ? & ? & ?).
+    eqtwice. subst.
+    econstructor. all: eassumption.
   - econstructor. all: eassumption.
-  - constructor. apply OnOne2_refl_Forall2. 1: exact _.
-    eapply OnOne2_impl.
-    + intros ??. apply some_rel_option_rel.
-    + assumption.
+  - cbn in hu. destruct hu as (hξ & _).
+    rewrite rForall_Forall in hξ.
+    eapply OnOne2_and_Forall_l in hξ. 2: eassumption.
+    constructor. apply OnOne2_refl_Forall2. 1: exact _.
+    eapply OnOne2_impl. 2: eassumption.
+    intros ?? [h1 h2]. apply some_rel_option_rel.
+    destruct h2. cbn in h1. constructor.
+    eauto.
+Qed.
+
+Lemma red1_const_eqs Σ Ξ Γ u v :
+  const_eqs Σ Ξ Γ u →
+  Σ ;; Ξ | Γ ⊢ u ↦ v →
+  const_eqs Σ Ξ Γ v.
+Proof.
+  intros hu h.
+  induction h using red1_ind_alt.
+  all: try solve [ cbn in * ; intuition eauto ].
+  - cbn in hu. admit.
+  - cbn in hu. admit.
+  - (* There is no reason this is true is there? We would need
+      somehow to add this to the Σ. And then we deduce it later from SR.
+    *)
+    admit.
+  - cbn in *. (* context again, irrelevant though *)
+    intuition eauto. admit.
+  - admit.
+  - cbn in *. admit.
 Admitted.
 
+Lemma red_const_eqs Σ Ξ Γ u v :
+  const_eqs Σ Ξ Γ u →
+  Σ ;; Ξ | Γ ⊢ u ↦* v →
+  const_eqs Σ Ξ Γ v.
+Proof.
+  intros hu h.
+  induction h.
+  - eapply red1_const_eqs. all: eassumption.
+  - assumption.
+  - eauto.
+Qed.
+
 Lemma red_conv Σ Ξ Γ u v :
+  const_eqs Σ Ξ Γ u →
   Σ ;; Ξ | Γ ⊢ u ↦* v →
   Σ ;; Ξ | Γ ⊢ u ≡ v.
 Proof.
-  intros h.
+  intros hu h.
   induction h.
-  - apply red1_conv. assumption.
+  - apply red1_conv. all: assumption.
   - reflexivity.
-  - eapply conv_trans. all: eassumption.
+  - eapply conv_trans. all: eauto using red_const_eqs.
 Qed.
 
 Lemma join_conv Σ Ξ Γ u v :
+  const_eqs Σ Ξ Γ u →
+  const_eqs Σ Ξ Γ v →
   Σ ;; Ξ | Γ ⊢ u ⋈ v →
   Σ ;; Ξ | Γ ⊢ u ≡ v.
 Proof.
-  intros (w & hu & hv).
+  intros hcu hcv (w & hu & hv).
   eapply conv_trans.
-  - eapply red_conv. eassumption.
-  - apply conv_sym. eapply red_conv. eassumption.
+  - eapply red_conv. all: eassumption.
+  - apply conv_sym. eapply red_conv. all: eassumption.
 Qed.
 
 (** * Context reduction *)
@@ -510,95 +571,3 @@ Section Injectivity.
   Admitted.
 
 End Injectivity.
-
-(** A property weaker than typing stating all const are well behaved **)
-Section good_consts.
-
-  Context (Σ : gctx) (Ξ : ictx).
-
-  Inductive good_consts (Γ : ctx) : term → Prop :=
-  | gc_var x : good_consts Γ (var x)
-  | gc_Sort s : good_consts Γ (Sort s)
-  | gc_Pi A B :
-      good_consts Γ A →
-      good_consts (Γ ,, A) B →
-      good_consts Γ (Pi A B)
-  | gc_lam A b :
-      good_consts Γ A →
-      good_consts (Γ ,, A) b →
-      good_consts Γ (lam A b)
-  | gc_app u v :
-      good_consts Γ u →
-      good_consts Γ v →
-      good_consts Γ (app u v)
-  | gc_const c ξ Ξ' A t :
-      Σ c = Some (Def Ξ' A t) →
-      inst_equations Σ Ξ Γ ξ Ξ' →
-      closed t = true →
-      Forall (OnSome (good_consts Γ)) ξ →
-      good_consts Γ (const c ξ)
-  | gc_assm x : good_consts Γ (assm x).
-
-  Section good_consts_ind.
-
-    Context (P : ctx → term → Prop).
-    Context (hvar : ∀ Γ x, P Γ (var x)).
-    Context (hsort : ∀ Γ s, P Γ (Sort s)).
-    Context (hpi :
-      ∀ Γ A B,
-        good_consts Γ A →
-        P Γ A →
-        good_consts (Γ,, A) B →
-        P (Γ,, A) B →
-        P Γ (Pi A B)
-    ).
-    Context (hlam :
-      ∀ Γ A b,
-        good_consts Γ A →
-        P Γ A →
-        good_consts (Γ,, A) b →
-        P (Γ,, A) b →
-        P Γ (lam A b)
-    ).
-    Context (happ :
-      ∀ Γ u v,
-        good_consts Γ u →
-        P Γ u →
-        good_consts Γ v →
-        P Γ v →
-        P Γ (app u v)
-    ).
-    Context (hconst :
-      ∀ Γ c ξ Ξ' A t,
-        Σ c = Some (Def Ξ' A t) →
-        inst_equations Σ Ξ Γ ξ Ξ' →
-        closed t = true →
-        Forall (OnSome (good_consts Γ)) ξ →
-        Forall (OnSome (P Γ)) ξ →
-        P Γ (const c ξ)
-    ).
-    Context (hassm : ∀ Γ x, P Γ (assm x)).
-
-    Lemma good_consts_ind_alt :
-      ∀ Γ t, good_consts Γ t → P Γ t.
-    Proof.
-      fix aux 3. move aux at top.
-      intros Γ t h. destruct h.
-      6:{
-        eapply hconst. all: eauto.
-        clear H0.
-        revert ξ H2. fix aux1 2.
-        intros ξ h. destruct h as [| u ξ hu hξ].
-        - constructor.
-        - constructor. 2: eauto.
-          destruct hu.
-          + constructor.
-          + constructor. eauto.
-      }
-      all: match goal with h : _ |- _ => eapply h end.
-      all: eauto.
-    Qed.
-
-  End good_consts_ind.
-
-End good_consts.
