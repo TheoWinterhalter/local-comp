@@ -1239,11 +1239,7 @@ Proof.
     + constructor. econstructor.
   - etransitivity.
     + eapply red_const. eassumption.
-    + constructor. econstructor. 1,3: eassumption.
-      admit. (* Here we will need good_cstrs unless we change red first
-        Probably best to do it on the red side and at the boundary with
-        conversion.
-      *)
+    + constructor. econstructor. all: eassumption.
   - eapply match_pat_sound in H0 as e. subst.
     (* We're going to have to prove substitutivity then? *)
     admit.

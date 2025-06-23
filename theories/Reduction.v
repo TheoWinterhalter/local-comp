@@ -38,7 +38,6 @@ Section Red.
 
   | red_unfold c ξ Ξ' A t :
       Σ c = Some (Def Ξ' A t) →
-      inst_equations Σ Ξ Γ ξ Ξ' →
       closed t = true →
       Γ ⊢ const c ξ ↦ inst ξ t
 
@@ -89,7 +88,6 @@ Section Red.
       (∀ Γ A t u, P Γ (app (lam A t) u) (t <[ u..])) →
       (∀ Γ c ξ Ξ' A t,
         Σ c = Some (Def Ξ' A t) →
-        inst_equations Σ Ξ Γ ξ Ξ' →
         closed t = true →
         P Γ (const c ξ) (inst ξ t)
       ) →
@@ -353,12 +351,13 @@ Proof.
   intros h.
   induction h using red1_ind_alt.
   all: try solve [ ttconv ].
+  - econstructor. (* Need good_const *) 1,3: eassumption. admit.
   - econstructor. all: eassumption.
   - constructor. apply OnOne2_refl_Forall2. 1: exact _.
     eapply OnOne2_impl.
     + intros ??. apply some_rel_option_rel.
     + assumption.
-Qed.
+Admitted.
 
 Lemma red_conv Σ Ξ Γ u v :
   Σ ;; Ξ | Γ ⊢ u ↦* v →
@@ -394,7 +393,7 @@ Inductive red_ctx (Σ : gctx) (Ξ : ictx) : ctx → ctx → Prop :=
 
 where "Σ ;; Ξ | Γ ↦* Δ" := (red_ctx Σ Ξ Γ Δ).
 
-Lemma red_ctx_red1 Σ Ξ Γ Δ u v :
+(* Lemma red_ctx_red1 Σ Ξ Γ Δ u v :
   Σ ;; Ξ | Δ ↦* Γ →
   Σ ;; Ξ | Γ ⊢ u ↦ v →
   Σ ;; Ξ | Δ ⊢ u ↦* v.
@@ -422,7 +421,7 @@ Proof.
   - eapply red_ind. 2: eauto.
     intros. apply rt_step. econstructor. assumption.
   - admit.
-Abort.
+Abort. *)
 
 (** * Injectivity of Π
 
