@@ -61,19 +61,19 @@ Section Typing.
 Reserved Notation "Γ ⊢ t : A"
   (at level 80, t, A at next level).
 
-Reserved Notation "Γ ⊢ u ≡ v"
-  (at level 80, u, v at next level).
+Reserved Notation "u ≡ v"
+  (at level 80).
 
 Context (Σ : gctx) (Ξ : ictx).
 
 (** Checking that an instance verifies the necessary equations *)
 Section Equations.
 
-  Context (conversion : ctx → term → term → Prop).
+  Context (conversion : term → term → Prop).
 
-  Notation "Γ ⊢ u ≡ v" := (conversion Γ u v).
+  Notation "u ≡ v" := (conversion u v) (at level 80).
 
-  Definition inst_equations_ (Γ : ctx) (ξ : instance) (Ξ' : ictx) :=
+  Definition inst_equations_ (ξ : instance) (Ξ' : ictx) :=
     ∀ x rl,
       ictx_get Ξ' x = Some (Comp rl) →
       let m := length rl.(cr_env) in
@@ -83,24 +83,24 @@ Section Equations.
       nth_error ξ x = None ∧
       scoped m rl.(cr_pat) = true ∧
       scoped m rl.(cr_rep) = true ∧
-      Γ ,,, Θ ⊢ lhs ≡ rhs.
+      (* Γ ,,, Θ ⊢ *) lhs ≡ rhs.
 
 End Equations.
 
-Inductive conversion (Γ : ctx) : term → term → Prop :=
+Inductive conversion : term → term → Prop :=
 
 (** Computation rules *)
 
 | conv_beta :
     ∀ A t u,
-      Γ ⊢ app (lam A t) u ≡ t <[ u .. ]
+      app (lam A t) u ≡ t <[ u .. ]
 
 | conv_unfold :
     ∀ c ξ Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
-      inst_equations_ conversion Γ ξ Ξ' →
+      inst_equations_ conversion ξ Ξ' →
       closed t = true →
-      Γ ⊢ const c ξ ≡ inst ξ t
+      const c ξ ≡ inst ξ t
 
 | conv_red :
     ∀ n rl σ,
@@ -111,51 +111,51 @@ Inductive conversion (Γ : ctx) : term → term → Prop :=
       let rhs := rl.(cr_rep) in
       scoped k lhs = true →
       scoped k rhs = true →
-      Γ ⊢ lhs <[ σ ] ≡ rhs <[ σ ]
+      lhs <[ σ ] ≡ rhs <[ σ ]
 
 (** Congruence rules *)
 
 | cong_Pi :
     ∀ A A' B B',
-      Γ ⊢ A ≡ A' →
-      Γ ,, A ⊢ B ≡ B' →
-      Γ ⊢ Pi A B ≡ Pi A' B'
+      A ≡ A' →
+      B ≡ B' →
+      Pi A B ≡ Pi A' B'
 
 | cong_lam :
     ∀ A A' t t',
-      Γ ⊢ A ≡ A' →
-      Γ ,, A ⊢ t ≡ t' →
-      Γ ⊢ lam A t ≡ lam A' t'
+      A ≡ A' →
+      t ≡ t' →
+      lam A t ≡ lam A' t'
 
 | cong_app :
     ∀ u u' v v',
-      Γ ⊢ u ≡ u' →
-      Γ ⊢ v ≡ v' →
-      Γ ⊢ app u v ≡ app u' v'
+      u ≡ u' →
+      v ≡ v' →
+      app u v ≡ app u' v'
 
 | cong_const :
     ∀ c ξ ξ',
-      Forall2 (option_rel (conversion Γ)) ξ ξ' →
-      Γ ⊢ const c ξ ≡ const c ξ'
+      Forall2 (option_rel conversion) ξ ξ' →
+      const c ξ ≡ const c ξ'
 
 (** Structural rules *)
 
 | conv_refl :
     ∀ u,
-      Γ ⊢ u ≡ u
+      u ≡ u
 
 | conv_sym :
     ∀ u v,
-      Γ ⊢ u ≡ v →
-      Γ ⊢ v ≡ u
+      u ≡ v →
+      v ≡ u
 
 | conv_trans :
     ∀ u v w,
-      Γ ⊢ u ≡ v →
-      Γ ⊢ v ≡ w →
-      Γ ⊢ u ≡ w
+      u ≡ v →
+      v ≡ w →
+      u ≡ w
 
-where "Γ ⊢ u ≡ v" := (conversion Γ u v).
+where "u ≡ v" := (conversion u v).
 
 Notation inst_equations := (inst_equations_ conversion).
 
@@ -173,7 +173,7 @@ Section Inst.
       Γ ⊢ iget ξ n : inst ξ A.
 
   Definition inst_typing_ (Γ : ctx) (ξ : instance) (Ξ' : ictx) :=
-    inst_equations Γ ξ Ξ' ∧ inst_iget_ Γ ξ Ξ' ∧ length ξ = length Ξ'.
+    inst_equations ξ Ξ' ∧ inst_iget_ Γ ξ Ξ' ∧ length ξ = length Ξ'.
 
 End Inst.
 
@@ -225,7 +225,7 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
 | type_conv :
     ∀ i A B t,
       Γ ⊢ t : A →
-      Γ ⊢ A ≡ B →
+      A ≡ B →
       Γ ⊢ B : Sort i →
       Γ ⊢ t : B
 
@@ -243,9 +243,9 @@ Inductive wf : ctx → Prop :=
 
 End Typing.
 
-Notation "Σ ;; Ξ | Γ ⊢ u ≡ v" :=
-  (conversion Σ Ξ Γ u v)
-  (at level 80, u, v at next level, format "Σ  ;;  Ξ  |  Γ  ⊢  u  ≡  v").
+Notation "Σ ;; Ξ ⊢ u ≡ v" :=
+  (conversion Σ Ξ u v)
+  (at level 80, u, v at next level, format "Σ  ;;  Ξ  ⊢  u  ≡  v").
 
 Notation "Σ ;; Ξ | Γ ⊢ t : A" :=
   (typing Σ Ξ Γ t A)
@@ -319,29 +319,29 @@ Proof.
 Qed.
 
 Lemma meta_conv_trans_l :
-  ∀ Σ Ξ Γ u v w,
+  ∀ Σ Ξ u v w,
     u = v →
-    Σ ;; Ξ | Γ ⊢ v ≡ w →
-    Σ ;; Ξ | Γ ⊢ u ≡ w.
+    Σ ;; Ξ ⊢ v ≡ w →
+    Σ ;; Ξ ⊢ u ≡ w.
 Proof.
-  intros Σ Ξ Γ ??? <- h. assumption.
+  intros Σ Ξ ??? <- h. assumption.
 Qed.
 
 Lemma meta_conv_trans_r :
-  ∀ Σ Ξ Γ u v w,
-    Σ ;; Ξ | Γ ⊢ u ≡ v →
+  ∀ Σ Ξ u v w,
+    Σ ;; Ξ ⊢ u ≡ v →
     v = w →
-    Σ ;; Ξ | Γ ⊢ u ≡ w.
+    Σ ;; Ξ ⊢ u ≡ w.
 Proof.
-  intros Σ Ξ Γ u v ? h <-. assumption.
+  intros Σ Ξ u v ? h <-. assumption.
 Qed.
 
 Lemma meta_conv_refl :
-  ∀ Σ Ξ Γ u v,
+  ∀ Σ Ξ u v,
     u = v →
-    Σ ;; Ξ | Γ ⊢ u ≡ v.
+    Σ ;; Ξ ⊢ u ≡ v.
 Proof.
-  intros Σ Ξ Γ u ? <-. ttconv.
+  intros Σ Ξ u ? <-. ttconv.
 Qed.
 
 Notation inst_equations Σ Ξ := (inst_equations_ (conversion Σ Ξ)).

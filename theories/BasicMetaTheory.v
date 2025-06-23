@@ -77,16 +77,16 @@ Qed.
 (** Better induction principle for [conversion] *)
 
 Lemma conversion_ind :
-  ∀ (Σ : gctx) Ξ (P : ctx → term → term → Prop),
-    (∀ Γ A t u, P Γ (app (lam A t) u) (t <[ u.. ])) →
-    (∀ Γ c ξ Ξ' A t,
+  ∀ (Σ : gctx) Ξ (P : term → term → Prop),
+    (∀ A t u, P (app (lam A t) u) (t <[ u.. ])) →
+    (∀ c ξ Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
-      inst_equations Σ Ξ Γ ξ Ξ' →
-      inst_equations_ P Γ ξ Ξ' →
+      inst_equations Σ Ξ ξ Ξ' →
+      inst_equations_ P ξ Ξ' →
       closed t = true →
-      P Γ (const c ξ) (inst ξ t)
+      P (const c ξ) (inst ξ t)
     ) →
-    (∀ Γ n rl σ,
+    (∀ n rl σ,
       ictx_get Ξ n = Some (Comp rl) →
       let Θ := rl.(cr_env) in
       let k := length Θ in
@@ -94,48 +94,48 @@ Lemma conversion_ind :
       let rhs := rl.(cr_rep) in
       scoped k lhs = true →
       scoped k rhs = true →
-      P Γ (lhs <[ σ ]) (rhs <[ σ ])
+      P (lhs <[ σ ]) (rhs <[ σ ])
     ) →
-    (∀ Γ A A' B B',
-      Σ ;; Ξ | Γ ⊢ A ≡ A' →
-      P Γ A A' →
-      Σ ;; Ξ | Γ,, A ⊢ B ≡ B' →
-      P (Γ,, A) B B' →
-      P Γ (Pi A B) (Pi A' B')
+    (∀ A A' B B',
+      Σ ;; Ξ ⊢ A ≡ A' →
+      P A A' →
+      Σ ;; Ξ ⊢ B ≡ B' →
+      P B B' →
+      P (Pi A B) (Pi A' B')
     ) →
-    (∀ Γ A A' t t',
-      Σ ;; Ξ | Γ ⊢ A ≡ A' →
-      P Γ A A' →
-      Σ ;; Ξ | Γ,, A ⊢ t ≡ t' →
-      P (Γ,, A) t t' →
-      P Γ (lam A t) (lam A' t')
+    (∀ A A' t t',
+      Σ ;; Ξ ⊢ A ≡ A' →
+      P A A' →
+      Σ ;; Ξ ⊢ t ≡ t' →
+      P t t' →
+      P (lam A t) (lam A' t')
     ) →
-    (∀ Γ u u' v v',
-      Σ ;; Ξ | Γ ⊢ u ≡ u' →
-      P Γ u u' →
-      Σ ;; Ξ | Γ ⊢ v ≡ v' →
-      P Γ v v' →
-      P Γ (app u v) (app u' v')
+    (∀ u u' v v',
+      Σ ;; Ξ ⊢ u ≡ u' →
+      P u u' →
+      Σ ;; Ξ ⊢ v ≡ v' →
+      P v v' →
+      P (app u v) (app u' v')
     ) →
-    (∀ Γ c ξ ξ',
-      Forall2 (option_rel (conversion Σ Ξ Γ)) ξ ξ' →
-      Forall2 (option_rel (P Γ)) ξ ξ' →
-      P Γ (const c ξ) (const c ξ')
+    (∀ c ξ ξ',
+      Forall2 (option_rel (conversion Σ Ξ)) ξ ξ' →
+      Forall2 (option_rel P) ξ ξ' →
+      P (const c ξ) (const c ξ')
     ) →
-    (∀ Γ u, P Γ u u) →
-    (∀ Γ u v, Σ ;; Ξ | Γ ⊢ u ≡ v → P Γ u v → P Γ v u) →
-    (∀ Γ u v w,
-      Σ ;; Ξ | Γ ⊢ u ≡ v →
-      P Γ u v →
-      Σ ;; Ξ | Γ ⊢ v ≡ w →
-      P Γ v w →
-      P Γ u w
+    (∀ u, P u u) →
+    (∀ u v, Σ ;; Ξ ⊢ u ≡ v → P u v → P v u) →
+    (∀ u v w,
+      Σ ;; Ξ ⊢ u ≡ v →
+      P u v →
+      Σ ;; Ξ ⊢ v ≡ w →
+      P v w →
+      P u w
     ) →
-    ∀ Γ u v, Σ ;; Ξ | Γ ⊢ u ≡ v → P Γ u v.
+    ∀ u v, Σ ;; Ξ ⊢ u ≡ v → P u v.
 Proof.
   intros Σ Ξ P hbeta hunfold hred hpi hlam happ hconst hrefl hsym htrans.
-  fix aux 4. move aux at top.
-  intros Γ u v h. destruct h.
+  fix aux 3. move aux at top.
+  intros u v h. destruct h.
   7:{
     eapply hconst. 1: assumption.
     revert ξ ξ' H.
@@ -199,7 +199,7 @@ Lemma typing_ind :
     (∀ Γ i A B t,
       Σ ;; Ξ | Γ ⊢ t : A →
       P Γ t A →
-      Σ ;; Ξ | Γ ⊢ A ≡ B →
+      Σ ;; Ξ ⊢ A ≡ B →
       Σ ;; Ξ | Γ ⊢ B : Sort i →
       P Γ B (Sort i) →
       P Γ t B
@@ -262,27 +262,6 @@ Proof.
   intros h.
   eapply typing_scoped with (Γ := ∙).
   eassumption.
-Qed.
-
-(** Context is irrelevant for conversion
-
-  A bit silly, but it might be better to stick to it in case we want to add more
-  data.
-
-*)
-
-Lemma conv_ctx_irr Σ Ξ Γ Δ u v :
-  Σ ;; Ξ | Γ ⊢ u ≡ v →
-  Σ ;; Ξ | Δ ⊢ u ≡ v.
-Proof.
-  induction 1 using conversion_ind in Δ |- *.
-  all: try solve [ ttconv ].
-  all: try solve [ econstructor ; eauto ].
-  - econstructor. 1,3: eassumption.
-    intros x rl hx. specialize (H1 _ _ hx). cbn in *. intuition eauto.
-  - econstructor. eapply Forall2_impl. 2: eassumption.
-    intros. eapply option_rel_impl. 2: eassumption.
-    intros ??. auto.
 Qed.
 
 (** Renaming preserves typing *)
@@ -530,10 +509,10 @@ Proof.
   cbn. rasimpl. apply closed_ren.
 Qed.
 
-Lemma inst_equations_ren_ih Σ Ξ Γ Δ ρ ξ Ξ' :
-  inst_equations Σ Ξ Γ ξ Ξ' →
-  inst_equations_ (λ _ u v, ∀ Δ ρ, Σ ;; Ξ | Δ ⊢ ρ ⋅ u ≡ ρ ⋅ v) Γ ξ Ξ' →
-  inst_equations Σ Ξ Δ (ren_instance ρ ξ) Ξ'.
+Lemma inst_equations_ren_ih Σ Ξ ρ ξ Ξ' :
+  inst_equations Σ Ξ ξ Ξ' →
+  inst_equations_ (λ u v, ∀ ρ, Σ ;; Ξ ⊢ ρ ⋅ u ≡ ρ ⋅ v) ξ Ξ' →
+  inst_equations Σ Ξ (ren_instance ρ ξ) Ξ'.
 Proof.
   intros h ih.
   intros x rl hx m Θ. cbn.
@@ -542,24 +521,19 @@ Proof.
   specialize (ih _ _ hx) as (e & hl & hr & ih).
   fold m Θ in hl, hr, ih.
   specialize ih with (ρ := uprens m ρ).
-  (* 2:{
-    eapply rtyping_uprens_eq. 1: eassumption.
-    rewrite 2!length_ctx_inst. reflexivity.
-  } *)
   rewrite e. cbn.
   rewrite 2!ren_inst in ih.
   rewrite 2!scoped_ren in ih. 2,3: eassumption.
   intuition eauto.
 Qed.
 
-Lemma conv_ren Σ Ξ Γ Δ ρ u v :
-  (* rtyping Γ ρ Δ → *)
-  Σ ;; Ξ | Δ ⊢ u ≡ v →
-  Σ ;; Ξ | Γ ⊢ ρ ⋅ u ≡ ρ ⋅ v.
+Lemma conv_ren Σ Ξ ρ u v :
+  Σ ;; Ξ ⊢ u ≡ v →
+  Σ ;; Ξ ⊢ ρ ⋅ u ≡ ρ ⋅ v.
 Proof.
-  intros (* hρ *) h.
-  induction h using conversion_ind in Γ, ρ (* , hρ *) |- *.
-  all: try solve [ rasimpl ; econstructor ; eauto using rtyping_up ].
+  intros h.
+  induction h using conversion_ind in ρ |- *.
+  all: try solve [ rasimpl ; econstructor ; eauto ].
   - rasimpl. eapply meta_conv_trans_r. 1: econstructor.
     rasimpl. reflexivity.
   - rasimpl. eapply conv_trans. 1: econstructor. 1,3: eassumption.
@@ -643,10 +617,10 @@ Proof.
 Abort.
 
 (* TODO MOVE *)
-Lemma inst_equations_prop Σ Ξ Γ ξ Ξ' P :
-  inst_equations Σ Ξ Γ ξ Ξ' →
-  (∀ Γ u v, Σ ;; Ξ | Γ ⊢ u ≡ v → P Γ u v) →
-  inst_equations_ P Γ ξ Ξ'.
+Lemma inst_equations_prop Σ Ξ ξ Ξ' P :
+  inst_equations Σ Ξ ξ Ξ' →
+  (∀ u v, Σ ;; Ξ ⊢ u ≡ v → P u v) →
+  inst_equations_ P ξ Ξ'.
 Proof.
   intros h ih.
   intros x rl hx. specialize (h _ _ hx).
@@ -1023,10 +997,10 @@ Proof.
     rasimpl. reflexivity.
 Qed.
 
-Lemma inst_equations_subst_ih Σ Ξ Γ Δ σ ξ Ξ' :
-  inst_equations Σ Ξ Γ ξ Ξ' →
-  inst_equations_ (λ _ u v, ∀ Δ σ, Σ ;; Ξ | Δ ⊢ u <[ σ ] ≡ v <[ σ ]) Γ ξ Ξ' →
-  inst_equations Σ Ξ Δ (subst_instance σ ξ) Ξ'.
+Lemma inst_equations_subst_ih Σ Ξ σ ξ Ξ' :
+  inst_equations Σ Ξ ξ Ξ' →
+  inst_equations_ (λ u v, ∀ σ, Σ ;; Ξ ⊢ u <[ σ ] ≡ v <[ σ ]) ξ Ξ' →
+  inst_equations Σ Ξ (subst_instance σ ξ) Ξ'.
 Proof.
   intros h ih.
   intros x rl hx m Θ. specialize (ih _ _ hx).
@@ -1044,12 +1018,12 @@ Qed.
   It is a bit silly because the context is ignored for conversion (for now).
 
 *)
-Lemma conv_subst Σ Ξ Γ Δ σ u v :
-  Σ ;; Ξ | Δ ⊢ u ≡ v →
-  Σ ;; Ξ | Γ ⊢ u <[ σ ] ≡ v <[ σ ].
+Lemma conv_subst Σ Ξ σ u v :
+  Σ ;; Ξ ⊢ u ≡ v →
+  Σ ;; Ξ ⊢ u <[ σ ] ≡ v <[ σ ].
 Proof.
   intros h.
-  induction h using conversion_ind in Γ, σ |- *.
+  induction h using conversion_ind in σ |- *.
   all: try solve [ rasimpl ; econstructor ; eauto ].
   - rasimpl. eapply meta_conv_trans_r. 1: econstructor.
     rasimpl. reflexivity.
@@ -1383,7 +1357,7 @@ Proof.
   - cbn. apply inst_get.
 Qed.
 
-Lemma liftn_map_map n ξ ξ' :
+Lemma liftn_inst_instance n ξ ξ' :
   liftn n (inst_instance ξ ξ') = inst_instance (liftn n ξ) (liftn n ξ').
 Proof.
   rewrite !map_map. apply map_ext. intro.
@@ -1398,43 +1372,40 @@ Proof.
   - reflexivity.
   - cbn. rewrite ih. f_equal. rewrite inst_inst. f_equal.
     rewrite length_ctx_inst.
-    rewrite liftn_map_map. reflexivity.
+    rewrite liftn_inst_instance. reflexivity.
 Qed.
 
-Lemma inst_equations_inst_ih Σ Ξ Ξ' Ξ'' Γ Δ ξ ξ' :
-  inst_equations Σ Ξ Δ ξ Ξ' →
-  inst_equations Σ Ξ' Γ ξ' Ξ'' →
-  inst_equations_ (λ Γ u v,
-    ∀ Ξ Δ ξ,
-      inst_equations Σ Ξ Δ ξ Ξ' →
-      Σ ;; Ξ | Δ ,,, ctx_inst ξ Γ ⊢ inst (liftn (length Γ) ξ) u ≡ inst (liftn (length Γ) ξ) v
-  ) Γ ξ' Ξ'' →
-  inst_equations Σ Ξ (Δ ,,, ctx_inst ξ Γ) (inst_instance (liftn (length Γ) ξ) ξ') Ξ''.
+Lemma inst_equations_inst_ih Σ Ξ Ξ' Ξ'' k ξ ξ' :
+  inst_equations Σ Ξ ξ Ξ' →
+  inst_equations Σ Ξ' ξ' Ξ'' →
+  inst_equations_ (λ u v,
+    ∀ Ξ p ξ,
+      inst_equations Σ Ξ ξ Ξ' →
+      Σ ;; Ξ ⊢ inst (liftn p ξ) u ≡ inst (liftn p ξ) v
+  ) ξ' Ξ'' →
+  inst_equations Σ Ξ (inst_instance (liftn k ξ) ξ') Ξ''.
 Proof.
   intros hξ h ih.
   intros x rl hx m Θ. specialize (ih _ _ hx) as (e & hl & hr & ih).
   cbn in *. fold m Θ in ih.
-  specialize ih with (1 := hξ).
-  rewrite ctx_inst_app in ih. rewrite <- app_assoc in ih.
-  rewrite ctx_inst_comp in ih.
-  rewrite !length_app in ih. rewrite !length_ctx_inst in ih.
+  specialize ih with (1 := hξ) (p := m + k).
   rewrite !inst_inst in ih.
-  rewrite liftn_map_map.
+  rewrite liftn_inst_instance.
   rewrite liftn_liftn.
   rewrite nth_error_map, e. cbn.
   intuition eauto.
 Qed.
 
-Lemma conv_inst Σ Ξ Ξ' Γ Δ u v ξ :
-  inst_equations Σ Ξ Δ ξ Ξ' →
-  Σ ;; Ξ' | Γ ⊢ u ≡ v →
-  let rξ := liftn (length Γ) ξ in
-  Σ ;; Ξ | Δ ,,, ctx_inst ξ Γ ⊢ inst rξ u ≡ inst rξ v.
+Lemma conv_inst Σ Ξ Ξ' k u v ξ :
+  inst_equations Σ Ξ ξ Ξ' →
+  Σ ;; Ξ' ⊢ u ≡ v →
+  let rξ := liftn k ξ in
+  Σ ;; Ξ ⊢ inst rξ u ≡ inst rξ v.
 Proof.
   intros hξ h. cbn.
-  induction h using conversion_ind in Ξ, Δ, ξ, hξ |- *.
+  induction h using conversion_ind in Ξ, k, ξ, hξ |- *.
   all: try solve [ cbn ; econstructor ; eauto ].
-  - cbn. rewrite subst_inst with (m := S (length Γ)). 2: auto.
+  - cbn. rewrite subst_inst with (m := S k). 2: auto.
     eapply meta_conv_trans_r. 1: constructor.
     cbn. rewrite lift_liftn. apply ext_term. intros []. all: reflexivity.
   - cbn. eapply meta_conv_trans_r.
@@ -1463,13 +1434,13 @@ Proof.
     cbn. auto.
 Qed.
 
-Corollary conv_inst_closed Σ Ξ Ξ' Δ u v ξ :
-  inst_equations Σ Ξ Δ ξ Ξ' →
-  Σ ;; Ξ' | ∙ ⊢ u ≡ v →
-  Σ ;; Ξ | Δ ⊢ inst ξ u ≡ inst ξ v.
+Corollary conv_inst_closed Σ Ξ Ξ' u v ξ :
+  inst_equations Σ Ξ ξ Ξ' →
+  Σ ;; Ξ' ⊢ u ≡ v →
+  Σ ;; Ξ ⊢ inst ξ u ≡ inst ξ v.
 Proof.
   intros hξ h.
-  eapply conv_inst in h. 2: eassumption.
+  eapply conv_inst with (k := 0) in h. 2: eassumption.
   cbn in h. rewrite ren_instance_id_ext in h. 2: auto.
   assumption.
 Qed.
@@ -1545,12 +1516,12 @@ Proof.
   assumption.
 Qed.
 
-Lemma conv_insts Σ Ξ Γ t ξ ξ' :
-  Forall2 (option_rel (conversion Σ Ξ Γ)) ξ ξ' →
-  Σ ;; Ξ | Γ ⊢ inst ξ t ≡ inst ξ' t.
+Lemma conv_insts Σ Ξ t ξ ξ' :
+  Forall2 (option_rel (conversion Σ Ξ)) ξ ξ' →
+  Σ ;; Ξ ⊢ inst ξ t ≡ inst ξ' t.
 Proof.
   intros hξ.
-  induction t using term_rect in Γ, ξ, ξ', hξ |- *.
+  induction t using term_rect in ξ, ξ', hξ |- *.
   all: try solve [ cbn ; ttconv ].
   - cbn. eapply cong_Pi. 1: eauto.
     eapply IHt2. eapply Forall2_map_l, Forall2_map_r.
@@ -1590,11 +1561,11 @@ Proof.
     assumption.
 Qed.
 
-Lemma cong_inst Σ Ξ Γ u v ξ ξ' Ξ' :
-  inst_equations Σ Ξ Γ ξ Ξ' →
-  Σ ;; Ξ' | ∙ ⊢ u ≡ v →
-  Forall2 (option_rel (conversion Σ Ξ Γ)) ξ ξ' →
-  Σ ;; Ξ | Γ ⊢ inst ξ u ≡ inst ξ' v.
+Lemma cong_inst Σ Ξ u v ξ ξ' Ξ' :
+  inst_equations Σ Ξ ξ Ξ' →
+  Σ ;; Ξ' ⊢ u ≡ v →
+  Forall2 (option_rel (conversion Σ Ξ)) ξ ξ' →
+  Σ ;; Ξ ⊢ inst ξ u ≡ inst ξ' v.
 Proof.
   intros hξ h hh.
   eapply conv_trans.
@@ -1611,9 +1582,9 @@ Proof.
   apply lvl_get_weak.
 Qed.
 
-Lemma conv_eweak Σ Ξ d Γ u v :
-  Σ ;; Ξ | Γ ⊢ u ≡ v →
-  Σ ;; d :: Ξ | Γ ⊢ u ≡ v.
+Lemma conv_eweak Σ Ξ d u v :
+  Σ ;; Ξ ⊢ u ≡ v →
+  Σ ;; d :: Ξ ⊢ u ≡ v.
 Proof.
   intros h. induction h using conversion_ind.
   all: try solve [ econstructor ; eauto ].
@@ -1621,9 +1592,9 @@ Proof.
   apply ictx_get_weak. eassumption.
 Qed.
 
-Lemma inst_equations_eweak Σ Ξ d Γ ξ Ξ' :
-  inst_equations Σ Ξ Γ ξ Ξ' →
-  inst_equations Σ (d :: Ξ) Γ ξ Ξ'.
+Lemma inst_equations_eweak Σ Ξ d ξ Ξ' :
+  inst_equations Σ Ξ ξ Ξ' →
+  inst_equations Σ (d :: Ξ) ξ Ξ'.
 Proof.
   intros h.
   intros x rl hx. specialize (h _ _ hx).
@@ -1703,29 +1674,29 @@ Qed.
 
 (** Global environment weakening *)
 
-Lemma inst_equations_gweak_ih Σ Σ' Ξ Γ ξ Ξ' :
+Lemma inst_equations_gweak_ih Σ Σ' Ξ ξ Ξ' :
   Σ ⊑ Σ' →
-  inst_equations_ (λ Γ u v, Σ' ;; Ξ | Γ ⊢ u ≡ v) Γ ξ Ξ' →
-  inst_equations Σ' Ξ Γ ξ Ξ'.
+  inst_equations_ (λ u v, Σ' ;; Ξ ⊢ u ≡ v) ξ Ξ' →
+  inst_equations Σ' Ξ ξ Ξ'.
 Proof.
   intros hle ih.
   intros x rl hx. specialize (ih _ _ hx).
   intuition eauto.
 Qed.
 
-Lemma conv_gweak Σ Σ' Ξ Γ u v :
-  Σ ;; Ξ | Γ ⊢ u ≡ v →
+Lemma conv_gweak Σ Σ' Ξ u v :
+  Σ ;; Ξ ⊢ u ≡ v →
   Σ ⊑ Σ' →
-  Σ' ;; Ξ | Γ ⊢ u ≡ v.
+  Σ' ;; Ξ ⊢ u ≡ v.
 Proof.
   intros h hle. induction h using conversion_ind.
   all: solve [ econstructor ; eauto ].
 Qed.
 
-Lemma inst_equations_gweak Σ Σ' Ξ Γ ξ Ξ' :
-  inst_equations Σ Ξ Γ ξ Ξ' →
+Lemma inst_equations_gweak Σ Σ' Ξ ξ Ξ' :
+  inst_equations Σ Ξ ξ Ξ' →
   Σ ⊑ Σ' →
-  inst_equations Σ' Ξ Γ ξ Ξ'.
+  inst_equations Σ' Ξ ξ Ξ'.
 Proof.
   intros h hle.
   eauto using inst_equations_gweak_ih, inst_equations_prop, conv_gweak.
@@ -2106,7 +2077,7 @@ Lemma typing_ind_wf :
       wf Σ Ξ Γ →
       Σ ;; Ξ | Γ ⊢ t : A →
       P Γ t A →
-      Σ ;; Ξ | Γ ⊢ A ≡ B →
+      Σ ;; Ξ ⊢ A ≡ B →
       Σ ;; Ξ | Γ ⊢ B : Sort i →
       P Γ B (Sort i) →
       P Γ t B

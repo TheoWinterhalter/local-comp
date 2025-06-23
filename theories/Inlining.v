@@ -156,13 +156,13 @@ Section Inline.
   Definition g_conv_unfold :=
     ∀ c Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
-      [] ;; ⟦ Ξ' ⟧e | ∙ ⊢ κ c ≡ ⟦ t ⟧.
+      [] ;; ⟦ Ξ' ⟧e ⊢ κ c ≡ ⟦ t ⟧.
 
   Context (h_conv_unfold : g_conv_unfold).
 
-  Lemma conv_ren_inst Ξ Γ Δ ρ ξ ξ' :
-    Forall2 (option_rel (conversion Σ Ξ Δ)) ξ ξ' →
-    Forall2 (option_rel (conversion Σ Ξ Γ)) (ren_instance ρ ξ) (ren_instance ρ ξ').
+  Lemma conv_ren_inst Ξ ρ ξ ξ' :
+    Forall2 (option_rel (conversion Σ Ξ)) ξ ξ' →
+    Forall2 (option_rel (conversion Σ Ξ)) (ren_instance ρ ξ) (ren_instance ρ ξ').
   Proof.
     intros h.
     apply Forall2_map_l, Forall2_map_r.
@@ -248,9 +248,9 @@ Section Inline.
       rewrite inline_ren_instance. rewrite length_map. reflexivity.
   Qed.
 
-  Lemma inst_equations_inline_ih Ξ Ξ' Γ ξ :
-    inst_equations_ (λ Γ u v, [] ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧) Γ ξ Ξ' →
-    inst_equations [] ⟦ Ξ ⟧e ⟦ Γ ⟧* ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
+  Lemma inst_equations_inline_ih Ξ Ξ' ξ :
+    inst_equations_ (λ u v, [] ;; ⟦ Ξ ⟧e ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧) ξ Ξ' →
+    inst_equations [] ⟦ Ξ ⟧e ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
   Proof.
     intros ih.
     intros x rl hx.
@@ -260,7 +260,6 @@ Section Inline.
     specialize (ih _ _ hx') as (hx & hl & hr & ih).
     cbn. rewrite nth_error_map, hx. cbn.
     rewrite !length_map.
-    rewrite map_app in ih. rewrite !inline_ctx_inst in ih.
     rewrite !inline_inst in ih. rewrite !inline_ren_instance in ih.
     intuition eauto using scoped_inline.
   Qed.
@@ -277,9 +276,9 @@ Section Inline.
     reflexivity.
   Qed.
 
-  Lemma conv_inline Ξ Γ u v :
-    Σ ;; Ξ | Γ ⊢ u ≡ v →
-    [] ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
+  Lemma conv_inline Ξ u v :
+    Σ ;; Ξ ⊢ u ≡ v →
+    [] ;; ⟦ Ξ ⟧e ⊢ ⟦ u ⟧ ≡ ⟦ v ⟧.
   Proof.
     intros h.
     induction h using conversion_ind.
