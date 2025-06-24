@@ -399,7 +399,16 @@ Proof.
       somehow to add this to the Σ. And then we deduce it later from SR.
     *)
     admit.
-  - cbn in *. admit.
+  - cbn in *. destruct hu as (hξ & Ξ' & A & t & e & hi).
+    split.
+    + rewrite rForall_Forall in hξ |- *.
+      eapply OnOne2_and_Forall_l in hξ as h. 2: eassumption.
+      eapply OnOne2_impl with (R' := λ x y, onSome (const_eqs Σ Ξ) y) in h.
+      2:{
+        intros ?? [h1 h2]. destruct h2 as [? ? h2]. cbn in h1.
+        specialize (h2 h1). cbn. assumption.
+      }
+      eapply Forall_OnOne2_r. all: eauto.
 Admitted.
 
 Lemma red_const_eqs Σ Ξ u v :

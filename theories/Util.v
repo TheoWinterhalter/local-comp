@@ -400,6 +400,20 @@ Proof.
   - constructor. inversion hf. intuition auto.
 Qed.
 
+Lemma Forall_OnOne2_r A (P : A → Prop) l l' :
+  Forall P l →
+  OnOne2 (λ _ y, P y) l l' →
+  Forall P l'.
+Proof.
+  intros h h2.
+  induction h2 in h |- *.
+  - constructor.
+    + assumption.
+    + inversion h. assumption.
+  - inversion h. subst.
+    constructor. all: eauto.
+Qed.
+
 (** Some mini [congruence] *)
 
 Ltac eqtwice :=
