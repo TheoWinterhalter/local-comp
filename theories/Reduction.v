@@ -385,19 +385,127 @@ Proof.
     eauto.
 Qed.
 
+Lemma Forall_funct A (P Q : A → Prop) l :
+  Forall P l →
+  Forall (λ x, P x → Q x) l →
+  Forall Q l.
+Proof.
+  intros h hi.
+  rewrite Forall_forall in *.
+  eauto.
+Qed.
+
+Lemma const_eqs_ren Σ Ξ t ρ :
+  const_eqs Σ Ξ t →
+  const_eqs Σ Ξ (ρ ⋅ t).
+Proof.
+  intros h.
+  induction t in ρ, h |- * using term_rect.
+  all: try solve [ cbn in * ; intuition eauto ].
+  cbn in *. destruct h as (h & Ξ' & A & t & e & h').
+  rewrite rForall_Forall in *.
+  change @core.option_map with option_map.
+  split.
+  - apply Forall_map. eapply Forall_funct. 1: eassumption.
+    apply All_Forall. eapply All_impl. 2: eassumption.
+    intros o ho ho'.
+    apply onSome_onSomeT in ho'. apply onSomeT_onSome.
+    eapply onSomeT_prod in ho. 2: eassumption.
+    apply onSomeT_map.
+    eapply onSomeT_impl. 2: eassumption.
+    cbn. intuition eauto.
+  - eexists _,_,_. split. 1: eassumption.
+    eauto using inst_equations_ren_ih, inst_equations_prop, conv_ren.
+Qed.
+
+Lemma const_eqs_shift Σ Ξ σ :
+  (∀ n, const_eqs Σ Ξ (σ n)) →
+  ∀ n, const_eqs Σ Ξ (up_term σ n).
+Proof.
+  intros h n.
+  destruct n.
+  - cbn. constructor.
+  - cbn. unfold core.funcomp.
+    apply const_eqs_ren. auto.
+Qed.
+
+Lemma const_eqs_subst Σ Ξ t σ :
+  (∀ n, const_eqs Σ Ξ (σ n)) →
+  const_eqs Σ Ξ t →
+  const_eqs Σ Ξ (t <[ σ ]).
+Proof.
+  intros hσ h.
+  induction t in σ, hσ, h |- * using term_rect.
+  all: try solve [ cbn in * ; intuition eauto using const_eqs_shift ].
+  cbn in *. destruct h as (h & Ξ' & A & t & e & h').
+  rewrite rForall_Forall in *.
+  change @core.option_map with option_map.
+  split.
+  - apply Forall_map. eapply Forall_funct. 1: eassumption.
+    apply All_Forall. eapply All_impl. 2: eassumption.
+    intros o ho ho'.
+    apply onSome_onSomeT in ho'. apply onSomeT_onSome.
+    eapply onSomeT_prod in ho. 2: eassumption.
+    apply onSomeT_map.
+    eapply onSomeT_impl. 2: eassumption.
+    cbn. intuition eauto.
+  - eexists _,_,_. split. 1: eassumption.
+    eauto using inst_equations_subst_ih, inst_equations_prop, conv_subst.
+Qed.
+
+Lemma const_eqs_inst Σ Ξ ξ t k :
+  Forall (onSome (const_eqs Σ Ξ)) ξ →
+  const_eqs Σ Ξ t →
+  let rξ := liftn k ξ in
+  const_eqs Σ Ξ (inst rξ t).
+Proof.
+  intros hξ h. cbn.
+  induction t in ξ, hξ, h, k |- * using term_rect.
+  all: try solve [ cbn in * ; intuition eauto ].
+  - cbn in *. intuition eauto.
+    rewrite lift_liftn. eauto.
+  - cbn in *. intuition eauto.
+    rewrite lift_liftn. eauto.
+  - cbn in *. admit.
+  - cbn. admit.
+Admitted.
+
+Lemma const_eqs_inst_closed Σ Ξ ξ t :
+  Forall (onSome (const_eqs Σ Ξ)) ξ →
+  const_eqs Σ Ξ t →
+  const_eqs Σ Ξ (inst ξ t).
+Proof.
+  intros hξ h.
+  eapply const_eqs_inst with (k := 0) in h. 2: eassumption.
+  cbn in h.
+  rewrite ren_instance_id_ext in h. 2: auto.
+  assumption.
+Qed.
+
+Definition preserves_const_eqs Σ Ξ :=
+  ∀ n rl σ,
+    ictx_get Ξ n = Some (Comp rl) →
+    let lhs := rl.(cr_pat) in
+    let rhs := rl.(cr_rep) in
+    const_eqs Σ Ξ (lhs <[ σ ]) →
+    const_eqs Σ Ξ (rhs <[ σ ]).
+
 Lemma red1_const_eqs Σ Ξ u v :
+  preserves_const_eqs Σ Ξ →
   const_eqs Σ Ξ u →
   Σ ;; Ξ ⊢ u ↦ v →
   const_eqs Σ Ξ v.
 Proof.
-  intros hu h.
+  intros hΣ hu h.
   induction h using red1_ind_alt.
   all: try solve [ cbn in * ; intuition eauto ].
-  - cbn in hu. admit.
-  - cbn in hu. admit.
-  - (* There is no reason this is true is there? We would need
-      somehow to add this to the Σ. And then we deduce it later from SR.
-    *)
+  - cbn in hu. apply const_eqs_subst. 2: intuition eauto.
+    intros []. all: cbn. all: intuition eauto.
+  - cbn in hu. destruct hu as (hξ & ?).
+    rewrite rForall_Forall in hξ.
+    eapply const_eqs_inst_closed. all: intuition eauto.
+    (* Missing also that t is const_eqs *)
+    (* This could be another property on Σ. *)
     admit.
   - cbn in *. destruct hu as (hξ & Ξ' & A & t & e & hi).
     split.
@@ -412,11 +520,12 @@ Proof.
 Admitted.
 
 Lemma red_const_eqs Σ Ξ u v :
+  preserves_const_eqs Σ Ξ →
   const_eqs Σ Ξ u →
   Σ ;; Ξ ⊢ u ↦* v →
   const_eqs Σ Ξ v.
 Proof.
-  intros hu h.
+  intros hΣ hu h.
   induction h.
   - eapply red1_const_eqs. all: eassumption.
   - assumption.
@@ -424,11 +533,12 @@ Proof.
 Qed.
 
 Lemma red_conv Σ Ξ u v :
+  preserves_const_eqs Σ Ξ →
   const_eqs Σ Ξ u →
   Σ ;; Ξ ⊢ u ↦* v →
   Σ ;; Ξ ⊢ u ≡ v.
 Proof.
-  intros hu h.
+  intros hΣ hu h.
   induction h.
   - apply red1_conv. all: assumption.
   - reflexivity.
@@ -436,12 +546,13 @@ Proof.
 Qed.
 
 Lemma join_conv Σ Ξ u v :
+  preserves_const_eqs Σ Ξ →
   const_eqs Σ Ξ u →
   const_eqs Σ Ξ v →
   Σ ;; Ξ ⊢ u ⋈ v →
   Σ ;; Ξ ⊢ u ≡ v.
 Proof.
-  intros hcu hcv (w & hu & hv).
+  intros hΣ hcu hcv (w & hu & hv).
   eapply conv_trans.
   - eapply red_conv. all: eassumption.
   - apply conv_sym. eapply red_conv. all: eassumption.
