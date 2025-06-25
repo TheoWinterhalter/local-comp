@@ -453,14 +453,15 @@ Proof.
     eauto using inst_equations_subst_ih, inst_equations_prop, conv_subst.
 Qed.
 
-Lemma const_eqs_inst Σ Ξ ξ t k :
+Lemma const_eqs_inst Σ Ξ Ξ' ξ t k :
+  inst_equations Σ Ξ ξ Ξ' →
   Forall (onSome (const_eqs Σ Ξ)) ξ →
-  const_eqs Σ Ξ t →
+  const_eqs Σ Ξ' t →
   let rξ := liftn k ξ in
   const_eqs Σ Ξ (inst rξ t).
 Proof.
-  intros hξ h. cbn.
-  induction t in ξ, hξ, h, k |- * using term_rect.
+  intros heξ hξ h. cbn.
+  induction t in Ξ', ξ, heξ, hξ, h, k |- * using term_rect.
   all: try solve [ cbn in * ; intuition eauto ].
   - cbn in *. intuition eauto.
     rewrite lift_liftn. eauto.
@@ -478,23 +479,22 @@ Proof.
       eapply onSomeT_impl. 2: eassumption.
       cbn. intuition eauto.
     + eexists _,_,_. split. 1: eassumption.
-      eapply inst_equations_inst_ih.
-      all: eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst.
-      admit.
+      eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst.
   - cbn. rewrite iget_ren. apply const_eqs_ren.
     unfold iget. destruct (nth_error ξ _) as [[?|] |] eqn:e1. 2,3: constructor.
     rewrite Forall_forall in hξ.
     apply nth_error_In in e1. specialize hξ with (1 := e1).
     cbn in hξ. assumption.
-Admitted.
+Qed.
 
-Lemma const_eqs_inst_closed Σ Ξ ξ t :
+Lemma const_eqs_inst_closed Σ Ξ Ξ' ξ t :
+  inst_equations Σ Ξ ξ Ξ' →
   Forall (onSome (const_eqs Σ Ξ)) ξ →
-  const_eqs Σ Ξ t →
+  const_eqs Σ Ξ' t →
   const_eqs Σ Ξ (inst ξ t).
 Proof.
-  intros hξ h.
-  eapply const_eqs_inst with (k := 0) in h. 2: eassumption.
+  intros heξ hξ h.
+  eapply const_eqs_inst with (k := 0) in h. 2,3: eassumption.
   cbn in h.
   rewrite ren_instance_id_ext in h. 2: auto.
   assumption.
@@ -508,9 +508,9 @@ Definition preserves_const_eqs Σ Ξ :=
     const_eqs Σ Ξ (lhs <[ σ ]) →
     const_eqs Σ Ξ (rhs <[ σ ]).
 
-Definition const_const_eqs (Σ : gctx) Ξ :=
-  ∀ c Ξ' A t,
-    Σ c = Some (Def Ξ' A t) →
+Definition const_const_eqs (Σ : gctx) :=
+  ∀ c Ξ A t,
+    Σ c = Some (Def Ξ A t) →
     const_eqs Σ Ξ t.
 
 (* TODO MOVE *)
@@ -545,7 +545,7 @@ Qed.
 
 Lemma red1_const_eqs Σ Ξ u v :
   preserves_const_eqs Σ Ξ →
-  const_const_eqs Σ Ξ →
+  const_const_eqs Σ →
   const_eqs Σ Ξ u →
   Σ ;; Ξ ⊢ u ↦ v →
   const_eqs Σ Ξ v.
@@ -555,8 +555,9 @@ Proof.
   all: try solve [ cbn in * ; intuition eauto ].
   - cbn in hu. apply const_eqs_subst. 2: intuition eauto.
     intros []. all: cbn. all: intuition eauto.
-  - cbn in hu. destruct hu as (hξ & ?).
+  - cbn in hu. destruct hu as (hξ & ? & ? & ? & e & hξ').
     rewrite rForall_Forall in hξ.
+    eqtwice. subst.
     eapply const_eqs_inst_closed. all: intuition eauto.
   - cbn in *. destruct hu as (hξ & Ξ' & A & t & e & hi).
     rewrite rForall_Forall in hξ |- *.
@@ -580,7 +581,7 @@ Qed.
 
 Lemma red_const_eqs Σ Ξ u v :
   preserves_const_eqs Σ Ξ →
-  const_const_eqs Σ Ξ →
+  const_const_eqs Σ →
   const_eqs Σ Ξ u →
   Σ ;; Ξ ⊢ u ↦* v →
   const_eqs Σ Ξ v.
@@ -594,7 +595,7 @@ Qed.
 
 Lemma red_conv Σ Ξ u v :
   preserves_const_eqs Σ Ξ →
-  const_const_eqs Σ Ξ →
+  const_const_eqs Σ →
   const_eqs Σ Ξ u →
   Σ ;; Ξ ⊢ u ↦* v →
   Σ ;; Ξ ⊢ u ≡ v.
@@ -608,7 +609,7 @@ Qed.
 
 Lemma join_conv Σ Ξ u v :
   preserves_const_eqs Σ Ξ →
-  const_const_eqs Σ Ξ →
+  const_const_eqs Σ →
   const_eqs Σ Ξ u →
   const_eqs Σ Ξ v →
   Σ ;; Ξ ⊢ u ⋈ v →
