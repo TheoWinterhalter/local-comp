@@ -503,10 +503,27 @@ Lemma inst_equations_conv Σ Ξ ξ ξ' Ξ' :
 Proof.
   intros h he.
   intros x rl hx. specialize (h _ _ hx).
-  cbn in *.
-  (* Wait, shouldn't it be Some None??? *)
-  intuition eauto.
-Admitted.
+  cbn in *. destruct h as (e & ? & ? & h).
+  split.
+  - eapply Forall2_nth_error_l in he. 2: eassumption.
+    destruct he as (o & eo & ho). inversion ho.
+    subst. assumption.
+  - intuition eauto.
+    assert (hc :
+      Forall2 (option_rel (conversion Σ Ξ))
+        (liftn (length (cr_env rl)) ξ)
+        (liftn (length (cr_env rl)) ξ')
+    ).
+    { apply Forall2_map_l, Forall2_map_r.
+      eapply Forall2_impl. 2: eassumption.
+      intros ?? ho. apply option_rel_map_l, option_rel_map_r.
+      eapply option_rel_impl. 2: eassumption.
+      eauto using conv_ren.
+    }
+    eapply conv_trans. 2: eapply conv_trans. 2: eassumption.
+    + apply conv_sym. eapply conv_insts. assumption.
+    + eapply conv_insts. assumption.
+Qed.
 
 Lemma red1_const_eqs Σ Ξ u v :
   preserves_const_eqs Σ Ξ →
