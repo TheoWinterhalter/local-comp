@@ -237,6 +237,8 @@ Proof.
   - cbn - ["<?"]. rewrite Nat.ltb_lt. eapply nth_error_Some. congruence.
   - cbn. eapply forallb_forall. intros u hu.
     eapply In_nth_error in hu as [n hn].
+    destruct u. 2: reflexivity.
+    cbn.
     destruct H1 as [heq [ih e]]. red in ih. specialize (ih n).
     destruct (ictx_get Ξ' n) as [[] |] eqn:e'.
     3:{
@@ -250,8 +252,7 @@ Proof.
       specialize (heq _ _ e'). cbn in heq. intuition congruence.
     }
     specialize ih with (1 := eq_refl).
-    unfold iget in ih. rewrite hn in ih. destruct u.
-    2:{ reflexivity. }
+    unfold iget in ih. rewrite hn in ih.
     cbn. apply ih.
 Qed.
 
