@@ -466,8 +466,26 @@ Proof.
     rewrite lift_liftn. eauto.
   - cbn in *. intuition eauto.
     rewrite lift_liftn. eauto.
-  - cbn in *. admit.
-  - cbn. admit.
+  - cbn in *. rewrite rForall_Forall in *.
+    destruct h as (h' & ? & ? & ? & e & h).
+    split.
+    + apply Forall_map. eapply Forall_funct. 1: eassumption.
+      apply All_Forall. eapply All_impl. 2: eassumption.
+      intros o ho ho'.
+      apply onSome_onSomeT in ho'. apply onSomeT_onSome.
+      eapply onSomeT_prod in ho. 2: eassumption.
+      apply onSomeT_map.
+      eapply onSomeT_impl. 2: eassumption.
+      cbn. intuition eauto.
+    + eexists _,_,_. split. 1: eassumption.
+      eapply inst_equations_inst_ih.
+      all: eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst.
+      admit.
+  - cbn. rewrite iget_ren. apply const_eqs_ren.
+    unfold iget. destruct (nth_error ξ _) as [[?|] |] eqn:e1. 2,3: constructor.
+    rewrite Forall_forall in hξ.
+    apply nth_error_In in e1. specialize hξ with (1 := e1).
+    cbn in hξ. assumption.
 Admitted.
 
 Lemma const_eqs_inst_closed Σ Ξ ξ t :
