@@ -743,44 +743,79 @@ Section Injectivity.
     intuition eauto using typed_join_conv.
   Qed.
 
-End Injectivity.
+  Context (hΣ : gwf Σ).
+  Context (hΞ : iwf Σ Ξ).
+  Context (hc : red_confluent Σ Ξ).
+  Context (hpc : preserves_const_eqs Σ Ξ).
 
-Lemma subject_reduction Σ Ξ Γ u v A :
-  Σ ;; Ξ ⊢ u ↦ v →
-  Σ ;; Ξ | Γ ⊢ u : A →
-  Σ ;; Ξ | Γ ⊢ v : A.
-Proof.
-  intros h hu.
-  induction h in Γ, A, hu |- * using red1_ind_alt.
-  - ttinv hu h. destruct h as (i & j & U & V & hlam & hu' & hU & hV & he).
-    ttinv hlam h'. destruct h' as (? & ? & ? & ? & ? & ht & hepi).
-    eapply pi_inv in hepi. all: eauto. 2-5: admit.
-    destruct hepi as [h1 h2].
-    eapply validity in hu as hA. 2-4: eauto ; admit.
-    destruct hA.
-    econstructor. 2,3: eassumption.
-    eapply typing_subst.
-    1:{ apply styping_one. eassumption. }
-    econstructor. 2,3: eassumption.
-    (* Need context conversion *)
-    admit.
-  - ttinv hu h. destruct h as (? & ? & ? & e & hξ & hcA & he).
-    eapply validity in hu as hA. 2-4: eauto ; admit.
-    destruct hA.
-    econstructor. 2,3: eassumption.
-    eapply typing_inst_closed. 1: eassumption.
-    eapply valid_def in e as h'. 2: admit.
-    eqtwice. subst. intuition eauto.
-  - admit.
-  - ttinv hu h'. destruct_exists h'.
-    eapply validity in hu as hA. 2-4: eauto ; admit.
-    destruct hA.
-    econstructor. 1: econstructor. all: intuition eauto.
-    (* Need context conversion *)
-    admit.
-  - ttinv hu h'. destruct_exists h'.
-    eapply validity in hu as hA. 2-4: eauto ; admit.
-    destruct hA.
-    econstructor. 1: econstructor. all: intuition eauto.
-    (* TODO fix the admit and then apply automatically *)
-Admitted.
+  Lemma subject_reduction Γ u v A :
+    wf Σ Ξ Γ →
+    Σ ;; Ξ ⊢ u ↦ v →
+    Σ ;; Ξ | Γ ⊢ u : A →
+    Σ ;; Ξ | Γ ⊢ v : A.
+  Proof.
+    intros hΓ h hu.
+    induction h in Γ, hΓ, A, hu |- * using red1_ind_alt.
+    all: try solve [
+      let h' := fresh in
+      ttinv hu h' ; destruct_exists h' ;
+      eapply validity in hu as hA ; try eassumption ;
+      destruct hA ;
+      econstructor ; [ econstructor | .. ] ; intuition eauto
+    ].
+    - ttinv hu h. destruct h as (i & j & U & V & hlam & hu' & hU & hV & he).
+      ttinv hlam h'. destruct h' as (? & ? & ? & ? & ? & ht & hepi).
+      eapply pi_inv in hepi. 2-8: eassumption.
+      destruct hepi as [h1 h2].
+      eapply validity in hu as hA. 2-4: eauto.
+      destruct hA.
+      econstructor. 2,3: eassumption.
+      eapply typing_subst.
+      1:{ apply styping_one. eassumption. }
+      econstructor. 2,3: eassumption.
+      (* Need context conversion *)
+      admit.
+    - ttinv hu h. destruct h as (? & ? & ? & e & hξ & hcA & he).
+      eapply validity in hu as hA. 2-4: eassumption.
+      destruct hA.
+      econstructor. 2,3: eassumption.
+      eapply typing_inst_closed. 1: eassumption.
+      eapply valid_def in e as h'. 2: assumption.
+      eqtwice. subst. intuition eauto.
+    - admit.
+    - ttinv hu h'. destruct_exists h'.
+      eapply validity in hu as hA. 2-4: eassumption.
+      destruct hA.
+      econstructor. 1: econstructor. all: intuition eauto.
+      (* Need context conversion *)
+      admit.
+    - ttinv hu h'. destruct_exists h'.
+      eapply validity in hu as hA. 2-4: eassumption.
+      destruct hA.
+      econstructor. 1: econstructor. all: intuition eauto.
+      (* Need context conversion *)
+      admit.
+    - ttinv hu h'. destruct_exists h'.
+      eapply validity in hu as hA. 2-4: eassumption.
+      destruct hA.
+      econstructor. 1: econstructor. all: intuition eauto.
+      (* Need context conversion *)
+      all: admit.
+    - ttinv hu h'. destruct_exists h'.
+      eapply validity in hu as hA. 2-4: eassumption.
+      destruct hA.
+      econstructor. 1: econstructor. all: intuition eauto.
+      admit.
+    - ttinv hu h'. destruct_exists h'.
+      eapply validity in hu as hA. 2-4: eassumption.
+      destruct hA.
+      econstructor. 1: econstructor. all: intuition eauto.
+      admit.
+    - ttinv hu h'. destruct_exists h'.
+      eapply validity in hu as hA. 2-4: eassumption.
+      destruct hA.
+      econstructor. 1: econstructor. all: intuition eauto.
+      all: admit.
+  Admitted.
+
+End Injectivity.
