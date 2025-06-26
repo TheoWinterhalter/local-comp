@@ -2099,3 +2099,37 @@ Proof.
     { econstructor. all: eassumption. }
     eapply happ. all: eauto.
 Qed.
+
+(** * Context conversion *)
+
+Notation ctx_conv Σ Ξ Γ Δ := (Forall2 (conversion Σ Ξ) Γ Δ).
+
+Lemma ctx_conv_cons_same Σ Ξ Γ Δ A :
+  ctx_conv Σ Ξ Γ Δ →
+  ctx_conv Σ Ξ (Γ ,, A) (Δ ,, A).
+Proof.
+  intros h.
+  constructor.
+  - apply conv_refl.
+  - assumption.
+Qed.
+
+Lemma typing_ctx_conv Σ Ξ (Γ Δ : ctx) t A :
+  ctx_conv Σ Ξ Γ Δ →
+  Σ ;; Ξ | Γ ⊢ t : A →
+  Σ ;; Ξ | Δ ⊢ t : A.
+Proof.
+  intros hctx ht.
+  induction ht in Δ, hctx |- * using typing_ind.
+  all: try solve [ econstructor ; eauto using ctx_conv_cons_same ].
+  - eapply Forall2_nth_error_l in hctx. 2: eassumption.
+    destruct hctx as (B & e & h).
+    eapply type_conv.
+    + econstructor. eassumption.
+    + apply conv_sym. apply conv_ren. assumption.
+    + (* Need wf Δ *) admit.
+  - econstructor.
+    + eassumption.
+    + admit.
+    + assumption.
+Admitted.
