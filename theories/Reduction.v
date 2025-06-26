@@ -621,6 +621,27 @@ Proof.
   - apply conv_sym. eapply red_conv. all: eassumption.
 Qed.
 
+Definition type_preserving Σ Ξ :=
+  ∀ n rl σ Γ A,
+    ictx_get Ξ n = Some (Comp rl) →
+    let lhs := rl.(cr_pat) in
+    let rhs := rl.(cr_rep) in
+    Σ ;; Ξ | Γ ⊢ lhs <[ σ ] : A →
+    Σ ;; Ξ | Γ ⊢ rhs <[ σ ] : A.
+
+Lemma typed_join_conv Σ Ξ Γ Δ u v A B :
+  gwf Σ →
+  (* type_preserving Σ Ξ → *) (* Actually not enough, need const_eqs *)
+  preserves_const_eqs Σ Ξ →
+  Σ ;; Ξ | Γ ⊢ u : A →
+  Σ ;; Ξ | Δ ⊢ v : B →
+  Σ ;; Ξ ⊢ u ⋈ v →
+  Σ ;; Ξ ⊢ u ≡ v.
+Proof.
+  intros hΣ hΞ hu hv h.
+  eapply join_conv.
+Admitted.
+
 (** * Injectivity of Π
 
   The key component to subject reduction.
@@ -704,4 +725,62 @@ Section Injectivity.
     - exists B1. intuition auto.
   Qed.
 
+  Lemma pi_inv Γ A B A' B' i j i' j' :
+    gwf Σ →
+    red_confluent Σ Ξ →
+    preserves_const_eqs Σ Ξ →
+    Σ ;; Ξ | Γ ⊢ A : Sort i →
+    Σ ;; Ξ | Γ ⊢ A' : Sort i' →
+    Σ ;; Ξ | Γ ,, A ⊢ B : Sort j →
+    Σ ;; Ξ | Γ ,, A' ⊢ B' : Sort j' →
+    Σ ;; Ξ ⊢ Pi A B ≡ Pi A' B' →
+    Σ ;; Ξ ⊢ A ≡ A' ∧
+    Σ ;; Ξ ⊢ B ≡ B'.
+  Proof.
+    intros hΣ hc hce hA hA' hB hB' h.
+    eapply conv_equiv in h. eapply equiv_join in h. 2: assumption.
+    eapply join_pi_inv in h.
+    intuition eauto using typed_join_conv.
+  Qed.
+
 End Injectivity.
+
+Lemma subject_reduction Σ Ξ Γ u v A :
+  Σ ;; Ξ ⊢ u ↦ v →
+  Σ ;; Ξ | Γ ⊢ u : A →
+  Σ ;; Ξ | Γ ⊢ v : A.
+Proof.
+  intros h hu.
+  induction h in Γ, A, hu |- * using red1_ind_alt.
+  - ttinv hu h. destruct h as (i & j & U & V & hlam & hu' & hU & hV & he).
+    ttinv hlam h'. destruct h' as (? & ? & ? & ? & ? & ht & hepi).
+    eapply pi_inv in hepi. all: eauto. 2-5: admit.
+    destruct hepi as [h1 h2].
+    eapply validity in hu as hA. 2-4: eauto ; admit.
+    destruct hA.
+    econstructor. 2,3: eassumption.
+    eapply typing_subst.
+    1:{ apply styping_one. eassumption. }
+    econstructor. 2,3: eassumption.
+    (* Need context conversion *)
+    admit.
+  - ttinv hu h. destruct h as (? & ? & ? & e & hξ & hcA & he).
+    eapply validity in hu as hA. 2-4: eauto ; admit.
+    destruct hA.
+    econstructor. 2,3: eassumption.
+    eapply typing_inst_closed. 1: eassumption.
+    eapply valid_def in e as h'. 2: admit.
+    eqtwice. subst. intuition eauto.
+  - admit.
+  - ttinv hu h'. destruct_exists h'.
+    eapply validity in hu as hA. 2-4: eauto ; admit.
+    destruct hA.
+    econstructor. 1: econstructor. all: intuition eauto.
+    (* Need context conversion *)
+    admit.
+  - ttinv hu h'. destruct_exists h'.
+    eapply validity in hu as hA. 2-4: eauto ; admit.
+    destruct hA.
+    econstructor. 1: econstructor. all: intuition eauto.
+    (* TODO fix the admit and then apply automatically *)
+Admitted.
