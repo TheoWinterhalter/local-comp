@@ -2088,10 +2088,7 @@ Proof.
   intros Σ Ξ P hvar hsort hpi hlam happ hconst hassm hconv.
   intros Γ t A hΓ h.
   induction h using typing_ind.
-  all: try solve [ eauto ].
-  - assert (hΓA : wf Σ Ξ (Γ ,, A)).
-    { econstructor. all: eassumption. }
-    eauto.
+  all: try solve [ eauto using wf_cons ].
   - assert (hΓA : wf Σ Ξ (Γ ,, A)).
     { econstructor. all: eassumption. }
     eauto.
@@ -2115,19 +2112,22 @@ Proof.
 Qed.
 
 Lemma typing_ctx_conv Σ Ξ (Γ Δ : ctx) t A :
+  wf Σ Ξ Γ →
   ctx_conv Σ Ξ Γ Δ →
   Σ ;; Ξ | Γ ⊢ t : A →
   Σ ;; Ξ | Δ ⊢ t : A.
 Proof.
-  intros hctx ht.
-  induction ht in Δ, hctx |- * using typing_ind.
-  all: try solve [ econstructor ; eauto using ctx_conv_cons_same ].
+  intros hΓ hctx ht.
+  induction ht in Δ, hΓ, hctx |- * using typing_ind.
+  all: try solve [ econstructor ; eauto using ctx_conv_cons_same, wf_cons ].
   - eapply Forall2_nth_error_l in hctx. 2: eassumption.
     destruct hctx as (B & e & h).
+    eapply valid_wf in hΓ as hi. 2: eassumption.
+    destruct hi.
     eapply type_conv.
     + econstructor. eassumption.
     + apply conv_sym. apply conv_ren. assumption.
-    + (* Need wf Δ *) admit.
+    + admit. (* Need hyp on the context *)
   - econstructor.
     + eassumption.
     + admit.
