@@ -2143,6 +2143,19 @@ Proof.
     rasimpl in h. eassumption.
 Qed.
 
+Lemma inst_typing_ctx_conv_ih Σ Ξ Ξ' (Γ Δ : ctx) ξ :
+  wf_ctx_conv Σ Ξ Γ Δ →
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  inst_typing_ Σ Ξ (λ Γ t A, ∀ Δ, wf_ctx_conv Σ Ξ Γ Δ → Σ ;; Ξ | Δ ⊢ t : A) Γ ξ Ξ' →
+  inst_typing Σ Ξ Δ ξ Ξ'.
+Proof.
+  intros hctx [h1 [h2 h3]] [ih1 [ih2 ih3]].
+  split. 2: split. 1,3: assumption.
+  intros x A hx. specialize (ih2 _ _ hx) as [? ih2].
+  split. 1: assumption.
+  eapply ih2. assumption.
+Qed.
+
 Lemma typing_ctx_conv_gen Σ Ξ (Γ Δ : ctx) t A :
   wf_ctx_conv Σ Ξ Γ Δ →
   Σ ;; Ξ | Γ ⊢ t : A →
@@ -2158,8 +2171,8 @@ Proof.
     + apply conv_sym. apply conv_ren. assumption.
     + eassumption.
   - econstructor. 1,3: eassumption.
-    admit.
-Admitted.
+    eauto using inst_typing_ctx_conv_ih.
+Qed.
 
 Lemma typing_ctx_conv Σ Ξ (Γ Δ : ctx) t A :
   wf Σ Ξ Γ →
