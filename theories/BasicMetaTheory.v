@@ -220,6 +220,35 @@ Proof.
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
 
+(** Reasoning principle on [inst_typing] *)
+
+Lemma inst_typing_prop_ih Σ Ξ Γ ξ Ξ' P :
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  inst_typing_ Σ Ξ (λ _ t _, P t) Γ ξ Ξ' →
+  Forall (OnSome P) ξ.
+Proof.
+  intros h ih.
+  rewrite Forall_forall. intros o ho.
+  eapply In_nth_error in ho as [x hx].
+  destruct o as [u |]. 2: constructor.
+  constructor.
+  destruct ih as [heq [ih e]]. red in ih. specialize (ih x).
+  destruct (ictx_get Ξ' x) as [[] |] eqn:e'.
+  3:{
+    unfold ictx_get in e'. destruct (_ <=? _) eqn: e1.
+    - rewrite Nat.leb_le in e1. rewrite <- e in e1.
+      rewrite <- nth_error_None in e1. congruence.
+    - rewrite nth_error_None in e'.
+      rewrite Nat.leb_gt in e1. lia.
+    }
+    2:{
+      specialize (heq _ _ e'). cbn in heq. intuition congruence.
+    }
+    specialize ih with (1 := eq_refl).
+    unfold iget in ih. rewrite hx in ih.
+    apply ih.
+Qed.
+
 (** Typing implies scoping *)
 
 Lemma typing_scoped Σ Ξ Γ t A :

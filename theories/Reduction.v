@@ -363,6 +363,23 @@ Section const_eqs.
 
 End const_eqs.
 
+(** Typing implies const_eqs *)
+
+Lemma typing_const_eqs Σ Ξ Γ t A :
+  Σ ;; Ξ | Γ ⊢ t : A →
+  const_eqs Σ Ξ t.
+Proof.
+  intros h.
+  induction h using typing_ind.
+  all: try solve [ cbn in * ; intuition eauto ].
+  cbn. split.
+  - rewrite rForall_Forall.
+    eapply Forall_impl. 1:{ intros ??. rewrite <- OnSome_onSome. eauto. }
+    eapply inst_typing_prop_ih. all: eassumption.
+  - eexists _,_,_. split. 1: eassumption.
+    unfold inst_typing in *. intuition eauto.
+Qed.
+
 Lemma red1_conv Σ Ξ u v :
   const_eqs Σ Ξ u →
   Σ ;; Ξ ⊢ u ↦ v →
@@ -747,6 +764,7 @@ Section Injectivity.
   Context (hΞ : iwf Σ Ξ).
   Context (hc : red_confluent Σ Ξ).
   Context (hpc : preserves_const_eqs Σ Ξ).
+  Context (hpt : type_preserving Σ Ξ).
 
   Lemma subject_reduction Γ u v A :
     wf Σ Ξ Γ →
@@ -782,7 +800,7 @@ Section Injectivity.
       eapply typing_inst_closed. 1: eassumption.
       eapply valid_def in e as h'. 2: assumption.
       eqtwice. subst. intuition eauto.
-    - admit.
+    - eauto.
     - ttinv hu h'. destruct_exists h'.
       eapply validity in hu as hA. 2-4: eassumption.
       destruct hA.

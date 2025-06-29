@@ -23,26 +23,7 @@ Lemma inst_typing_gscope_ih Σ Ξ Γ ξ Ξ' :
   inst_typing_ Σ Ξ (λ _ t _, gscope Σ t) Γ ξ Ξ' →
   gscope_instance Σ ξ.
 Proof.
-  intros h ih.
-  rewrite Forall_forall. intros o ho.
-  eapply In_nth_error in ho as [x hx].
-  destruct o as [u |]. 2: constructor.
-  constructor.
-  destruct ih as [heq [ih e]]. red in ih. specialize (ih x).
-  destruct (ictx_get Ξ' x) as [[] |] eqn:e'.
-  3:{
-    unfold ictx_get in e'. destruct (_ <=? _) eqn: e1.
-    - rewrite Nat.leb_le in e1. rewrite <- e in e1.
-      rewrite <- nth_error_None in e1. congruence.
-    - rewrite nth_error_None in e'.
-      rewrite Nat.leb_gt in e1. lia.
-    }
-    2:{
-      specialize (heq _ _ e'). cbn in heq. intuition congruence.
-    }
-    specialize ih with (1 := eq_refl).
-    unfold iget in ih. rewrite hx in ih.
-    apply ih.
+  eauto using inst_typing_prop_ih.
 Qed.
 
 Lemma typing_gscope Σ Ξ Γ t A :
@@ -67,7 +48,7 @@ Proof.
   - assumption.
   - intros x A hx. specialize (ht _ _ hx) as [].
     split. 1: assumption.
-    unfold iget in *. 
+    unfold iget in *.
     destruct (nth_error ξ _) as [[] |] eqn:e1. 2,3: constructor.
     eapply typing_gscope. eassumption.
   - assumption.
