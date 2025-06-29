@@ -380,6 +380,21 @@ Proof.
     unfold inst_typing in *. intuition eauto.
 Qed.
 
+Lemma red1_conv_inst_ih Σ Ξ ξ ξ' :
+  Forall (onSome (const_eqs Σ Ξ)) ξ →
+  OnOne2 (some_rel (red1 Σ Ξ)) ξ ξ' →
+  OnOne2 (some_rel (λ u v, const_eqs Σ Ξ u → Σ ;; Ξ ⊢ u ≡ v)) ξ ξ' →
+  Forall2 (option_rel (conversion Σ Ξ)) ξ ξ'.
+Proof.
+  intros hξ ? ?.
+  eapply OnOne2_and_Forall_l in hξ. 2: eassumption.
+  apply OnOne2_refl_Forall2. 1: exact _.
+  eapply OnOne2_impl. 2: eassumption.
+  intros ?? [h1 h2]. apply some_rel_option_rel.
+  destruct h2. cbn in h1. constructor.
+  eauto.
+Qed.
+
 Lemma red1_conv Σ Ξ u v :
   const_eqs Σ Ξ u →
   Σ ;; Ξ ⊢ u ↦ v →
@@ -394,12 +409,8 @@ Proof.
   - econstructor. all: eassumption.
   - cbn in hu. destruct hu as (hξ & _).
     rewrite rForall_Forall in hξ.
-    eapply OnOne2_and_Forall_l in hξ. 2: eassumption.
-    constructor. apply OnOne2_refl_Forall2. 1: exact _.
-    eapply OnOne2_impl. 2: eassumption.
-    intros ?? [h1 h2]. apply some_rel_option_rel.
-    destruct h2. cbn in h1. constructor.
-    eauto.
+    constructor.
+    eauto using red1_conv_inst_ih.
 Qed.
 
 Lemma Forall_funct A (P Q : A → Prop) l :
@@ -841,8 +852,13 @@ Section Injectivity.
       + admit.
       + eapply conv_trans. 2: eassumption.
         apply conv_sym. apply conv_insts.
-        (* We must have proven it somewhere with red1_conv *)
-        admit.
+        eapply red1_conv_inst_ih.
+        * eapply typing_const_eqs in hu. cbn in hu.
+          rewrite rForall_Forall in hu. intuition auto.
+        * assumption.
+        * eapply OnOne2_impl. 2: exact H.
+          intros ?? h. destruct h. constructor.
+          eauto using red1_conv.
   Admitted.
 
 End Injectivity.
