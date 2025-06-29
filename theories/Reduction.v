@@ -780,7 +780,8 @@ Section Injectivity.
       eapply validity in hu as hA ; try eassumption ;
       destruct hA ;
       econstructor ; [ econstructor | .. ] ;
-      intuition eauto using typing_ctx_conv, wf_cons, ctx_conv_cons_same_ctx
+      intuition eauto using typing_ctx_conv, wf_cons, ctx_conv_cons_same_ctx,
+        ctx_conv_cons_same, red1_conv, typing_const_eqs
     ].
     - ttinv hu h. destruct h as (i & j & U & V & hlam & hu' & hU & hV & he).
       ttinv hlam h'. destruct h' as (? & ? & ? & ? & ? & ht & hepi).
@@ -807,14 +808,12 @@ Section Injectivity.
       econstructor. 1: econstructor. all: intuition eauto.
       eapply typing_ctx_conv. 3: eassumption.
       all:
-      intuition eauto using typing_ctx_conv, wf_cons, ctx_conv_cons_same_ctx, ctx_conv_cons_same, red1_conv.
-      (* What's missing is that typing implies const_eqs *)
-      admit.
+      intuition eauto using typing_ctx_conv, wf_cons, ctx_conv_cons_same_ctx,
+        ctx_conv_cons_same, red1_conv, typing_const_eqs.
     - ttinv hu h'. destruct_exists h'.
       eapply validity in hu as hA. 2-4: eassumption.
       destruct hA.
       econstructor. 1: econstructor. all: intuition eauto.
-      (* Need context conversion *)
       all: admit.
     - ttinv hu h'. destruct_exists h'.
       eapply validity in hu as hA. 2-4: eassumption.
