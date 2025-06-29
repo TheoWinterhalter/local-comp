@@ -2120,14 +2120,21 @@ Proof.
   intros hΓ hctx ht.
   induction ht in Δ, hΓ, hctx |- * using typing_ind.
   all: try solve [ econstructor ; eauto using ctx_conv_cons_same, wf_cons ].
-  - eapply Forall2_nth_error_l in hctx. 2: eassumption.
-    destruct hctx as (B & e & h).
+  - eapply Forall2_nth_error_l in hctx as hx. 2: eassumption.
+    destruct hx as (B & e & h).
     eapply valid_wf in hΓ as hi. 2: eassumption.
-    destruct hi.
-    eapply type_conv.
+    destruct hi as (i & hi).
+    eapply type_conv with (i := i).
     + econstructor. eassumption.
     + apply conv_sym. apply conv_ren. assumption.
-    + admit. (* Need hyp on the context *)
+    + induction hΓ in Δ, hctx, i, A, B, x, H, e, h |- *.
+      1:{ exfalso. pose proof nth_error_nil. congruence. }
+      inversion hctx. subst.
+      destruct x.
+      * cbn in *. inversion H. inversion e. subst.
+        (* Wrong approach *)
+        admit.
+      * admit.
   - econstructor.
     + eassumption.
     + admit.
