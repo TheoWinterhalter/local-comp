@@ -813,18 +813,36 @@ Section Injectivity.
     - ttinv hu h'. destruct_exists h'.
       eapply validity in hu as hA. 2-4: eassumption.
       destruct hA.
-      econstructor. 1: econstructor. all: intuition eauto.
-      all: admit.
+      econstructor. 3: eassumption.
+      2:{
+        eapply conv_trans. 2: intuition eauto.
+        apply cong_Pi. 2: apply conv_refl.
+        apply conv_sym. intuition eauto using red1_conv, typing_const_eqs.
+      }
+      econstructor.
+      + intuition eauto.
+      + eapply typing_ctx_conv. 1,2: intuition eauto using wf_cons.
+        apply ctx_conv_cons_same_ctx.
+        intuition eauto using red1_conv, typing_const_eqs.
+      + eapply typing_ctx_conv. 1,2: intuition eauto using wf_cons.
+        apply ctx_conv_cons_same_ctx.
+        intuition eauto using red1_conv, typing_const_eqs.
     - ttinv hu h'. destruct_exists h'.
       eapply validity in hu as hA. 2-4: eassumption.
       destruct hA.
       econstructor. 1: econstructor. all: intuition eauto.
+      eapply conv_trans. 2: eassumption.
+      (* eapply conv_subst. *) (* Needed! *)
       admit.
     - ttinv hu h'. destruct_exists h'.
       eapply validity in hu as hA. 2-4: eassumption.
       destruct hA.
       econstructor. 1: econstructor. all: intuition eauto.
-      all: admit.
+      + admit.
+      + eapply conv_trans. 2: eassumption.
+        apply conv_sym. apply conv_insts.
+        (* We must have proven it somewhere with red1_conv *)
+        admit.
   Admitted.
 
 End Injectivity.
