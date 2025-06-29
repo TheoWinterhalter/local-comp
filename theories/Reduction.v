@@ -761,7 +761,8 @@ Section Injectivity.
       ttinv hu h' ; destruct_exists h' ;
       eapply validity in hu as hA ; try eassumption ;
       destruct hA ;
-      econstructor ; [ econstructor | .. ] ; intuition eauto
+      econstructor ; [ econstructor | .. ] ;
+      intuition eauto using typing_ctx_conv, wf_cons, ctx_conv_cons_same_ctx
     ].
     - ttinv hu h. destruct h as (i & j & U & V & hlam & hu' & hU & hV & he).
       ttinv hlam h'. destruct h' as (? & ? & ? & ? & ? & ht & hepi).
@@ -773,8 +774,7 @@ Section Injectivity.
       eapply typing_subst.
       1:{ apply styping_one. eassumption. }
       econstructor. 2,3: eassumption.
-      (* Need context conversion *)
-      admit.
+      eauto using typing_ctx_conv, wf_cons, ctx_conv_cons_same_ctx.
     - ttinv hu h. destruct h as (? & ? & ? & e & hξ & hcA & he).
       eapply validity in hu as hA. 2-4: eassumption.
       destruct hA.
@@ -787,13 +787,10 @@ Section Injectivity.
       eapply validity in hu as hA. 2-4: eassumption.
       destruct hA.
       econstructor. 1: econstructor. all: intuition eauto.
-      (* Need context conversion *)
-      admit.
-    - ttinv hu h'. destruct_exists h'.
-      eapply validity in hu as hA. 2-4: eassumption.
-      destruct hA.
-      econstructor. 1: econstructor. all: intuition eauto.
-      (* Need context conversion *)
+      eapply typing_ctx_conv. 3: eassumption.
+      all:
+      intuition eauto using typing_ctx_conv, wf_cons, ctx_conv_cons_same_ctx, ctx_conv_cons_same, red1_conv.
+      (* What's missing is that typing implies const_eqs *)
       admit.
     - ttinv hu h'. destruct_exists h'.
       eapply validity in hu as hA. 2-4: eassumption.
@@ -801,11 +798,6 @@ Section Injectivity.
       econstructor. 1: econstructor. all: intuition eauto.
       (* Need context conversion *)
       all: admit.
-    - ttinv hu h'. destruct_exists h'.
-      eapply validity in hu as hA. 2-4: eassumption.
-      destruct hA.
-      econstructor. 1: econstructor. all: intuition eauto.
-      admit.
     - ttinv hu h'. destruct_exists h'.
       eapply validity in hu as hA. 2-4: eassumption.
       destruct hA.

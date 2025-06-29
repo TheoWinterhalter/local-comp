@@ -2111,6 +2111,23 @@ Proof.
   - assumption.
 Qed.
 
+Lemma ctx_conv_refl Σ Ξ Γ :
+  ctx_conv Σ Ξ Γ Γ.
+Proof.
+  apply Forall2_diag. apply Forall_forall.
+  auto using conv_refl.
+Qed.
+
+Lemma ctx_conv_cons_same_ctx Σ Ξ Γ A B :
+  Σ ;; Ξ ⊢ A ≡ B →
+  ctx_conv Σ Ξ (Γ ,, A) (Γ ,, B).
+Proof.
+  intros h.
+  constructor.
+  - assumption.
+  - apply ctx_conv_refl.
+Qed.
+
 Inductive wf_ctx_conv Σ Ξ : ctx → ctx → Prop :=
 | wf_conv_nil : wf_ctx_conv Σ Ξ ∙ ∙
 | wf_conv_cons Γ Δ i A B :
