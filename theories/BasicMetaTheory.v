@@ -2111,6 +2111,56 @@ Proof.
   - assumption.
 Qed.
 
+Inductive wf_ctx_conv Σ Ξ : ctx → ctx → Prop :=
+| wf_conv_nil : wf_ctx_conv Σ Ξ ∙ ∙
+| wf_conv_cons Γ Δ i A B :
+    wf_ctx_conv Σ Ξ Γ Δ →
+    Σ ;; Ξ | Δ ⊢ A : Sort i →
+    Σ ;; Ξ ⊢ A ≡ B →
+    wf_ctx_conv Σ Ξ (Γ ,, A) (Δ ,, B).
+
+Lemma wf_ctx_conv_nth_error_l Σ Ξ Γ Δ x A :
+  wf_ctx_conv Σ Ξ Γ Δ →
+  nth_error Γ x = Some A →
+  ∃ i B,
+    nth_error Δ x = Some B ∧
+    Σ ;; Ξ ⊢ A ≡ B ∧
+    Σ ;; Ξ | Δ ⊢ (plus (S x)) ⋅ A : Sort i.
+Proof.
+  intros hctx h.
+  induction hctx as [| Γ Δ i B C hctx ih hB he] in x, h |- *.
+  1: destruct x ; discriminate.
+  destruct x.
+  - cbn in *. inversion h. subst.
+    exists i, C. rasimpl. intuition auto.
+    eapply meta_conv.
+    + eapply typing_ren. 1: eapply rtyping_S.
+      eassumption.
+    + reflexivity.
+  - cbn in h. eapply ih in h as (j & D & ? & ? & h).
+    exists j, D. cbn. intuition auto.
+    eapply typing_ren in h. 2: eapply rtyping_S.
+    rasimpl in h. eassumption.
+Qed.
+
+Lemma typing_ctx_conv_gen Σ Ξ (Γ Δ : ctx) t A :
+  wf_ctx_conv Σ Ξ Γ Δ →
+  Σ ;; Ξ | Γ ⊢ t : A →
+  Σ ;; Ξ | Δ ⊢ t : A.
+Proof.
+  intros hctx h.
+  induction h in Δ, hctx |- * using typing_ind.
+  all: try solve [ econstructor ; eauto using wf_conv_cons, conv_refl ].
+  - eapply wf_ctx_conv_nth_error_l in hctx as h. 2: eassumption.
+    destruct h as (i & B & e & hc & h).
+    eapply type_conv.
+    + econstructor. eassumption.
+    + apply conv_sym. apply conv_ren. assumption.
+    + eassumption.
+  - econstructor. 1,3: eassumption.
+    admit.
+Admitted.
+
 Lemma typing_ctx_conv Σ Ξ (Γ Δ : ctx) t A :
   wf Σ Ξ Γ →
   ctx_conv Σ Ξ Γ Δ →
@@ -2118,25 +2168,10 @@ Lemma typing_ctx_conv Σ Ξ (Γ Δ : ctx) t A :
   Σ ;; Ξ | Δ ⊢ t : A.
 Proof.
   intros hΓ hctx ht.
-  induction ht in Δ, hΓ, hctx |- * using typing_ind.
-  all: try solve [ econstructor ; eauto using ctx_conv_cons_same, wf_cons ].
-  - eapply Forall2_nth_error_l in hctx as hx. 2: eassumption.
-    destruct hx as (B & e & h).
-    eapply valid_wf in hΓ as hi. 2: eassumption.
-    destruct hi as (i & hi).
-    eapply type_conv with (i := i).
-    + econstructor. eassumption.
-    + apply conv_sym. apply conv_ren. assumption.
-    + induction hΓ in Δ, hctx, i, A, B, x, H, e, h |- *.
-      1:{ exfalso. pose proof nth_error_nil. congruence. }
-      inversion hctx. subst.
-      destruct x.
-      * cbn in *. inversion H. inversion e. subst.
-        (* Wrong approach *)
-        admit.
-      * admit.
-  - econstructor.
-    + eassumption.
-    + admit.
-    + assumption.
-Admitted.
+  eapply typing_ctx_conv_gen. 2: eassumption.
+  clear ht. induction hΓ in Δ, hctx |- *.
+  - inversion hctx. constructor.
+  - inversion hctx. subst.
+    econstructor. 1,3: eauto.
+    eauto using typing_ctx_conv_gen.
+Qed.
