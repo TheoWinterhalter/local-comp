@@ -806,7 +806,7 @@ Section Injectivity.
       eapply validity in hu as hA. 2-4: eassumption.
       destruct hA.
       econstructor. 1: econstructor. all: intuition eauto.
-      eapply typing_ctx_conv. 3: eassumption.
+      eapply typing_ctx_conv.
       all:
       intuition eauto using typing_ctx_conv, wf_cons, ctx_conv_cons_same_ctx,
         ctx_conv_cons_same, red1_conv, typing_const_eqs.

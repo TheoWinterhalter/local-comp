@@ -2221,12 +2221,12 @@ Proof.
 Qed.
 
 Lemma typing_ctx_conv Σ Ξ (Γ Δ : ctx) t A :
+  Σ ;; Ξ | Γ ⊢ t : A →
   wf Σ Ξ Γ →
   ctx_conv Σ Ξ Γ Δ →
-  Σ ;; Ξ | Γ ⊢ t : A →
   Σ ;; Ξ | Δ ⊢ t : A.
 Proof.
-  intros hΓ hctx ht.
+  intros ht hΓ hctx.
   eapply typing_ctx_conv_gen. 2: eassumption.
   clear ht. induction hΓ in Δ, hctx |- *.
   - inversion hctx. constructor.
