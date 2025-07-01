@@ -77,7 +77,7 @@ Section Equations.
     ∀ x rl,
       ictx_get Ξ' x = Some (Comp rl) →
       let m := length rl.(cr_env) in
-      let Θ := ctx_inst ξ rl.(cr_env) in
+      (* let Θ := ctx_inst ξ rl.(cr_env) in *)
       let lhs := inst (liftn m ξ) rl.(cr_pat) in
       let rhs := inst (liftn m ξ) rl.(cr_rep) in
       nth_error ξ x = Some None ∧

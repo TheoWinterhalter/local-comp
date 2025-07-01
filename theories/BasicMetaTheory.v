@@ -545,11 +545,11 @@ Lemma inst_equations_ren_ih Σ Ξ ρ ξ Ξ' :
   inst_equations Σ Ξ (ren_instance ρ ξ) Ξ'.
 Proof.
   intros h ih.
-  intros x rl hx m Θ. cbn.
+  intros x rl hx m. cbn.
   rewrite nth_error_map.
   rewrite liftn_ren_instance.
   specialize (ih _ _ hx) as (e & hl & hr & ih).
-  fold m Θ in hl, hr, ih.
+  fold m in hl, hr, ih.
   specialize ih with (ρ := uprens m ρ).
   rewrite e. cbn.
   rewrite 2!ren_inst in ih.
@@ -1033,8 +1033,8 @@ Lemma inst_equations_subst_ih Σ Ξ σ ξ Ξ' :
   inst_equations Σ Ξ (subst_instance σ ξ) Ξ'.
 Proof.
   intros h ih.
-  intros x rl hx m Θ. specialize (ih _ _ hx).
-  cbn in ih. fold Θ m in ih. destruct ih as (e & hl & hr & ih).
+  intros x rl hx m. specialize (ih _ _ hx).
+  cbn in ih. fold m in ih. destruct ih as (e & hl & hr & ih).
   specialize ih with (σ := ups m σ).
   cbn.
   rewrite !liftn_subst_instance.
@@ -1416,8 +1416,8 @@ Lemma inst_equations_inst_ih Σ Ξ Ξ' Ξ'' k ξ ξ' :
   inst_equations Σ Ξ (inst_instance (liftn k ξ) ξ') Ξ''.
 Proof.
   intros hξ h ih.
-  intros x rl hx m Θ. specialize (ih _ _ hx) as (e & hl & hr & ih).
-  cbn in *. fold m Θ in ih.
+  intros x rl hx m. specialize (ih _ _ hx) as (e & hl & hr & ih).
+  cbn in *. fold m in ih.
   specialize ih with (1 := hξ) (p := m + k).
   rewrite !inst_inst in ih.
   rewrite liftn_inst_instance.
