@@ -1043,11 +1043,6 @@ Proof.
   intuition eauto.
 Qed.
 
-(** Note:
-
-  It is a bit silly because the context is ignored for conversion (for now).
-
-*)
 Lemma conv_subst Σ Ξ σ u v :
   Σ ;; Ξ ⊢ u ≡ v →
   Σ ;; Ξ ⊢ u <[ σ ] ≡ v <[ σ ].
