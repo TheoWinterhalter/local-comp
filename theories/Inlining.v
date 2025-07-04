@@ -529,20 +529,18 @@ Lemma gwf_conv_unfold Σ :
   g_conv_unfold Σ ⟦ Σ ⟧κ.
 Proof.
   intros h c Ξ' A t ec.
+  apply meta_conv_refl.
   induction h as [ | c' ??????? ih ].
   - discriminate.
   - cbn in *. destruct (c =? c')%string eqn:e.
     + inversion ec. subst. clear ec.
       rewrite gcons_eq. 2: assumption.
-      erewrite <- inline_ictx_ext. 2,3: eauto using eq_gscope_gcons.
-      apply meta_conv_refl.
       eapply inline_ext.
       all: eauto using eq_gscope_gcons, typing_gscope.
     + rewrite gcons_neq. 2: assumption.
       eapply valid_def in ec as h'. 2: assumption.
       destruct h' as (hΞ' & [j hB] & ht).
-      erewrite <- inline_ictx_ext. 2,3: eauto using eq_gscope_gcons.
-      erewrite <- inline_ext with (t := t).
+      erewrite <- inline_ext.
       2,3: eauto using eq_gscope_gcons, typing_gscope.
       eauto.
 Qed.
