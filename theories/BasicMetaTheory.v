@@ -2229,3 +2229,33 @@ Proof.
     econstructor. 1,3: eauto.
     eauto using typing_ctx_conv_gen.
 Qed.
+
+(** Congruence of substitution *)
+
+Lemma conv_substs_up Σ Ξ σ σ' :
+  (∀ x, Σ ;; Ξ ⊢ σ x ≡ σ' x) →
+  (∀ x, Σ ;; Ξ ⊢ up_term σ x ≡ up_term σ' x).
+Proof.
+  intros h x.
+  destruct x.
+  - cbn. ttconv.
+  - cbn. unfold core.funcomp. apply conv_ren. auto.
+Qed.
+
+Lemma conv_substs Σ Ξ σ σ' t :
+  (∀ x, Σ ;; Ξ ⊢ σ x ≡ σ' x) →
+  Σ ;; Ξ ⊢ t <[ σ ] ≡ t <[ σ' ].
+Proof.
+  intros h.
+  induction t using term_rect in σ, σ', h |- *.
+  all: try solve [ rasimpl ; econstructor ; eauto using conv_substs_up ].
+  - cbn. auto.
+  - cbn. econstructor.
+    apply Forall2_map_l, Forall2_map_r. apply Forall2_diag.
+    apply All_Forall. eapply All_impl. 2: eassumption.
+    intros o ho.
+    apply option_rel_map_l, option_rel_map_r.
+    apply option_rel_diag. apply OnSome_onSome. apply onSomeT_onSome.
+    eapply onSomeT_impl. 2: eassumption.
+    cbn. auto.
+Qed.
