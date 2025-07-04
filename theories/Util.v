@@ -305,6 +305,15 @@ Inductive OnOne2 {A} (R : A → A → Prop) : list A → list A → Prop :=
 | OnOne2_hd a a' l : R a a' → OnOne2 R (a :: l) (a' :: l)
 | OnOne2_tl a l l' : OnOne2 R l l' → OnOne2 R (a :: l) (a :: l').
 
+Lemma OnOne2_length A P (l l' : list A) :
+  OnOne2 P l l' →
+  length l = length l'.
+Proof.
+  intros h. induction h.
+  - cbn. reflexivity.
+  - cbn. auto.
+Qed.
+
 Lemma Forall2_rst_OnOne2 A (R : relation A) l l' :
   Forall2 R l l' →
   clos_refl_sym_trans _ (OnOne2 R) l l'.

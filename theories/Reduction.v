@@ -777,6 +777,23 @@ Section Injectivity.
   Context (hpc : preserves_const_eqs Σ Ξ).
   Context (hpt : type_preserving Σ Ξ).
 
+  Lemma inst_typing_red_ih Ξ' Γ ξ ξ' :
+    inst_typing Σ Ξ Γ ξ Ξ' →
+    OnOne2 (some_rel (red1 Σ Ξ)) ξ ξ' →
+    OnOne2 (some_rel (λ u v, ∀ Γ A,
+      wf Σ Ξ Γ →
+      Σ ;; Ξ | Γ ⊢ u : A →
+      Σ ;; Ξ | Γ ⊢ v : A
+    )) ξ ξ' →
+    inst_typing Σ Ξ Γ ξ' Ξ'.
+  Proof.
+    intros (h1 & h2 & h3) hr ih.
+    split. 2: split.
+    - admit. (* Surprised I don't have anything for red1 to conv or something *)
+    - admit.
+    - apply OnOne2_length in hr. congruence.
+  Admitted.
+
   Lemma subject_reduction Γ u v A :
     wf Σ Ξ Γ →
     Σ ;; Ξ ⊢ u ↦ v →
