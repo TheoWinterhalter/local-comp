@@ -843,8 +843,10 @@ Section Injectivity.
       destruct hA.
       econstructor. 1: econstructor. all: intuition eauto.
       eapply conv_trans. 2: eassumption.
-      (* eapply conv_subst. *) (* Needed! *)
-      admit.
+      eapply conv_substs. intros [].
+      + cbn. apply conv_sym.
+        intuition eauto using red1_conv, typing_const_eqs.
+      + cbn. ttconv.
     - ttinv hu h'. destruct_exists h'.
       eapply validity in hu as hA. 2-4: eassumption.
       destruct hA.
