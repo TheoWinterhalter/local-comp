@@ -571,6 +571,22 @@ Proof.
     + eapply conv_insts. assumption.
 Qed.
 
+Lemma inst_equations_red1 Σ Ξ Ξ' ξ ξ' :
+  inst_equations Σ Ξ ξ Ξ' →
+  Forall (onSome (const_eqs Σ Ξ)) ξ →
+  OnOne2 (some_rel (red1 Σ Ξ)) ξ ξ' →
+  inst_equations Σ Ξ ξ' Ξ'.
+Proof.
+  intros hi hξ h.
+  eapply inst_equations_conv. 1: eassumption.
+  eapply OnOne2_and_Forall_l in hξ. 2: exact h.
+  apply OnOne2_refl_Forall2. 1: exact _.
+  eapply OnOne2_impl. 2: eassumption.
+  intros o o' [h1 h2]. destruct h2 as [? ? h2].
+  cbn in h1. constructor.
+  eauto using red1_conv.
+Qed.
+
 Lemma red1_const_eqs Σ Ξ u v :
   preserves_const_eqs Σ Ξ →
   const_const_eqs Σ →
@@ -598,13 +614,7 @@ Proof.
       }
       eapply Forall_OnOne2_r. all: eauto.
     + eexists _,_,_. split. 1: eassumption.
-      eapply inst_equations_conv. 1: eassumption.
-      eapply OnOne2_and_Forall_l in hξ. 2: exact H.
-      apply OnOne2_refl_Forall2. 1: exact _.
-      eapply OnOne2_impl. 2: eassumption.
-      intros o o' [h1 h2]. destruct h2 as [? ? h2].
-      cbn in h1. constructor.
-      eauto using red1_conv.
+      eauto using inst_equations_red1.
 Qed.
 
 Lemma red_const_eqs Σ Ξ u v :
@@ -779,6 +789,7 @@ Section Injectivity.
 
   Lemma inst_typing_red_ih Ξ' Γ ξ ξ' :
     inst_typing Σ Ξ Γ ξ Ξ' →
+    Forall (onSome (const_eqs Σ Ξ)) ξ →
     OnOne2 (some_rel (red1 Σ Ξ)) ξ ξ' →
     OnOne2 (some_rel (λ u v, ∀ Γ A,
       wf Σ Ξ Γ →
@@ -787,9 +798,9 @@ Section Injectivity.
     )) ξ ξ' →
     inst_typing Σ Ξ Γ ξ' Ξ'.
   Proof.
-    intros (h1 & h2 & h3) hr ih.
+    intros (h1 & h2 & h3) hξ hr ih.
     split. 2: split.
-    - admit. (* Surprised I don't have anything for red1 to conv or something *)
+    - eauto using inst_equations_red1.
     - admit.
     - apply OnOne2_length in hr. congruence.
   Admitted.
