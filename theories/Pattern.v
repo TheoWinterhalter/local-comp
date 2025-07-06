@@ -1193,6 +1193,24 @@ Proof.
   constructor. assumption.
 Qed.
 
+Lemma red_substs Σ Ξ t σ σ' :
+  Forall2 (red Σ Ξ) σ σ' →
+  Σ ;; Ξ ⊢ t <[ slist σ ] ↦* t <[ slist σ' ].
+Proof.
+  intros h.
+  induction t in σ, σ', h |- * using term_rect.
+  all: try solve [ cbn ; econstructor ; eauto ].
+  - cbn. induction h in n |- *.
+    + cbn. reflexivity.
+    + cbn. destruct n.
+      * cbn. assumption.
+      * cbn. eauto.
+  - cbn. admit.
+  - admit.
+  - admit.
+  - admit.
+Admitted.
+
 Lemma pred_red Σ Ξ u v :
   Σ ;; Ξ ⊢ u ⇒ v →
   Σ ;; pctx_ictx Ξ ⊢ u ↦* v.
@@ -1209,7 +1227,8 @@ Proof.
     + eapply red_const. eassumption.
     + constructor. econstructor. all: eassumption.
   - eapply match_pat_sound in H0 as e. subst.
-    (* We're going to have to prove substitutivity then? *)
+    subst rhs. (* eapply red_substs. *)
+    (* Uh... *)
     admit.
   - etransitivity.
     + eapply red_ind with (f := λ x, Pi _ x). 2: eassumption.
