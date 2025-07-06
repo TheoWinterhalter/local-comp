@@ -1227,9 +1227,13 @@ Proof.
     + eapply red_const. eassumption.
     + constructor. econstructor. all: eassumption.
   - eapply match_pat_sound in H0 as e. subst.
-    subst rhs. (* eapply red_substs. *)
-    (* Uh... *)
-    admit.
+    subst rhs. etransitivity.
+    + econstructor. eapply red_rule with (rl := prule_crule rl).
+      * unfold pctx_ictx. rewrite lvl_get_map. rewrite H. reflexivity.
+      * cbn. admit. (* It should either be added to pred or removed from red *)
+        (* Or we could require something on Ξ *)
+      * cbn. admit.
+    + eapply red_substs. assumption.
   - etransitivity.
     + eapply red_ind with (f := λ x, Pi _ x). 2: eassumption.
       cbn. intros. repeat constructor. assumption.
