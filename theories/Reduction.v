@@ -788,6 +788,7 @@ Section Injectivity.
   Context (hpt : type_preserving Σ Ξ).
 
   Lemma inst_iget_red_ih Ξ' Γ ξ ξ' :
+    wf Σ Ξ Γ →
     inst_iget Σ Ξ Γ ξ Ξ' →
     Forall (onSome (const_eqs Σ Ξ)) ξ →
     OnOne2 (some_rel (red1 Σ Ξ)) ξ ξ' →
@@ -798,7 +799,7 @@ Section Injectivity.
     )) ξ ξ' →
     inst_iget Σ Ξ Γ ξ' Ξ'.
   Proof.
-    intros h hξ hr ih.
+    intros hΓ h hξ hr ih.
     intros x A hx. specialize (h _ _ hx) as [? h].
     split. 1: assumption.
     unfold iget in *.
@@ -806,7 +807,9 @@ Section Injectivity.
     2,3: admit.
     eapply OnOne2_some_rel_nth_error in e as hh. 2: eassumption.
     destruct hh as [e' | h'].
-    - rewrite e'. econstructor.
+    - rewrite e'. eapply validity in h as hA. 2-4: eassumption.
+      destruct hA.
+      econstructor.
       + eassumption.
       + apply conv_insts.
         (* Copied from above so could be a lemma *)
@@ -817,7 +820,12 @@ Section Injectivity.
         cbn in h1. constructor.
         eauto using red1_conv.
       + eapply meta_conv.
-        * eapply typing_inst_closed. 2: admit.
+        * (* We need to exploit iwf to see inst ξ is the same as inst ξ'
+            in this case, because it operates on a strict prefix that wasn't
+            changed.
+            I need something like GScope but for Ξ.
+          *)
+          (* eapply typing_inst_closed. 2: admit. *)
           (* That would be a loop! *)
           admit.
         * admit.
