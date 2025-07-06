@@ -833,6 +833,7 @@ Section Injectivity.
   Admitted.
 
   Lemma inst_typing_red_ih Ξ' Γ ξ ξ' :
+    wf Σ Ξ Γ →
     inst_typing Σ Ξ Γ ξ Ξ' →
     Forall (onSome (const_eqs Σ Ξ)) ξ →
     OnOne2 (some_rel (red1 Σ Ξ)) ξ ξ' →
@@ -843,12 +844,12 @@ Section Injectivity.
     )) ξ ξ' →
     inst_typing Σ Ξ Γ ξ' Ξ'.
   Proof.
-    intros (h1 & h2 & h3) hξ hr ih.
+    intros hΓ (h1 & h2 & h3) hξ hr ih.
     split. 2: split.
     - eauto using inst_equations_red1.
-    - admit.
+    - eauto using inst_iget_red_ih.
     - apply OnOne2_length in hr. congruence.
-  Admitted.
+  Qed.
 
   Lemma subject_reduction Γ u v A :
     wf Σ Ξ Γ →
@@ -924,7 +925,10 @@ Section Injectivity.
       eapply validity in hu as hA. 2-4: eassumption.
       destruct hA.
       econstructor. 1: econstructor. all: intuition eauto.
-      + admit.
+      + eapply typing_const_eqs in hu as hce.
+        cbn in hce. destruct hce as (hξ & _).
+        rewrite rForall_Forall in hξ.
+        eauto using inst_typing_red_ih.
       + eapply conv_trans. 2: eassumption.
         apply conv_sym. apply conv_insts.
         eapply red1_conv_inst_ih.
@@ -934,6 +938,6 @@ Section Injectivity.
         * eapply OnOne2_impl. 2: exact H.
           intros ?? h. destruct h. constructor.
           eauto using red1_conv.
-  Admitted.
+  Qed.
 
 End Injectivity.
