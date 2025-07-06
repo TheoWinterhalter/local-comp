@@ -787,6 +787,43 @@ Section Injectivity.
   Context (hpc : preserves_const_eqs Σ Ξ).
   Context (hpt : type_preserving Σ Ξ).
 
+  Lemma inst_iget_red_ih Ξ' Γ ξ ξ' :
+    inst_iget Σ Ξ Γ ξ Ξ' →
+    Forall (onSome (const_eqs Σ Ξ)) ξ →
+    OnOne2 (some_rel (red1 Σ Ξ)) ξ ξ' →
+    OnOne2 (some_rel (λ u v, ∀ Γ A,
+      wf Σ Ξ Γ →
+      Σ ;; Ξ | Γ ⊢ u : A →
+      Σ ;; Ξ | Γ ⊢ v : A
+    )) ξ ξ' →
+    inst_iget Σ Ξ Γ ξ' Ξ'.
+  Proof.
+    intros h hξ hr ih.
+    intros x A hx. specialize (h _ _ hx) as [? h].
+    split. 1: assumption.
+    unfold iget in *.
+    destruct (nth_error ξ x) as [[]|] eqn:e.
+    2,3: admit.
+    eapply OnOne2_some_rel_nth_error in e as hh. 2: eassumption.
+    destruct hh as [e' | h'].
+    - rewrite e'. econstructor.
+      + eassumption.
+      + apply conv_insts.
+        (* Copied from above so could be a lemma *)
+        eapply OnOne2_and_Forall_l in hξ. 2: exact hr.
+        apply OnOne2_refl_Forall2. 1: exact _.
+        eapply OnOne2_impl. 2: eassumption.
+        intros o o' [h1 h2]. destruct h2 as [? ? h2].
+        cbn in h1. constructor.
+        eauto using red1_conv.
+      + eapply meta_conv.
+        * eapply typing_inst_closed. 2: admit.
+          (* That would be a loop! *)
+          admit.
+        * admit.
+    - admit.
+  Admitted.
+
   Lemma inst_typing_red_ih Ξ' Γ ξ ξ' :
     inst_typing Σ Ξ Γ ξ Ξ' →
     Forall (onSome (const_eqs Σ Ξ)) ξ →

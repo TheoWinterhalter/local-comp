@@ -423,6 +423,22 @@ Proof.
     constructor. all: eauto.
 Qed.
 
+Lemma OnOne2_nth_error [A] R (l l' : list A) x a :
+  OnOne2 R l l' →
+  nth_error l x = Some a →
+  (nth_error l' x = Some a) ∨ (∃ a', R a a' ∧ nth_error l' x = Some a').
+Proof.
+  intros h e.
+  induction h in x, a, e |- *.
+  - destruct x.
+    + cbn in *. inversion e. subst.
+      right. eexists. intuition eauto.
+    + cbn in *. eauto.
+  - destruct x.
+    + cbn in *. eauto.
+    + cbn in *. eauto.
+Qed.
+
 (** Some mini [congruence] *)
 
 Ltac eqtwice :=
@@ -692,6 +708,22 @@ Lemma some_rel_option_rel A B (R : A → B → Prop) a b :
 Proof.
   intro h. destruct h.
   constructor. assumption.
+Qed.
+
+Lemma OnOne2_some_rel_nth_error A R l l' x (a : A) :
+  OnOne2 (some_rel R) l l' →
+  nth_error l x = Some (Some a) →
+  (nth_error l' x = Some (Some a)) ∨
+  (∃ a', R a a' ∧ nth_error l' x = Some (Some a')).
+Proof.
+  intros h e.
+  eapply OnOne2_nth_error in h. 2: eassumption.
+  destruct h as [h|h].
+  - auto.
+  - right.
+    destruct h as (a' & h & e').
+    inversion h. subst.
+    eexists. intuition eauto.
 Qed.
 
 (** [fold_left] util *)
