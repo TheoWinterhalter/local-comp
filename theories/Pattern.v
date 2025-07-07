@@ -33,8 +33,10 @@ Definition pat_to_term p :=
   | passm x => assm x
   end.
 
+(** TODO Have a proper environment (or scope), and ensure linearity *)
 Record prule := {
-  pr_env : ctx ;
+  (* pr_env : ctx ; *)
+  pr_env : ctx := [] ;
   pr_pat : pat ;
   pr_sub : nat → term ;
   pr_rep : term ;
@@ -1122,21 +1124,24 @@ Proof.
   eexists. intuition eauto.
 Qed.
 
+(** TODO: This should be improved once we have better patterns
+
+  In such a setting, patterns should be linear (stronger than scoping)
+  which should ensure we indeed the part of [σ] that is on domain [< k].
+
+*)
 Lemma match_pat_lhs rl σ :
   let lhs := (prule_crule rl).(cr_pat) in
   let Θ := (prule_crule rl).(cr_env) in
   let k := length Θ in
-  match_pat rl.(pr_pat) (lhs <[ σ ]) = Some (listify k σ).
+  (* match_pat rl.(pr_pat) (lhs <[ σ ]) = Some (listify k σ). *)
+  match_pat rl.(pr_pat) (lhs <[ σ ]) = Some [].
 Proof.
   intros lhs Θ k.
   cbn in lhs. destruct rl.(pr_pat).
   subst lhs. cbn.
-  rewrite Nat.eqb_refl.
-  (* This is not correct presently, we need something weaker *)
-  (* Or we need to change the rules so that scoping is tight, or even 0
-    since we currently have very weak rules.
-  *)
-Admitted.
+  rewrite Nat.eqb_refl. reflexivity.
+Qed.
 
 Lemma eq_subst_listify k σ :
   eq_subst_on k (slist (listify k σ)) σ.
@@ -1168,7 +1173,9 @@ Proof.
       * apply Forall2_diag. apply Forall_forall.
         intros. apply pred_refl.
     + eapply ext_term_scoped. 1: eassumption.
-      apply eq_subst_listify.
+      subst Θ k. cbn.
+      (* apply eq_subst_listify. *)
+      intros ??. lia.
   - econstructor.
     eapply OnOne2_refl_Forall2. 1: exact _.
     eapply OnOne2_impl. 2: eassumption.
