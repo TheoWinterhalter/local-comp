@@ -1322,11 +1322,10 @@ Lemma pred_red Σ Ξ u v :
 Proof.
   intros h.
   induction h using pred_ind_alt.
-  - etransitivity. 2: etransitivity.
-    + eapply red_ind with (f := λ x, app _ x). 2: eassumption.
-      cbn. intros. constructor. constructor. assumption.
-    + eapply red_ind with (f := λ x, app (lam _ x) _). 2: eassumption.
-      cbn. intros. constructor. constructor. constructor. assumption.
+  - etransitivity.
+    + eapply red_app. 2: eassumption.
+      eapply red_lam. 2: eassumption.
+      reflexivity.
     + constructor. econstructor.
   - etransitivity.
     + eapply red_const. eassumption.
@@ -1339,25 +1338,13 @@ Proof.
         (* Or we could require something on Ξ *)
       * cbn. admit.
     + eapply red_substs_slist. assumption.
-  - etransitivity.
-    + eapply red_ind with (f := λ x, Pi _ x). 2: eassumption.
-      cbn. intros. repeat constructor. assumption.
-    + eapply red_ind with (f := λ x, Pi x _). 2: eassumption.
-      cbn. intros. repeat constructor. assumption.
-  - etransitivity.
-    + eapply red_ind with (f := λ x, lam _ x). 2: eassumption.
-      cbn. intros. repeat constructor. assumption.
-    + eapply red_ind with (f := λ x, lam x _). 2: eassumption.
-      cbn. intros. repeat constructor. assumption.
-  - etransitivity.
-    + eapply red_ind with (f := λ x, app _ x). 2: eassumption.
-      cbn. intros. repeat constructor. assumption.
-    + eapply red_ind with (f := λ x, app x _). 2: eassumption.
-      cbn. intros. repeat constructor. assumption.
+  - eapply red_pi. all: eassumption.
+  - eauto using red_lam.
+  - eauto using red_app.
   - apply red_const. assumption.
-  - apply rt_refl.
-  - apply rt_refl.
-  - apply rt_refl.
+  - reflexivity.
+  - reflexivity.
+  - reflexivity.
 Admitted.
 
 Lemma red_confluence Σ Ξ :
