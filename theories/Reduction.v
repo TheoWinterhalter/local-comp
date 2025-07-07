@@ -23,6 +23,67 @@ Set Default Goal Selector "!".
 
 Require Import Equations.Prop.DepElim.
 
+(* TODO MOVE *)
+Lemma lvl_get_length A (l : list A) x a :
+  lvl_get l x = Some a →
+  x < length l.
+Proof.
+  intros h.
+  unfold lvl_get in h.
+  destruct (_ <=? _) eqn: e. 1: discriminate.
+  rewrite Nat.leb_gt in e. assumption.
+Qed.
+
+(* TODO MOVE *)
+Inductive inst_iget_alt Σ Ξ Γ : instance → ictx → Prop :=
+| inst_iget_nil : inst_iget_alt Σ Ξ Γ [] []
+| inst_iget_comp Ξ' ξ rl :
+    inst_iget_alt Σ Ξ Γ ξ Ξ' →
+    inst_iget_alt Σ Ξ Γ (ξ ++ [ None ]) (Comp rl :: Ξ')
+| inst_iget_assm Ξ' ξ A u :
+    inst_iget_alt Σ Ξ Γ ξ Ξ' →
+    closed A = true →
+    Σ ;; Ξ | Γ ⊢ u : inst ξ A →
+    inst_iget_alt Σ Ξ Γ (ξ ++ [ Some u ]) (Assm A :: Ξ').
+
+Lemma inst_iget_alt_length Σ Ξ Γ ξ Ξ' :
+  inst_iget_alt Σ Ξ Γ ξ Ξ' →
+  length ξ = length Ξ'.
+Proof.
+  intros h. induction h as [| Ξ' ξ rl h ih | Ξ' ξ B u h ih hB hu ].
+  - reflexivity.
+  - rewrite length_app. cbn. lia.
+  - rewrite length_app. cbn. lia.
+Qed.
+
+Lemma inst_iget_change Σ Ξ Γ ξ Ξ' :
+  iwf Σ Ξ' →
+  inst_iget_alt Σ Ξ Γ ξ Ξ' ↔ inst_iget Σ Ξ Γ ξ Ξ'.
+Proof.
+  intros hΞ'.
+  split.
+  - intros h. intros x A e.
+    induction h as [| Ξ' ξ rl h ih | Ξ' ξ B u h ih hB hu ] in hΞ', x, A, e |- *.
+    + cbn in e. discriminate.
+    + eapply ictx_get_case in e. destruct e as [[? [=]] | e].
+      inversion hΞ'. subst.
+      eapply ih in e as hh. 2: assumption.
+      destruct hh as [? hx].
+      split. 1: assumption.
+      unfold iget in *. eapply lvl_get_length in e as hxl.
+      eapply inst_iget_alt_length in h as hl.
+      rewrite nth_error_app1. 2: lia.
+      eapply meta_conv. 1: eauto.
+      eapply valid_assm in e as hA. 2: eassumption.
+      destruct hA as [i hA].
+      eapply typing_iscope in hA.
+      eapply inst_ext_iscope. 2: eassumption.
+      (* True thanks to hl *)
+      admit.
+    + admit.
+  - admit.
+Abort.
+
 Section Red.
 
   Reserved Notation "u ↦ v"
