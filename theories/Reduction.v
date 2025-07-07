@@ -11,7 +11,7 @@ From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst Typing BasicMetaTheory
-  GScope Inversion Confluence.
+  GScope Inversion Confluence IScope.
 From Stdlib Require Import Setoid Morphisms Relation_Definitions
   Relation_Operators.
 From Equations Require Import Equations.
@@ -811,7 +811,30 @@ Section Injectivity.
     intros hΓ h hξ hr ih.
     intros x A hx. specialize (h _ _ hx) as [? h].
     split. 1: assumption.
-    unfold iget in *.
+
+    (* New attempt *)
+
+    eapply OnOne2_split in ih.
+    destruct ih as (y & o1 & o2 & e1 & e2 & ho & he).
+    destruct ho as [u v ih].
+    destruct (Nat.eqb_spec x y).
+    - subst y. unfold iget in *.
+      rewrite e1 in h. rewrite e2.
+      eapply meta_conv. 1: eauto.
+      (* eapply valid_assm in hx as hA. 2: admit.
+      destruct hA as (i & hA). *)
+      (* We want something stronger, we want a strict sub Ξ' *)
+      (* eapply inst_ext_iscope. *)
+      admit.
+    - unfold iget in *. rewrite <- he. 2: auto.
+      (* If x is after y, then y could appear in A so this approach is doomed?
+      *)
+      admit.
+
+
+    (* Old approach *)
+
+    (* unfold iget in *.
     destruct (nth_error ξ x) as [[]|] eqn:e.
     2,3: admit.
     eapply OnOne2_some_rel_nth_error in e as hh. 2: eassumption.
@@ -838,7 +861,7 @@ Section Injectivity.
           (* That would be a loop! *)
           admit.
         * admit.
-    - admit.
+    - admit. *)
   Admitted.
 
   Lemma inst_typing_red_ih Ξ' Γ ξ ξ' :
