@@ -448,6 +448,30 @@ Proof.
   - cbn. constructor. assumption.
 Qed.
 
+Lemma OnOne2_split A R (l l' : list A) :
+  OnOne2 R l l' →
+  ∃ n a a',
+    nth_error l n = Some a ∧
+    nth_error l' n = Some a' ∧
+    R a a' ∧
+    (∀ m, n ≠ m → nth_error l m = nth_error l' m).
+Proof.
+  intros h.
+  induction h as [ x y l h | x l l' h ih ].
+  - eexists 0, _, _. cbn.
+    split. 2: split. 3: split. 1-3: eauto.
+    intros m ?.
+    destruct m. 1: contradiction.
+    cbn. reflexivity.
+  - destruct ih as (n & a & a' & ? & ? & ? & ?).
+    exists (S n), a, a'.
+    split. 2: split. 3: split. 1-3: eauto.
+    intros m hm.
+    destruct m.
+    + cbn. reflexivity.
+    + cbn. eauto.
+Qed.
+
 (** Some mini [congruence] *)
 
 Ltac eqtwice :=
