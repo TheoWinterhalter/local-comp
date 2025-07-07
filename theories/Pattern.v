@@ -1332,11 +1332,19 @@ Proof.
     + constructor. econstructor. all: eassumption.
   - eapply match_pat_sound in H0 as e. subst.
     subst rhs. etransitivity.
-    + econstructor. eapply red_rule with (rl := prule_crule rl).
-      * unfold pctx_ictx. rewrite lvl_get_map. rewrite H. reflexivity.
-      * cbn. admit. (* It should either be added to pred or removed from red *)
-        (* Or we could require something on Ξ *)
-      * cbn. admit.
+    + assert (e : ictx_get (pctx_ictx Ξ) n = Some (Comp (prule_crule rl))).
+      { unfold pctx_ictx. rewrite lvl_get_map. rewrite H. reflexivity. }
+      eapply valid_comp in e as h. 2: admit.
+      destruct h as (_ & ? & ? & hl & hr).
+      eapply typing_scoped in hl, hr.
+      econstructor. eapply red_rule with (rl := prule_crule rl).
+      * eassumption.
+      * cbn in *. (* Maybe we have a judgement on Ξ that implies
+        that pctx_ictx is well formed or something.
+        Or just some ws (well scoped).
+         *)
+         admit.
+      * eassumption.
     + eapply red_substs_slist. assumption.
   - eapply red_pi. all: eassumption.
   - eauto using red_lam.
