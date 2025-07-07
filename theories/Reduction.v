@@ -667,9 +667,17 @@ Definition type_preserving Σ Ξ :=
     Σ ;; Ξ | Γ ⊢ lhs <[ σ ] : A →
     Σ ;; Ξ | Γ ⊢ rhs <[ σ ] : A.
 
+Lemma gwf_const_const_eqs Σ :
+  gwf Σ →
+  const_const_eqs Σ.
+Proof.
+  intros h. intros c Ξ A t e.
+  eapply valid_def in e. 2: eassumption.
+  intuition eauto using typing_const_eqs.
+Qed.
+
 Lemma typed_join_conv Σ Ξ Γ Δ u v A B :
   gwf Σ →
-  (* type_preserving Σ Ξ → *) (* Actually not enough, need const_eqs *)
   preserves_const_eqs Σ Ξ →
   Σ ;; Ξ | Γ ⊢ u : A →
   Σ ;; Ξ | Δ ⊢ v : B →
@@ -678,7 +686,8 @@ Lemma typed_join_conv Σ Ξ Γ Δ u v A B :
 Proof.
   intros hΣ hΞ hu hv h.
   eapply join_conv.
-Admitted.
+  all: eauto using typing_const_eqs, gwf_const_const_eqs.
+Qed.
 
 (** * Injectivity of Π
 
