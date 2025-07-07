@@ -439,6 +439,15 @@ Proof.
     + cbn in *. eauto.
 Qed.
 
+Lemma OnOne2_map A R l l' (f : A → A) :
+  OnOne2 (λ x y, R (f x) (f y)) l l' →
+  OnOne2 R (map f l) (map f l').
+Proof.
+  intro h. induction h.
+  - constructor. assumption.
+  - cbn. constructor. assumption.
+Qed.
+
 (** Some mini [congruence] *)
 
 Ltac eqtwice :=
@@ -724,6 +733,23 @@ Proof.
     destruct h as (a' & h & e').
     inversion h. subst.
     eexists. intuition eauto.
+Qed.
+
+Lemma some_rel_map A R o o' (f : A → A) :
+  some_rel (λ x y, R (f x) (f y)) o o' →
+  some_rel R (option_map f o) (option_map f o').
+Proof.
+  intro h. induction h.
+  constructor. assumption.
+Qed.
+
+Lemma some_rel_impl A R R' (o o' : option A) :
+  some_rel R o o' →
+  inclusion _ R R' →
+  some_rel R' o o'.
+Proof.
+  intros h hi. induction h.
+  constructor. auto.
 Qed.
 
 (** [fold_left] util *)

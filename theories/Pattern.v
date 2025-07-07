@@ -1193,23 +1193,128 @@ Proof.
   constructor. assumption.
 Qed.
 
+Lemma red_pi Σ Ξ A A' B B' :
+  Σ ;; Ξ ⊢ A ↦* A' →
+  Σ ;; Ξ ⊢ B ↦* B' →
+  Σ ;; Ξ ⊢ Pi A B ↦* Pi A' B'.
+Proof.
+  intros hA hB.
+  etransitivity.
+  - eapply red_ind with (f := λ x, Pi _ x). 2: eassumption.
+    cbn. intros. repeat constructor. assumption.
+  - eapply red_ind with (f := λ x, Pi x _). 2: eassumption.
+    cbn. intros. repeat constructor. assumption.
+Qed.
+
+Lemma red_lam Σ Ξ A A' t t' :
+  Σ ;; Ξ ⊢ A ↦* A' →
+  Σ ;; Ξ ⊢ t ↦* t' →
+  Σ ;; Ξ ⊢ lam A t ↦* lam A' t'.
+Proof.
+  intros hA hB.
+  etransitivity.
+  - eapply red_ind with (f := λ x, lam _ x). 2: eassumption.
+    cbn. intros. repeat constructor. assumption.
+  - eapply red_ind with (f := λ x, lam x _). 2: eassumption.
+    cbn. intros. repeat constructor. assumption.
+Qed.
+
+Lemma red_app Σ Ξ u u' v v' :
+  Σ ;; Ξ ⊢ u ↦* u' →
+  Σ ;; Ξ ⊢ v ↦* v' →
+  Σ ;; Ξ ⊢ app u v ↦* app u' v'.
+Proof.
+  intros hA hB.
+  etransitivity.
+  - eapply red_ind with (f := λ x, app _ x). 2: eassumption.
+    cbn. intros. repeat constructor. assumption.
+  - eapply red_ind with (f := λ x, app x _). 2: eassumption.
+    cbn. intros. repeat constructor. assumption.
+Qed.
+
+Lemma meta_red1_r Σ Ξ u v v' :
+  Σ ;; Ξ ⊢ u ↦ v →
+  v = v' →
+  Σ ;; Ξ ⊢ u ↦ v'.
+Proof.
+  intros h ->. assumption.
+Qed.
+
+Lemma red1_ren Σ Ξ ρ u v :
+  Σ ;; Ξ ⊢ u ↦ v →
+  Σ ;; Ξ ⊢ ρ ⋅ u ↦ ρ ⋅ v.
+Proof.
+  intros h.
+  induction h in ρ |- * using red1_ind_alt.
+  all: try solve [ cbn ; econstructor ; eauto ].
+  - cbn. eapply meta_red1_r. 1: econstructor.
+    rasimpl. reflexivity.
+  - cbn. change @core.option_map with @option_map.
+    eapply meta_red1_r.
+    + econstructor. all: eassumption.
+    + rewrite ren_inst. f_equal.
+      symmetry. apply closed_ren. assumption.
+  - rasimpl. econstructor. all: eassumption.
+  - cbn. change @core.option_map with @option_map.
+    econstructor. apply OnOne2_map.
+    eapply OnOne2_impl. 2: eassumption.
+    intros ???. eapply some_rel_map.
+    eapply some_rel_impl. 1: eassumption.
+    intros ???. auto.
+Qed.
+
+Lemma red_ren Σ Ξ ρ u v :
+  Σ ;; Ξ ⊢ u ↦* v →
+  Σ ;; Ξ ⊢ ρ ⋅ u ↦* ρ ⋅ v.
+Proof.
+  intros h.
+  eapply red_ind. 2: eassumption.
+  intros. apply rt_step. eauto using red1_ren.
+Qed.
+
+Lemma red_substs_up Σ Ξ σ σ' :
+  (∀ n, Σ ;; Ξ ⊢ σ n ↦* σ' n) →
+  (∀ n, Σ ;; Ξ ⊢ (up_term σ) n ↦* (up_term σ') n).
+Proof.
+  intros h n.
+  destruct n.
+  - cbn. reflexivity.
+  - cbn. unfold core.funcomp. eapply red_ren. auto.
+Qed.
+
 Lemma red_substs Σ Ξ t σ σ' :
-  Forall2 (red Σ Ξ) σ σ' →
-  Σ ;; Ξ ⊢ t <[ slist σ ] ↦* t <[ slist σ' ].
+  (∀ n, Σ ;; Ξ ⊢ σ n ↦* σ' n) →
+  Σ ;; Ξ ⊢ t <[ σ ] ↦* t <[ σ' ].
 Proof.
   intros h.
   induction t in σ, σ', h |- * using term_rect.
   all: try solve [ cbn ; econstructor ; eauto ].
-  - cbn. induction h in n |- *.
-    + cbn. reflexivity.
-    + cbn. destruct n.
-      * cbn. assumption.
-      * cbn. eauto.
-  - cbn. admit.
-  - admit.
-  - admit.
-  - admit.
-Admitted.
+  - cbn. auto.
+  - cbn. eauto using red_substs_up, red_pi.
+  - cbn. eauto using red_substs_up, red_lam.
+  - cbn. eauto using red_substs_up, red_app.
+  - cbn. eapply red_const.
+    apply Forall2_map_l, Forall2_map_r. apply Forall2_diag.
+    eapply All_Forall. eapply All_impl. 2: eassumption.
+    intros ? ho.
+    apply option_rel_map_l, option_rel_map_r. apply option_rel_diag.
+    rewrite OnSome_onSome. apply onSomeT_onSome.
+    eapply onSomeT_impl. 2: eassumption.
+    auto.
+Qed.
+
+Lemma red_substs_slist Σ Ξ t σ σ' :
+  Forall2 (red Σ Ξ) σ σ' →
+  Σ ;; Ξ ⊢ t <[ slist σ ] ↦* t <[ slist σ' ].
+Proof.
+  intros h.
+  eapply red_substs.
+  intros n. induction h in n |- *.
+  - cbn. reflexivity.
+  - cbn. destruct n.
+    + cbn. assumption.
+    + cbn. eauto.
+Qed.
 
 Lemma pred_red Σ Ξ u v :
   Σ ;; Ξ ⊢ u ⇒ v →
@@ -1233,7 +1338,7 @@ Proof.
       * cbn. admit. (* It should either be added to pred or removed from red *)
         (* Or we could require something on Ξ *)
       * cbn. admit.
-    + eapply red_substs. assumption.
+    + eapply red_substs_slist. assumption.
   - etransitivity.
     + eapply red_ind with (f := λ x, Pi _ x). 2: eassumption.
       cbn. intros. repeat constructor. assumption.
@@ -1265,3 +1370,4 @@ Proof.
   - intros ??. apply pred_red.
   - apply pred_confluence. assumption.
 Qed.
+
