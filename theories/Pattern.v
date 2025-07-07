@@ -1316,11 +1316,19 @@ Proof.
     + cbn. eauto.
 Qed.
 
+(** Well-scoped (pattern) interface *)
+Definition ws (Ξ : pctx) :=
+  ∀ n rl,
+    pctx_get Ξ n = Some (pComp rl) →
+    scoped (length rl.(pr_env)) (pat_to_term rl.(pr_pat)) = true ∧
+    scoped (length rl.(pr_env)) rl.(pr_rep) = true.
+
 Lemma pred_red Σ Ξ u v :
+  ws Ξ →
   Σ ;; Ξ ⊢ u ⇒ v →
   Σ ;; pctx_ictx Ξ ⊢ u ↦* v.
 Proof.
-  intros h.
+  intros hΞ h.
   induction h using pred_ind_alt.
   - etransitivity.
     + eapply red_app. 2: eassumption.
@@ -1332,19 +1340,10 @@ Proof.
     + constructor. econstructor. all: eassumption.
   - eapply match_pat_sound in H0 as e. subst.
     subst rhs. etransitivity.
-    + assert (e : ictx_get (pctx_ictx Ξ) n = Some (Comp (prule_crule rl))).
-      { unfold pctx_ictx. rewrite lvl_get_map. rewrite H. reflexivity. }
-      eapply valid_comp in e as h. 2: admit.
-      destruct h as (_ & ? & ? & hl & hr).
-      eapply typing_scoped in hl, hr.
-      econstructor. eapply red_rule with (rl := prule_crule rl).
-      * eassumption.
-      * cbn in *. (* Maybe we have a judgement on Ξ that implies
-        that pctx_ictx is well formed or something.
-        Or just some ws (well scoped).
-         *)
-         admit.
-      * eassumption.
+    + econstructor. eapply red_rule with (rl := prule_crule rl). all: cbn.
+      * unfold pctx_ictx. rewrite lvl_get_map. rewrite H. reflexivity.
+      * cbn. eapply hΞ. eassumption.
+      * cbn. eapply hΞ. eassumption.
     + eapply red_substs_slist. assumption.
   - eapply red_pi. all: eassumption.
   - eauto using red_lam.
@@ -1353,16 +1352,17 @@ Proof.
   - reflexivity.
   - reflexivity.
   - reflexivity.
-Admitted.
+Qed.
 
 Lemma red_confluence Σ Ξ :
+  ws Ξ →
   triangle_citerion Ξ →
   red_confluent Σ (pctx_ictx Ξ).
 Proof.
-  intros h Γ.
+  intros hΞ h Γ.
   eapply sandwish.
   - intros ??. apply red1_pred.
-  - intros ??. apply pred_red.
+  - intros ??. apply pred_red. assumption.
   - apply pred_confluence. assumption.
 Qed.
 
