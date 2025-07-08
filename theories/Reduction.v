@@ -962,7 +962,70 @@ Section Injectivity.
     unfold lvl_firstn in e. rewrite length_skipn in e.
   Admitted.
 
+  Lemma lvl_firstn_app_r_all A (l l' : list A) :
+    lvl_firstn (length l) (l' ++ l) = l.
+  Proof.
+    unfold lvl_firstn. rewrite length_app.
+    replace (length _ + _ - _) with (length l') by lia.
+    rewrite skipn_app. rewrite skipn_all. cbn.
+    replace (length _ - _) with 0 by lia.
+    reflexivity.
+  Qed.
+
+  Lemma lvl_firstn_cons_all A (l : list A) a :
+    lvl_firstn (length l) (a :: l) = l.
+  Proof.
+    apply lvl_firstn_app_r_all with (l' := [ _ ]).
+  Qed.
+
+  Lemma lvl_firstn_app_r A k (l l' : list A) :
+    k < length l →
+    lvl_firstn k (l' ++ l) = lvl_firstn k l.
+  Proof.
+    intros h.
+    unfold lvl_firstn. rewrite length_app.
+    rewrite skipn_app. rewrite skipn_all2. 2: lia.
+    cbn. f_equal. lia.
+  Qed.
+
+  Lemma lvl_firstn_cons A k (l : list A) a :
+    k < length l →
+    lvl_firstn k (a :: l) = lvl_firstn k l.
+  Proof.
+    intros h.
+    apply lvl_firstn_app_r with (l' := [ _ ]). assumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma valid_assm_iscope (* Σ *) Ξ' x A :
+    iwf Σ Ξ' →
+    ictx_get Ξ' x = Some (Assm A) →
+    iscope (lvl_firstn x Ξ') A.
+  Proof.
+    intros hΞ' e.
+    induction hΞ' as [| B Ξ' i hΞ' ih hB | rl Ξ' hΞ' ih hs ht ] in x, e, A |- *.
+    - destruct x. all: discriminate.
+    - eapply ictx_get_case in e as eh. destruct eh as [[-> [= ->]] | eh].
+      + rewrite lvl_firstn_cons_all.
+        eapply typing_iscope. eassumption.
+      + specialize ih with (1 := eh).
+        rewrite lvl_firstn_cons. 2: eauto using lvl_get_length.
+        assumption.
+    - eapply ictx_get_case in e as eh. destruct eh as [[-> [=]] | eh].
+      specialize ih with (1 := eh).
+      rewrite lvl_firstn_cons. 2: eauto using lvl_get_length.
+      assumption.
+  Qed.
+
+  Lemma length_lvl_firstn A k (l : list A) :
+    length (lvl_firstn k l) ≤ k.
+  Proof.
+    unfold lvl_firstn.
+    rewrite length_skipn. lia.
+  Qed.
+
   Lemma inst_typing_red1_aux Ξ' Γ ξ ξ' :
+    iwf Σ Ξ' →
     wf Σ Ξ Γ →
     inst_typing Σ Ξ Γ ξ Ξ' →
     Forall (onSome (const_eqs Σ Ξ)) ξ →
@@ -974,7 +1037,7 @@ Section Injectivity.
     )) ξ ξ' →
     inst_typing Σ Ξ Γ ξ' Ξ'.
   Proof.
-    intros hΓ h hξ hr ih.
+    intros hΞ' hΓ h hξ hr ih.
     eapply OnOne2_split in ih.
     destruct ih as (y & o1 & o2 & e1 & e2 & ho & he).
     destruct ho as [u v ih].
@@ -987,14 +1050,17 @@ Section Injectivity.
         eapply lvl_get_firstn in hx as hx'.
         specialize (h2 _ _ hx') as (? & hd & h).
         split. 1: assumption.
-        (* First show x < y from hx *)
-        assert (hxy : x < y) by admit.
+        apply lvl_get_length in hx as hxl.
+        assert (hxy : x < y).
+        { pose proof (length_lvl_firstn _ y Ξ'). lia. }
         split. 1: admit.
         unfold iget in *. rewrite nth_error_firstn.
         destruct (x <? y) eqn: exy.
         2:{ rewrite Nat.ltb_ge in exy. lia. }
         rewrite <- he. 2: lia.
         eapply meta_conv. 1: eauto.
+        eapply valid_assm_iscope in hx'. 2: assumption.
+        eapply inst_ext_iscope. 2: eassumption.
         admit.
       - apply OnOne2_length in hr.
         rewrite length_firstn.
