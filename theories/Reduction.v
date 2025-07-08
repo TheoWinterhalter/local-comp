@@ -970,15 +970,23 @@ Section Injectivity.
     (* OLD *)
 
 
-    intros x A hx. specialize (h _ _ hx) as (? & ? & h).
+    intros x A hx. specialize (h _ _ hx) as (? & hd & h).
     split. 1: assumption.
-    split. 1: admit.
-
-    (* New attempt *)
 
     eapply OnOne2_split in ih.
     destruct ih as (y & o1 & o2 & e1 & e2 & ho & he).
     destruct ho as [u v ih].
+
+    split.
+    1:{
+      destruct (Nat.eqb_spec x y).
+      - subst. eexists. eassumption.
+      - destruct hd. eexists. rewrite <- he. 2: auto.
+        eassumption.
+    }
+
+    (* New attempt *)
+
     destruct (Nat.eqb_spec x y).
     - subst y. unfold iget in *.
       rewrite e1 in h. rewrite e2.
