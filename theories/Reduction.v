@@ -56,6 +56,18 @@ Proof.
   - rewrite length_app. cbn. lia.
 Qed.
 
+Lemma eq_inst_on_cons Ξ ξ o :
+  length ξ = length Ξ →
+  eq_inst_on Ξ ξ (ξ ++ o).
+Proof.
+  intros e.
+  intros x A hx.
+  unfold iget.
+  eapply lvl_get_length in hx as hxl.
+  rewrite nth_error_app1. 2: lia.
+  reflexivity.
+Qed.
+
 Lemma inst_iget_change Σ Ξ Γ ξ Ξ' :
   iwf Σ Ξ' →
   inst_iget_alt Σ Ξ Γ ξ Ξ' ↔ inst_iget Σ Ξ Γ ξ Ξ'.
@@ -78,9 +90,28 @@ Proof.
       destruct hA as [i hA].
       eapply typing_iscope in hA.
       eapply inst_ext_iscope. 2: eassumption.
-      (* True thanks to hl *)
-      admit.
-    + admit.
+      apply eq_inst_on_cons. assumption.
+    + eapply inst_iget_alt_length in h as hl.
+      inversion hΞ'. subst.
+      eapply ictx_get_case in e. destruct e as [[-> [= ->]] | e].
+      * split. 1: assumption.
+        unfold iget. rewrite nth_error_app2. 2: lia.
+        replace (length Ξ' - _) with 0 by lia. cbn.
+        eapply meta_conv. 1: eauto.
+        eapply typing_iscope in H2.
+        eapply inst_ext_iscope. 2: eassumption.
+        apply eq_inst_on_cons. assumption.
+      * eapply ih in e as hh. 2: assumption.
+        destruct hh as [? hx].
+        split. 1: assumption.
+        unfold iget in *. eapply lvl_get_length in e as hxl.
+        rewrite nth_error_app1. 2: lia.
+        eapply meta_conv. 1: eauto.
+        eapply valid_assm in e as hA. 2: eassumption.
+        destruct hA as [? hA].
+        eapply typing_iscope in hA.
+        eapply inst_ext_iscope. 2: eassumption.
+        apply eq_inst_on_cons. assumption.
   - admit.
 Abort.
 
