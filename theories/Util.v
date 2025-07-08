@@ -806,3 +806,15 @@ Proof.
   - reflexivity.
   - cbn. rewrite ih. rewrite h. reflexivity.
 Qed.
+
+(** [list] util *)
+
+Lemma list_last_split [A] (l : list A) :
+  l = [] ∨ (∃ a l', l = l' ++ [ a ]).
+Proof.
+  replace l with (rev (rev l)) by apply rev_involutive.
+  set (l' := rev l). clearbody l'.
+  destruct l'.
+  - left. reflexivity.
+  - right. cbn. eexists _,_. reflexivity.
+Qed.

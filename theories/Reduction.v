@@ -135,17 +135,6 @@ Proof.
       apply eq_inst_on_cons. assumption.
 Qed.
 
-(* TODO MOVE *)
-Lemma list_last_split [A] (l : list A) :
-  l = [] ∨ (∃ a l', l = l' ++ [ a ]).
-Proof.
-  replace l with (rev (rev l)) by apply rev_involutive.
-  set (l' := rev l). clearbody l'.
-  destruct l'.
-  - left. reflexivity.
-  - right. cbn. eexists _,_. reflexivity.
-Qed.
-
 Lemma inst_get_to_alt Σ Ξ Γ ξ Ξ' :
   inst_iget Σ Ξ Γ ξ Ξ' →
   length ξ = length Ξ' →
