@@ -141,15 +141,32 @@ Lemma inst_get_to_alt Σ Ξ Γ ξ Ξ' :
   inst_iget_alt Σ Ξ Γ ξ Ξ'.
 Proof.
   intros h hl.
-  induction Ξ' in ξ, h, hl |- *.
+  induction Ξ' as [| d Ξ' ih] in ξ, h, hl |- *.
   - destruct ξ. 2: discriminate.
     constructor.
   - pose proof (list_last_split ξ) as e.
     destruct e as [-> | (o & ξ' & ->)]. 1: discriminate.
-    destruct a.
-    + red in h. (* TODO Change inst_iget_ to ensure o is Some *)
-      admit.
-    + admit.
+    rewrite length_app in hl. cbn in hl.
+    rewrite Nat.add_comm in hl. cbn in hl. injection hl as hl.
+    destruct d.
+    + apply id in h as h'.
+      red in h. specialize h with (n := length Ξ').
+      specialize h with (1 := lvl_get_last _ _).
+      destruct h as (? & hd & h).
+      eapply iget_def_sound in hd as e.
+      destruct e as (t & e1 & e2).
+      rewrite nth_error_app2 in e1. 2: lia.
+      replace (length _ - _) with 0 in e1 by lia.
+      cbn in e1. injection e1 as ->.
+      constructor.
+      * eapply ih. 2: assumption. admit.
+      * assumption.
+      * rewrite e2 in h.
+        eapply meta_conv. 1: eauto.
+        symmetry.
+        eapply inst_ext_iscope. 2: admit. (* Need iwf *)
+        apply eq_inst_on_cons. eassumption.
+    + admit. (* Need some of inst_equations *)
 Admitted.
 
 Lemma inst_iget_change Σ Ξ Γ ξ Ξ' :
