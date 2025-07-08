@@ -304,6 +304,14 @@ Section Inline.
     - eapply conv_trans. all: eassumption.
   Qed.
 
+  Lemma iget_def_inline ξ x :
+    iget_def ξ x →
+    iget_def ⟦ ξ ⟧× x.
+  Proof.
+    intros [t h].
+    eexists. rewrite nth_error_map, h. reflexivity.
+  Qed.
+
   Definition g_type :=
     ∀ c Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
@@ -322,9 +330,10 @@ Section Inline.
       rewrite ictx_get_map in hx.
       destruct (ictx_get _ _) as [[]|] eqn: hx'. 2,3: discriminate.
       cbn in hx. inversion hx. subst. clear hx.
-      specialize (ih _ _ hx') as [hc ih].
-      split.
+      specialize (ih _ _ hx') as (hc & hd & ih).
+      split. 2: split.
       + apply scoped_inline. assumption.
+      + eauto using iget_def_inline.
       + rewrite inline_iget, inline_inst in ih.
         assumption.
     - rewrite 2!length_map. assumption.

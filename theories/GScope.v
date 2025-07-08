@@ -46,7 +46,8 @@ Proof.
   destruct h as (he & ht & e).
   split. 2: split.
   - assumption.
-  - intros x A hx. specialize (ht _ _ hx) as [].
+  - intros x A hx. specialize (ht _ _ hx) as (? & ? & ?).
+    split. 1: assumption.
     split. 1: assumption.
     unfold iget in *.
     destruct (nth_error ξ _) as [[] |] eqn:e1. 2,3: constructor.

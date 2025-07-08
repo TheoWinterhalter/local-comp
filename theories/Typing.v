@@ -170,6 +170,7 @@ Section Inst.
     ∀ n A,
       ictx_get Ξ' n = Some (Assm A) →
       closed A = true ∧
+      iget_def ξ n ∧
       Γ ⊢ iget ξ n : inst ξ A.
 
   Definition inst_typing_ (Γ : ctx) (ξ : instance) (Ξ' : ictx) :=

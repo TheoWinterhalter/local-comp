@@ -240,13 +240,13 @@ Proof.
       rewrite <- nth_error_None in e1. congruence.
     - rewrite nth_error_None in e'.
       rewrite Nat.leb_gt in e1. lia.
-    }
-    2:{
-      specialize (heq _ _ e'). cbn in heq. intuition congruence.
-    }
-    specialize ih with (1 := eq_refl).
-    unfold iget in ih. rewrite hx in ih.
-    apply ih.
+  }
+  2:{
+    specialize (heq _ _ e'). cbn in heq. intuition congruence.
+  }
+  specialize ih with (1 := eq_refl).
+  unfold iget, iget_def in ih. rewrite hx in ih.
+  apply ih.
 Qed.
 
 (** Typing implies scoping *)
@@ -443,6 +443,16 @@ Proof.
   unfold iget.
   rewrite nth_error_map.
   destruct (nth_error ξ x) as [[] |]. all: reflexivity.
+Qed.
+
+Lemma iget_def_ren ξ x ρ :
+  iget_def ξ x →
+  iget_def (ren_instance ρ ξ) x.
+Proof.
+  unfold iget_def.
+  rewrite nth_error_map.
+  intros (t, h).
+  eexists. rewrite h. reflexivity.
 Qed.
 
 Lemma ren_inst :
@@ -668,8 +678,9 @@ Proof.
   intros hρ [h1 [h2 h3]] [ih1 [ih2 ih3]].
   split. 2: split.
   - eauto using inst_equations_ren_ih, inst_equations_prop, conv_ren.
-  - intros x A hx. specialize (ih2 _ _ hx) as [hc ih2]. cbn in ih2.
+  - intros x A hx. specialize (ih2 _ _ hx) as [hc [hd ih2]].
     split. 1: assumption.
+    split. 1: eauto using iget_def_ren.
     rewrite iget_ren. eapply meta_conv.
     + eauto.
     + rewrite !ren_inst. f_equal.
@@ -913,6 +924,14 @@ Lemma iget_subst σ ξ x :
 Proof.
   unfold iget.
   rewrite nth_error_map. destruct nth_error as [ [] |]. all: reflexivity.
+Qed.
+
+Lemma iget_def_subst σ ξ x :
+  iget_def ξ x →
+  iget_def (subst_instance σ ξ) x.
+Proof.
+  intros (t, h).
+  eexists. rewrite nth_error_map, h. reflexivity.
 Qed.
 
 Lemma subst_inst_scoped σ ξ t k :
@@ -1293,8 +1312,9 @@ Proof.
   intros hσ [h1 [h2 h3]] [ih1 [ih2 ih3]].
   split. 2: split.
   - eauto using inst_equations_subst_ih, inst_equations_prop, conv_subst.
-  - intros x A hx. specialize (ih2 _ _ hx) as [? ih2].
+  - intros x A hx. specialize (ih2 _ _ hx) as [? [? ih2]].
     split. 1: assumption.
+    split. 1: eauto using iget_def_subst.
     rewrite iget_subst. eapply meta_conv.
     + eauto.
     + apply subst_inst_closed. assumption.
@@ -1355,6 +1375,14 @@ Lemma inst_get ξ ξ' x :
 Proof.
   unfold iget. rewrite nth_error_map.
   destruct nth_error as [[]|]. all: reflexivity.
+Qed.
+
+Lemma iget_def_inst ξ ξ' x :
+  iget_def ξ x →
+  iget_def (inst_instance ξ' ξ) x.
+Proof.
+  intros [t h].
+  eexists. rewrite nth_error_map, h. reflexivity.
 Qed.
 
 Lemma inst_inst ξ ξ' t :
@@ -1511,8 +1539,9 @@ Proof.
       * destruct hξ as (? & ? & ?).
         eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst.
       * rename H3 into ih2.
-        intros x B hx. specialize (ih2 _ _ hx) as [? ih2].
+        intros x B hx. specialize (ih2 _ _ hx) as [? [? ih2]].
         split. 1: assumption.
+        split. 1: eauto using iget_def_inst.
         rewrite <- inst_get. rewrite <- inst_inst.
         eauto.
       * rewrite length_map. assumption.
@@ -1671,7 +1700,8 @@ Proof.
   eapply inst_typing_eweak_. 1: eassumption.
   destruct h as [h1 [h2 h3]]. split. 2: split.
   - assumption.
-  - intros x A hx. specialize (h2 _ _ hx) as [? ih].
+  - intros x A hx. specialize (h2 _ _ hx) as [? [? ih]].
+    split. 1: assumption.
     split. 1: assumption.
     eauto using typing_eweak.
   - assumption.
@@ -1771,7 +1801,8 @@ Proof.
   eapply inst_typing_gweak_. 1,3: eassumption.
   destruct h as [h1 [h2 h3]]. split. 2: split.
   - assumption.
-  - intros x A hx. specialize (h2 _ _ hx) as [? h2].
+  - intros x A hx. specialize (h2 _ _ hx) as [? [? h2]].
+    split. 1: assumption.
     split. 1: assumption.
     eauto using typing_gweak.
   - assumption.
@@ -2192,7 +2223,8 @@ Lemma inst_typing_ctx_conv_ih Σ Ξ Ξ' (Γ Δ : ctx) ξ :
 Proof.
   intros hctx [h1 [h2 h3]] [ih1 [ih2 ih3]].
   split. 2: split. 1,3: assumption.
-  intros x A hx. specialize (ih2 _ _ hx) as [? ih2].
+  intros x A hx. specialize (ih2 _ _ hx) as [? [? ih2]].
+  split. 1: assumption.
   split. 1: assumption.
   eapply ih2. assumption.
 Qed.

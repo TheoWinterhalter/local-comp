@@ -68,6 +68,24 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma iget_def_app_l ξ ξ' x :
+  iget_def ξ x →
+  iget_def (ξ ++ ξ') x.
+Proof.
+  intros [t h].
+  exists t. rewrite nth_error_app1.
+  2:{ eapply nth_error_Some. congruence. }
+  assumption.
+Qed.
+
+Lemma iget_def_app_r ξ u :
+  iget_def (ξ ++ [ Some u ]) (length ξ).
+Proof.
+  eexists. rewrite nth_error_app2. 2: auto.
+  replace (length _ - _) with 0 by lia.
+  reflexivity.
+Qed.
+
 Lemma inst_get_from_alt Σ Ξ Γ ξ Ξ' :
   iwf Σ Ξ' →
   inst_iget_alt Σ Ξ Γ ξ Ξ' →
@@ -79,8 +97,9 @@ Proof.
   - eapply ictx_get_case in e. destruct e as [[? [=]] | e].
     inversion hΞ'. subst.
     eapply ih in e as hh. 2: assumption.
-    destruct hh as [? hx].
+    destruct hh as (? & ? & hx).
     split. 1: assumption.
+    split. 1: eauto using iget_def_app_l.
     unfold iget in *. eapply lvl_get_length in e as hxl.
     eapply inst_iget_alt_length in h as hl.
     rewrite nth_error_app1. 2: lia.
@@ -94,6 +113,8 @@ Proof.
     inversion hΞ'. subst.
     eapply ictx_get_case in e. destruct e as [[-> [= ->]] | e].
     + split. 1: assumption.
+      split.
+      1:{ rewrite <- hl. apply iget_def_app_r. }
       unfold iget. rewrite nth_error_app2. 2: lia.
       replace (length Ξ' - _) with 0 by lia. cbn.
       eapply meta_conv. 1: eauto.
@@ -101,8 +122,9 @@ Proof.
       eapply inst_ext_iscope. 2: eassumption.
       apply eq_inst_on_cons. assumption.
     + eapply ih in e as hh. 2: assumption.
-      destruct hh as [? hx].
+      destruct hh as (? & ? & hx).
       split. 1: assumption.
+      split. 1: eauto using iget_def_app_l.
       unfold iget in *. eapply lvl_get_length in e as hxl.
       rewrite nth_error_app1. 2: lia.
       eapply meta_conv. 1: eauto.
@@ -933,8 +955,9 @@ Section Injectivity.
     inst_iget Σ Ξ Γ ξ' Ξ'.
   Proof.
     intros hΓ h hξ hr ih.
-    intros x A hx. specialize (h _ _ hx) as [? h].
+    intros x A hx. specialize (h _ _ hx) as (? & ? & h).
     split. 1: assumption.
+    split. 1: admit.
 
     (* New attempt *)
 

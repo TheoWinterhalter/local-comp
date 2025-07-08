@@ -11,11 +11,23 @@ Open Scope subst_scope.
 
 Definition dummy := (Sort 0).
 
+Definition iget_def (ξ : instance) x :=
+  ∃ t, nth_error ξ x = Some (Some t).
+
 Definition iget (ξ : instance) x :=
   match nth_error ξ x with
   | Some (Some t) => t
   | _ => dummy
   end.
+
+Lemma iget_def_sound ξ x :
+  iget_def ξ x →
+  ∃ t, nth_error ξ x = Some (Some t) ∧ iget ξ x = t.
+Proof.
+  intros [t e].
+  exists t. intuition auto.
+  unfold iget. rewrite e. reflexivity.
+Qed.
 
 Notation map_instance f ξ :=
   (map (option_map f) ξ).
