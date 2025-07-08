@@ -168,6 +168,7 @@ Proof.
       eapply inst_ext_iscope. 2: eassumption.
       apply eq_inst_on_cons. assumption.
   - admit. (* Need some of inst_equations *)
+    (* OR, not force None in this position *)
 Admitted.
 
 Section Red.
@@ -956,6 +957,19 @@ Section Injectivity.
     inst_iget Σ Ξ Γ ξ' Ξ'.
   Proof.
     intros hΓ h hξ hr ih.
+
+    (* Yet another attempt *)
+
+    (* apply inst_get_from_alt. 1: admit.
+    eapply inst_get_to_alt  in h. 2,3: admit.
+    induction h.
+    - inversion hr.
+    - admit.
+    - *) (* It's going to be a pain with ξ in reverse *)
+
+    (* OLD *)
+
+
     intros x A hx. specialize (h _ _ hx) as (? & ? & h).
     split. 1: assumption.
     split. 1: admit.
