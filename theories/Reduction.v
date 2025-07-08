@@ -944,6 +944,67 @@ Section Injectivity.
   Context (hpc : preserves_const_eqs Σ Ξ).
   Context (hpt : type_preserving Σ Ξ).
 
+  Definition lvl_firstn {A} x (l : list A) :=
+    skipn (length l - x) l.
+
+  Lemma inst_equations_firstn Ξ' ξ k :
+    inst_equations Σ Ξ ξ Ξ' →
+    inst_equations Σ Ξ (firstn k ξ) (lvl_firstn k Ξ').
+  Proof.
+  Admitted.
+
+  Lemma lvl_get_firstn A x k (l : list A) a :
+    lvl_get (lvl_firstn k l) x = Some a →
+    lvl_get l x = Some a.
+  Proof.
+    intros e.
+    unfold lvl_get in *.
+    unfold lvl_firstn in e. rewrite length_skipn in e.
+  Admitted.
+
+  Lemma inst_typing_red1_aux Ξ' Γ ξ ξ' :
+    wf Σ Ξ Γ →
+    inst_typing Σ Ξ Γ ξ Ξ' →
+    Forall (onSome (const_eqs Σ Ξ)) ξ →
+    OnOne2 (some_rel (red1 Σ Ξ)) ξ ξ' →
+    OnOne2 (some_rel (λ u v, ∀ Γ A,
+      wf Σ Ξ Γ →
+      Σ ;; Ξ | Γ ⊢ u : A →
+      Σ ;; Ξ | Γ ⊢ v : A
+    )) ξ ξ' →
+    inst_typing Σ Ξ Γ ξ' Ξ'.
+  Proof.
+    intros hΓ h hξ hr ih.
+    eapply OnOne2_split in ih.
+    destruct ih as (y & o1 & o2 & e1 & e2 & ho & he).
+    destruct ho as [u v ih].
+    (* Before [y], everything is fine *)
+    assert (hby : inst_typing Σ Ξ Γ (firstn y ξ') (lvl_firstn y Ξ')).
+    { destruct h as (h1 & h2 & h3).
+      split. 2: split.
+      - eauto using inst_equations_firstn, inst_equations_red1.
+      - intros x A hx.
+        eapply lvl_get_firstn in hx as hx'.
+        specialize (h2 _ _ hx') as (? & hd & h).
+        split. 1: assumption.
+        (* First show x < y from hx *)
+        assert (hxy : x < y) by admit.
+        split. 1: admit.
+        unfold iget in *. rewrite nth_error_firstn.
+        destruct (x <? y) eqn: exy.
+        2:{ rewrite Nat.ltb_ge in exy. lia. }
+        rewrite <- he. 2: lia.
+        eapply meta_conv. 1: eauto.
+        admit.
+      - apply OnOne2_length in hr.
+        rewrite length_firstn.
+        apply nth_error_Some_alt in e1.
+        unfold lvl_firstn. rewrite length_skipn. lia.
+    }
+    (* Then perhaps we can add things one by one? *)
+    admit.
+  Abort.
+
   Lemma inst_iget_red_ih Ξ' Γ ξ ξ' :
     wf Σ Ξ Γ →
     inst_iget Σ Ξ Γ ξ Ξ' →
