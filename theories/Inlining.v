@@ -17,11 +17,13 @@ From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst Typing BasicMetaTheory
-  GScope.
+  GScope IScope.
 From Stdlib Require Import Setoid Morphisms Relation_Definitions.
 
 Import ListNotations.
 Import CombineNotations.
+
+Require Import Equations.Prop.DepElim.
 
 Set Default Goal Selector "!".
 
@@ -176,9 +178,9 @@ Section Inline.
     ictx_get (map f Ξ) x =
     option_map f (ictx_get Ξ x).
   Proof.
-    unfold ictx_get. rewrite length_map.
-    rewrite nth_error_map.
-    destruct (_ <=? _). all: reflexivity.
+    unfold ictx_get.
+    rewrite <- map_rev, nth_error_map.
+    reflexivity.
   Qed.
 
   Lemma ictx_get_assm_inline Ξ x A :
@@ -238,6 +240,29 @@ Section Inline.
     destruct o. 2: constructor.
     cbn. intros. eapply scoped_inline. assumption.
   Qed.
+
+  Lemma iscope_instance_inline_ih Ξ ξ :
+    Forall (OnSome (λ t : term, iscope Ξ ⟦ t ⟧)) ξ →
+    iscope_instance Ξ ξ →
+    iscope_instance Ξ ⟦ ξ ⟧×.
+  Proof.
+    intros ih h.
+    induction h; inversion ih; subst; constructor; auto.
+    inversion H; subst; cbn; constructor.
+    inversion H2; subst; auto.
+  Qed.
+
+  (* Lemma iscope_inline Ξ t :
+    iscope Ξ t →
+    iscope ⟦ Ξ ⟧e ⟦ t ⟧.
+  Proof.
+    intros h.
+    induction h using iscope_ind_alt.
+    all: try solve [ cbn ; constructor; eauto ].
+    - cbn.
+      eapply iscope_instance_inline_ih. all: assumption.
+    - apply hclosed.
+  Qed. *)
 
   Lemma inline_ctx_inst ξ Γ :
     ⟦ ctx_inst ξ Γ ⟧* = ctx_inst ⟦ ξ ⟧× ⟦ Γ ⟧*.
@@ -312,23 +337,28 @@ Section Inline.
   Context (h_type : g_type).
 
   Lemma inst_typing_inline Ξ Γ ξ Ξ' :
-    inst_typing_ Σ Ξ (λ Γ t A, [] ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧) Γ ξ Ξ' →
+    iwf Σ Ξ' ->
+    inst_typing_ (conversion Σ Ξ) (λ t A, [] ;; ⟦ Ξ ⟧e | ⟦ Γ ⟧* ⊢ ⟦ t ⟧ : ⟦ A ⟧) ξ Ξ' →
     inst_typing [] ⟦ Ξ ⟧e ⟦ Γ ⟧* ⟦ ξ ⟧× ⟦ Ξ' ⟧e.
   Proof.
-    intros (he & ih & e).
-    split. 2: split.
-    - eauto using inst_equations_inline_ih, inst_equations_prop, conv_inline.
-    - intros x A hx.
-      rewrite ictx_get_map in hx.
-      destruct (ictx_get _ _) as [[]|] eqn: hx'. 2,3: discriminate.
-      cbn in hx. inversion hx. subst. clear hx.
-      specialize (ih _ _ hx') as [hc ih].
-      split.
+    intro wf.
+    induction 1; cbn; depelim wf; try constructor; eauto.
+    - rewrite map_app; constructor; auto.
+      + apply scoped_inline. cbn.
+        now rewrite length_map.
+      + admit.
+      + apply scoped_inline. cbn.
+        now rewrite length_map.
+      + admit.
+      + cbn. rewrite !length_map.
+        rewrite <- !inline_ren_instance.
+        rewrite <- !inline_inst.
+        now apply conv_inline.
+    - rewrite map_app; constructor; auto.
+      + admit.
       + apply scoped_inline. assumption.
-      + rewrite inline_iget, inline_inst in ih.
-        assumption.
-    - rewrite 2!length_map. assumption.
-  Qed.
+      + rewrite <- inline_inst. assumption.
+  Admitted.
 
   Lemma typing_inline Ξ Γ t A :
     gwf Σ →
@@ -343,8 +373,9 @@ Section Inline.
     - cbn in *. eapply meta_conv.
       + tttype.
       + rewrite inline_subst. apply ext_term. intros []. all: reflexivity.
-    - cbn. rewrite inline_inst. eapply typing_inst_closed.
-      + eapply inst_typing_inline. eassumption.
+    - apply valid_def in H as Hc; auto. destruct Hc as (wf & Hc).
+      cbn. rewrite inline_inst. eapply typing_inst_closed.
+      + eapply inst_typing_inline; eauto.
       + eapply h_type. all: eassumption.
     - cbn. econstructor.
       + apply ictx_get_assm_inline. assumption.

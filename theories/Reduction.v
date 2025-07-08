@@ -30,8 +30,9 @@ Lemma lvl_get_length A (l : list A) x a :
 Proof.
   intros h.
   unfold lvl_get in h.
-  destruct (_ <=? _) eqn: e. 1: discriminate.
-  rewrite Nat.leb_gt in e. assumption.
+  rewrite <- length_rev.
+  apply nth_error_Some.
+  rewrite h. intro. easy.
 Qed.
 
 (* TODO MOVE *)
@@ -67,53 +68,6 @@ Proof.
   rewrite nth_error_app1. 2: lia.
   reflexivity.
 Qed.
-
-Lemma inst_iget_change Σ Ξ Γ ξ Ξ' :
-  iwf Σ Ξ' →
-  inst_iget_alt Σ Ξ Γ ξ Ξ' ↔ inst_iget Σ Ξ Γ ξ Ξ'.
-Proof.
-  intros hΞ'.
-  split.
-  - intros h. intros x A e.
-    induction h as [| Ξ' ξ rl h ih | Ξ' ξ B u h ih hB hu ] in hΞ', x, A, e |- *.
-    + cbn in e. discriminate.
-    + eapply ictx_get_case in e. destruct e as [[? [=]] | e].
-      inversion hΞ'. subst.
-      eapply ih in e as hh. 2: assumption.
-      destruct hh as [? hx].
-      split. 1: assumption.
-      unfold iget in *. eapply lvl_get_length in e as hxl.
-      eapply inst_iget_alt_length in h as hl.
-      rewrite nth_error_app1. 2: lia.
-      eapply meta_conv. 1: eauto.
-      eapply valid_assm in e as hA. 2: eassumption.
-      destruct hA as [i hA].
-      eapply typing_iscope in hA.
-      eapply inst_ext_iscope. 2: eassumption.
-      apply eq_inst_on_cons. assumption.
-    + eapply inst_iget_alt_length in h as hl.
-      inversion hΞ'. subst.
-      eapply ictx_get_case in e. destruct e as [[-> [= ->]] | e].
-      * split. 1: assumption.
-        unfold iget. rewrite nth_error_app2. 2: lia.
-        replace (length Ξ' - _) with 0 by lia. cbn.
-        eapply meta_conv. 1: eauto.
-        eapply typing_iscope in H2.
-        eapply inst_ext_iscope. 2: eassumption.
-        apply eq_inst_on_cons. assumption.
-      * eapply ih in e as hh. 2: assumption.
-        destruct hh as [? hx].
-        split. 1: assumption.
-        unfold iget in *. eapply lvl_get_length in e as hxl.
-        rewrite nth_error_app1. 2: lia.
-        eapply meta_conv. 1: eauto.
-        eapply valid_assm in e as hA. 2: eassumption.
-        destruct hA as [? hA].
-        eapply typing_iscope in hA.
-        eapply inst_ext_iscope. 2: eassumption.
-        apply eq_inst_on_cons. assumption.
-  - admit.
-Abort.
 
 Section Red.
 
@@ -402,27 +356,11 @@ Lemma inst_typing_Forall_typed Σ Ξ Γ ξ Ξ' :
   inst_typing Σ Ξ Γ ξ Ξ' →
   Forall (onSome (λ t, ∃ A, Σ ;; Ξ | Γ ⊢ t : A)) ξ.
 Proof.
-  intros (heq & h & e).
-  rewrite Forall_forall. intros o ho.
-  apply In_nth_error in ho as [x hx].
-  destruct o as [t |]. 2: constructor.
+  induction 1; try constructor.
+  all: apply Forall_app; split; auto.
+  all: repeat constructor.
   cbn.
-  unfold inst_iget in h.
-  specialize (h x).
-  destruct (ictx_get _ _) as [[]|] eqn: eg.
-  3:{
-    unfold ictx_get in eg. destruct (_ <=? _) eqn: e1.
-    - rewrite Nat.leb_le in e1. rewrite <- e in e1.
-      rewrite <- nth_error_None in e1. congruence.
-    - rewrite nth_error_None in eg.
-      rewrite Nat.leb_gt in e1. lia.
-  }
-  2:{
-    specialize (heq _ _ eg). cbn in heq. intuition congruence.
-  }
-  specialize h with (1 := eq_refl).
-  unfold iget in h. rewrite hx in h.
-  eexists. intuition eauto.
+  eexists; eassumption.
 Qed.
 
 (* Definition factor_rules (Σ : gctx) Ξ :=
@@ -469,7 +407,7 @@ Proof.
     eapply Forall_impl. 1:{ intros ??. rewrite <- OnSome_onSome. eauto. }
     eapply inst_typing_prop_ih. all: eassumption.
   - eexists _,_,_. split. 1: eassumption.
-    unfold inst_typing in *. intuition eauto.
+    eapply inst_typing_equations; eassumption.
 Qed.
 
 Lemma red1_conv_inst_ih Σ Ξ ξ ξ' :
@@ -888,76 +826,68 @@ Section Injectivity.
   Context (hpc : preserves_const_eqs Σ Ξ).
   Context (hpt : type_preserving Σ Ξ).
 
-  Lemma inst_iget_red_ih Ξ' Γ ξ ξ' :
+  Lemma inst_typing_red_ih_gen Ξ' Γ ξ ξ' :
     wf Σ Ξ Γ →
-    inst_iget Σ Ξ Γ ξ Ξ' →
+    iwf Σ Ξ' ->
+    inst_typing Σ Ξ Γ ξ Ξ' →
     Forall (onSome (const_eqs Σ Ξ)) ξ →
-    OnOne2 (some_rel (red1 Σ Ξ)) ξ ξ' →
-    OnOne2 (some_rel (λ u v, ∀ Γ A,
+    Forall2 (option_rel (conversion Σ Ξ)) ξ ξ' →
+    Forall2 (option_rel (λ u v, ∀ Γ A,
       wf Σ Ξ Γ →
       Σ ;; Ξ | Γ ⊢ u : A →
       Σ ;; Ξ | Γ ⊢ v : A
     )) ξ ξ' →
-    inst_iget Σ Ξ Γ ξ' Ξ'.
+    inst_typing Σ Ξ Γ ξ' Ξ'.
   Proof.
-    intros hΓ h hξ hr ih.
-    intros x A hx. specialize (h _ _ hx) as [? h].
-    split. 1: assumption.
+    intros hΓ hΞ' h.
+    induction h in ξ', hΞ' |- *; intros hξ hr hξ'.
+    - depelim hξ'. constructor.
+    - depelim hΞ'.
+      apply Forall_app in hξ as [hξ _].
+      apply Forall2_app_inv_l in hξ' as (ξ'1 & ξ'2 & hξ' & hξ'' & e). subst ξ'.
+      depelim hξ''. depelim hξ''. depelim H7.
+      apply Forall2_app_inv_l in hr as (ξ''1 & ξ''2 & hr & hξ'' & e).
+      depelim hξ''. depelim hξ''. depelim H7.
+      apply app_inj_tail in e as [e [= ]]. subst ξ''1.
+      constructor; auto.
 
-    (* New attempt *)
-
-    eapply OnOne2_split in ih.
-    destruct ih as (y & o1 & o2 & e1 & e2 & ho & he).
-    destruct ho as [u v ih].
-    destruct (Nat.eqb_spec x y).
-    - subst y. unfold iget in *.
-      rewrite e1 in h. rewrite e2.
-      eapply meta_conv. 1: eauto.
-      (* eapply valid_assm in hx as hA. 2: admit.
-      destruct hA as (i & hA). *)
-      (* We want something stronger, we want a strict sub Ξ' *)
-      (* eapply inst_ext_iscope. *)
-      admit.
-    - unfold iget in *. rewrite <- he. 2: auto.
-      (* If x is after y, then y could appear in A so this approach is doomed?
-      *)
-      admit.
+      rename ξ'1 into ξ'.
+      assert (hc' :
+        Forall2 (option_rel (conversion Σ Ξ))
+          (liftn (length (cr_env rl)) ξ)
+          (liftn (length (cr_env rl)) ξ')
+      ).
+      { apply Forall2_map_l, Forall2_map_r.
+        eapply Forall2_impl. 2: apply hr.
+        intros ?? ho. apply option_rel_map_l, option_rel_map_r.
+        eapply option_rel_impl. 2: eassumption.
+        eauto using conv_ren.
+      }
+      eapply conv_trans. 2: eapply conv_trans. 2: eassumption.
+      + apply conv_sym. eapply conv_insts. assumption.
+      + eapply conv_insts. assumption.
 
 
-    (* Old approach *)
+    - depelim hΞ'.
+      apply Forall_app in hξ as [hξ _].
+      apply Forall2_app_inv_l in hξ' as (ξ'1 & ξ'2 & hξ' & hξ'' & e). subst ξ'.
+      depelim hξ''. depelim hξ''. depelim H3.
+      apply Forall2_app_inv_l in hr as (ξ''1 & ξ''2 & hr & hξ'' & e).
+      depelim hξ''. depelim hξ''. depelim H3.
+      apply app_inj_tail in e as [e [= e']]. subst ξ''1 y1.
+      constructor; auto.
+      specialize (IHh _ hΞ' hξ hr hξ').
 
-    (* unfold iget in *.
-    destruct (nth_error ξ x) as [[]|] eqn:e.
-    2,3: admit.
-    eapply OnOne2_some_rel_nth_error in e as hh. 2: eassumption.
-    destruct hh as [e' | h'].
-    - rewrite e'. eapply validity in h as hA. 2-4: eassumption.
-      destruct hA.
-      econstructor.
-      + eassumption.
-      + apply conv_insts.
-        (* Copied from above so could be a lemma *)
-        eapply OnOne2_and_Forall_l in hξ. 2: exact hr.
-        apply OnOne2_refl_Forall2. 1: exact _.
-        eapply OnOne2_impl. 2: eassumption.
-        intros o o' [h1 h2]. destruct h2 as [? ? h2].
-        cbn in h1. constructor.
-        eauto using red1_conv.
-      + eapply meta_conv.
-        * (* We need to exploit iwf to see inst ξ is the same as inst ξ'
-            in this case, because it operates on a strict prefix that wasn't
-            changed.
-            I need something like GScope but for Ξ.
-          *)
-          (* eapply typing_inst_closed. 2: admit. *)
-          (* That would be a loop! *)
-          admit.
-        * admit.
-    - admit. *)
-  Admitted.
+      apply H4; auto.
+      eapply type_conv; eauto.
+      1: now eapply conv_insts.
+      eapply typing_inst_closed with (A := Sort _); eauto.
+  Qed.
+
 
   Lemma inst_typing_red_ih Ξ' Γ ξ ξ' :
     wf Σ Ξ Γ →
+    iwf Σ Ξ' ->
     inst_typing Σ Ξ Γ ξ Ξ' →
     Forall (onSome (const_eqs Σ Ξ)) ξ →
     OnOne2 (some_rel (red1 Σ Ξ)) ξ ξ' →
@@ -968,11 +898,16 @@ Section Injectivity.
     )) ξ ξ' →
     inst_typing Σ Ξ Γ ξ' Ξ'.
   Proof.
-    intros hΓ (h1 & h2 & h3) hξ hr ih.
-    split. 2: split.
-    - eauto using inst_equations_red1.
-    - eauto using inst_iget_red_ih.
-    - apply OnOne2_length in hr. congruence.
+    intros.
+    eapply inst_typing_red_ih_gen; eauto.
+    - eapply OnOne2_and_Forall_l in H3; eauto.
+      eapply OnOne2_refl_Forall2, OnOne2_impl; eauto.
+      { intros []; reflexivity. }
+      intros to to' (h & h'). destruct h'. constructor.
+      apply red1_conv; auto.
+    - eapply OnOne2_refl_Forall2, OnOne2_impl; eauto.
+      { intros []; constructor. auto. }
+      intros to to' h. destruct h. constructor. auto.
   Qed.
 
   Lemma subject_reduction Γ u v A :
@@ -1046,6 +981,8 @@ Section Injectivity.
         intuition eauto using red1_conv, typing_const_eqs.
       + cbn. ttconv.
     - ttinv hu h'. destruct_exists h'.
+      destruct h' as (hin & h').
+      apply valid_def in hin as hΞ'; auto. destruct hΞ' as (hΞ' & _).
       eapply validity in hu as hA. 2-4: eassumption.
       destruct hA.
       econstructor. 1: econstructor. all: intuition eauto.

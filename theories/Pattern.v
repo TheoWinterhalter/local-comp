@@ -62,10 +62,9 @@ Notation pctx_get Ξ x := (lvl_get (A := pdecl) Ξ x).
 Lemma lvl_get_map [A B] (f : A → B) l x :
   lvl_get (map f l) x = option_map f (lvl_get l x).
 Proof.
-  unfold lvl_get. rewrite !length_map.
-  destruct (_ <=? _) eqn: e.
-  - reflexivity.
-  - apply nth_error_map.
+  unfold lvl_get.
+  rewrite <- map_rev, nth_error_map.
+  reflexivity.
 Qed.
 
 Definition pdecl_idecl (d : pdecl) : idecl :=
@@ -851,7 +850,7 @@ Section Red.
   Proof.
     intros e.
     unfold lvl_get in e.
-    destruct (_ <=? _). 1: discriminate.
+    apply In_rev.
     eapply nth_error_In. eassumption.
   Qed.
 

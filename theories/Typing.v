@@ -34,6 +34,30 @@ Notation scoped_instance k ξ :=
 Notation closed_instance ξ :=
   (scoped_instance 0 ξ).
 
+(** ** Instance scoping (see IScope) *)
+
+Section iscope.
+
+  Context (Ξ : ictx).
+
+  Inductive iscope : term → Prop :=
+  | iscope_var x : iscope (var x)
+  | iscope_sort i : iscope (Sort i)
+  | iscope_pi A B : iscope A → iscope B → iscope (Pi A B)
+  | iscope_lam A t : iscope A → iscope t → iscope (lam A t)
+  | iscope_app u v : iscope u → iscope v → iscope (app u v)
+  | iscope_const c ξ :
+      Forall (OnSome (iscope)) ξ →
+      iscope (const c ξ)
+  | iscope_assm x A :
+      ictx_get Ξ x = Some (Assm A) →
+      iscope (assm x).
+Derive Signature for iscope.
+Derive NoConfusion for term.
+End iscope.
+
+Notation iscope_instance Ξ ξ := (Forall (OnSome (iscope Ξ)) ξ).
+
 (** ** Global scoping (see GScope) *)
 
 Inductive gscope (Σ : gctx) : term → Prop :=
@@ -65,6 +89,41 @@ Reserved Notation "u ≡ v"
   (at level 80).
 
 Context (Σ : gctx) (Ξ : ictx).
+
+Section InstTyping.
+
+  Context (conversion : term → term → Prop).
+
+  Notation "u ≡ v" := (conversion u v) (at level 80).
+
+
+  Context (typing : term → term → Prop).
+
+  Notation "Γ ⊢ u : A" := (typing u A) (only parsing).
+  Local Set Elimination Schemes.
+  Inductive inst_typing_ : instance → ictx → Prop :=
+  | inst_typing_nil : inst_typing_ [] []
+  | inst_typing_comp Ξ' ξ rl :
+      inst_typing_ ξ Ξ' →
+      let m := length rl.(cr_env) in
+      (* let Θ := ctx_inst ξ rl.(cr_env) in *)
+      let lhs := inst (liftn m ξ) rl.(cr_pat) in
+      let rhs := inst (liftn m ξ) rl.(cr_rep) in
+      scoped m rl.(cr_pat) = true →
+      iscope Ξ' rl.(cr_pat) →
+      scoped m rl.(cr_rep) = true →
+      iscope Ξ' rl.(cr_rep) →
+      (* Γ ,,, Θ ⊢ *) lhs ≡ rhs →
+      inst_typing_ (ξ ++ [None]) (Comp rl :: Ξ')
+  | inst_typing_assm Ξ' ξ A u :
+      inst_typing_ ξ Ξ' →
+      iscope Ξ' A →
+      closed A = true →
+      Γ ⊢ u : inst ξ A →
+      inst_typing_ (ξ ++ [Some u]) (Assm A :: Ξ').
+  Derive Signature for inst_typing_.
+
+End InstTyping.
 
 (** Checking that an instance verifies the necessary equations *)
 Section Equations.
@@ -172,9 +231,6 @@ Section Inst.
       closed A = true ∧
       Γ ⊢ iget ξ n : inst ξ A.
 
-  Definition inst_typing_ (Γ : ctx) (ξ : instance) (Ξ' : ictx) :=
-    inst_equations ξ Ξ' ∧ inst_iget_ Γ ξ Ξ' ∧ length ξ = length Ξ'.
-
 End Inst.
 
 Inductive typing (Γ : ctx) : term → term → Prop :=
@@ -212,7 +268,7 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
 | type_const :
     ∀ c ξ Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
-      inst_typing_ typing Γ ξ Ξ' →
+      inst_typing_ conversion (typing Γ) ξ Ξ' →
       closed A = true →
       Γ ⊢ const c ξ : inst ξ A
 
@@ -254,7 +310,6 @@ Notation "Σ ;; Ξ | Γ ⊢ t : A" :=
 (** ** Equation typing *)
 
 Definition equation_typing Σ Ξ ε :=
-  let k := length ε.(eq_env) in
   wf Σ Ξ ε.(eq_env) ∧
   (∃ i, Σ ;; Ξ | ε.(eq_env) ⊢ ε.(eq_typ) : Sort i) ∧
   Σ ;; Ξ | ε.(eq_env) ⊢ ε.(eq_lhs) : ε.(eq_typ) ∧
@@ -273,8 +328,10 @@ Inductive iwf (Σ : gctx) : ictx → Prop :=
 | iwf_comp rl Ξ :
     iwf Σ Ξ →
     gscope_crule Σ rl →
+    iscope Ξ rl.(cr_pat) →
     equation_typing Σ Ξ (crule_eq rl) →
     iwf Σ (Comp rl :: Ξ).
+Derive Signature for iwf.
 
 (** ** Global environment typing *)
 
@@ -346,4 +403,4 @@ Qed.
 
 Notation inst_equations Σ Ξ := (inst_equations_ (conversion Σ Ξ)).
 Notation inst_iget Σ Ξ := (inst_iget_ (typing Σ Ξ)).
-Notation inst_typing Σ Ξ := (inst_typing_ Σ Ξ (typing Σ Ξ)).
+Notation inst_typing Σ Ξ Γ := (inst_typing_ (conversion Σ Ξ) (typing Σ Ξ Γ)).

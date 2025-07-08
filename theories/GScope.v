@@ -18,9 +18,8 @@ Import CombineNotations.
 
 Set Default Goal Selector "!".
 
-Lemma inst_typing_gscope_ih Σ Ξ Γ ξ Ξ' :
-  inst_typing Σ Ξ Γ ξ Ξ' →
-  inst_typing_ Σ Ξ (λ _ t _, gscope Σ t) Γ ξ Ξ' →
+Lemma inst_typing_gscope_ih Σ conv ξ Ξ' :
+  inst_typing_ conv (λ t _, gscope Σ t) ξ Ξ' →
   gscope_instance Σ ξ.
 Proof.
   eauto using inst_typing_prop_ih.
@@ -42,16 +41,9 @@ Lemma inst_typing_gscope Σ Ξ Γ ξ Ξ' :
   gscope_instance Σ ξ.
 Proof.
   intros h.
-  eapply inst_typing_gscope_ih. 1: eassumption.
-  destruct h as (he & ht & e).
-  split. 2: split.
-  - assumption.
-  - intros x A hx. specialize (ht _ _ hx) as [].
-    split. 1: assumption.
-    unfold iget in *.
-    destruct (nth_error ξ _) as [[] |] eqn:e1. 2,3: constructor.
-    eapply typing_gscope. eassumption.
-  - assumption.
+  eapply inst_typing_gscope_ih.
+  eapply inst_typing_impl; eauto.
+  apply typing_gscope.
 Qed.
 
 Lemma wf_gscope Σ Ξ Γ :

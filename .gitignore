@@ -55,3 +55,6 @@ theories/autosubst/core.v
 theories/autosubst/unscoped.v
 
 doc/coqdoc/*
+
+_opam
+_opam/**

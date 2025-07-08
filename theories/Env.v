@@ -69,6 +69,8 @@ Inductive idecl :=
 | Assm (A : term)
 | Comp (rl : crule).
 
+Derive NoConfusion for idecl.
+
 (** Interface *)
 Definition ictx := list idecl.
 
@@ -92,8 +94,7 @@ Definition instance := list (option term).
 *)
 
 Definition lvl_get [A] (l : list A) (x : aref) :=
-  if length l <=? x then None
-  else nth_error l (length l - (S x)).
+  nth_error (rev l) x.
 
 Notation ictx_get Ξ x := (lvl_get (A := idecl) Ξ x).
 
@@ -101,23 +102,18 @@ Lemma lvl_get_weak [A] d l n a :
   lvl_get (A := A) l n = Some a →
   lvl_get (d :: l) n = Some a.
 Proof.
-  unfold lvl_get. cbn - ["<=?"].
-  destruct (_ <=? _) eqn: e. 1: congruence.
-  rewrite Nat.leb_gt in e.
-  intro h.
-  destruct (_ <=? _) eqn: e'. 1:{ rewrite Nat.leb_le in e'. lia. }
-  replace (length l - n) with (S (length l - (S n))) by lia.
-  cbn. assumption.
+  unfold lvl_get. cbn.
+  intro.
+  rewrite nth_error_app1; auto.
+  apply nth_error_Some. intros e; rewrite e in H; discriminate.
 Qed.
 
 Lemma lvl_get_last [A] (a : A) l :
   lvl_get (a :: l) (length l) = Some a.
 Proof.
-  unfold lvl_get. cbn - ["<=?"].
-  destruct (_ <=? _) eqn: e.
-  1:{ rewrite Nat.leb_le in e. lia. }
-  replace (length l - length l) with 0 by lia.
-  reflexivity.
+  unfold lvl_get. cbn.
+  rewrite nth_error_app2, length_rev, Nat.sub_diag; auto.
+  rewrite length_rev. auto.
 Qed.
 
 (** Global declaration *)

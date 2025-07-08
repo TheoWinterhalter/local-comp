@@ -15,27 +15,6 @@ Import CombineNotations.
 
 Set Default Goal Selector "!".
 
-Section iscope.
-
-  Context (Ξ : ictx).
-
-  Inductive iscope : term → Prop :=
-  | iscope_var x : iscope (var x)
-  | iscope_sort i : iscope (Sort i)
-  | iscope_pi A B : iscope A → iscope B → iscope (Pi A B)
-  | iscope_lam A t : iscope A → iscope t → iscope (lam A t)
-  | iscope_app u v : iscope u → iscope v → iscope (app u v)
-  | iscope_const c ξ :
-      Forall (OnSome (iscope)) ξ →
-      iscope (const c ξ)
-  | iscope_assm x A :
-      ictx_get Ξ x = Some (Assm A) →
-      iscope (assm x).
-
-End iscope.
-
-Notation iscope_instance Ξ ξ := (Forall (OnSome (iscope Ξ)) ξ).
-
 (** Better induction principle for [iscope] *)
 
 Lemma iscope_ind_alt :
@@ -73,9 +52,8 @@ Proof.
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
 
-Lemma inst_typing_iscope_ih Σ Ξ Γ ξ Ξ' :
-  inst_typing Σ Ξ Γ ξ Ξ' →
-  inst_typing_ Σ Ξ (λ _ t _, iscope Ξ t) Γ ξ Ξ' →
+Lemma inst_typing_iscope_ih conv Ξ ξ Ξ' :
+  inst_typing_ conv (λ t _, iscope Ξ t) ξ Ξ' →
   iscope_instance Ξ ξ.
 Proof.
   eauto using inst_typing_prop_ih.

@@ -6,6 +6,8 @@ From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
 From LocalComp Require Import Util BasicAST Env Inst Typing.
 From Stdlib Require Import Setoid Morphisms Relation_Definitions.
 
+Require Import Equations.Prop.DepElim.
+
 Import ListNotations.
 Import CombineNotations.
 
@@ -187,7 +189,7 @@ Lemma typing_ind :
     (∀ Γ c ξ Ξ' A t,
       Σ c = Some (Def Ξ' A t) →
       inst_typing Σ Ξ Γ ξ Ξ' →
-      inst_typing_ Σ Ξ P Γ ξ Ξ' →
+      inst_typing_ (conversion Σ Ξ) (P Γ) ξ Ξ' →
       closed A = true →
       P Γ (const c ξ) (inst ξ A)
     ) →
@@ -211,42 +213,172 @@ Proof.
   intros Γ t A h. destruct h as [| | | | | ????? hc h hA | |].
   6:{
     eapply hconst. 1,2,4: eassumption.
-    destruct h as [h1 [h2 h3]].
-    split. 1: assumption.
-    split. 2: assumption.
-    intros n B hn. specialize (h2 _ _ hn).
-    intuition eauto.
+    clear hc.
+    induction h in |- *; constructor; eauto.
   }
   all: match goal with h : _ |- _ => solve [ eapply h ; eauto ] end.
 Qed.
 
+
+Lemma inst_typing_nth_error_gen {conv typ ξ Ξ} n :
+  inst_typing_ conv typ ξ Ξ →
+  match nth_error (rev ξ) n, nth_error Ξ n with
+  | None, None => True
+  | Some (Some t), Some (Assm A) => closed A = true ∧ iscope (skipn (S n) Ξ) A ∧ typ t (inst (firstn (length ξ - S n) ξ) A)
+  | Some None, Some (Comp rl) =>
+    let m := length rl.(cr_env) in
+    (* let Θ := ctx_inst ξ rl.(cr_env) in *)
+    let lhs := inst (liftn m (firstn (length ξ - S n) ξ)) rl.(cr_pat) in
+    let rhs := inst (liftn m (firstn (length ξ - S n) ξ)) rl.(cr_rep) in
+    scoped m rl.(cr_pat) = true ∧
+    iscope (skipn (S n) Ξ) rl.(cr_pat) ∧
+    scoped m rl.(cr_rep) = true ∧
+    iscope (skipn (S n) Ξ) rl.(cr_rep) ∧
+    conv lhs rhs
+  | _, _ => False
+  end.
+Proof.
+  induction 1 in n.
+  1: now rewrite !nth_error_nil.
+  all: rewrite rev_app_distr; cbn.
+  all: destruct n; cbn.
+  2,4: rewrite length_app, Nat.add_comm, firstn_app; cbn;
+    replace (length ξ - S n - length ξ) with 0 by lia; cbn;
+    rewrite app_nil_r; eapply IHinst_typing_; eassumption.
+  all: rewrite length_app; cbn; rewrite Nat.add_sub, firstn_app, firstn_all, Nat.sub_diag; cbn; rewrite app_nil_r.
+  - repeat split; try assumption.
+  - repeat split; assumption.
+Qed.
+
+Lemma inst_typing_length {conv typ ξ Ξ} :
+  inst_typing_ conv typ ξ Ξ →
+  length ξ = length Ξ.
+Proof. induction 1; eauto. all: rewrite length_app, Nat.add_comm. all: now cbn; f_equal. Qed.
+
+
+Lemma inst_typing_nth_error_gen' {conv typ ξ Ξ} n :
+  inst_typing_ conv typ ξ Ξ →
+  match nth_error ξ n, ictx_get Ξ n with
+  | None, None => True
+  | Some (Some t), Some (Assm A) => closed A = true ∧ iscope (skipn (length Ξ - n) Ξ) A ∧ typ t (inst (firstn n ξ) A)
+  | Some None, Some (Comp rl) =>
+    let m := length rl.(cr_env) in
+    (* let Θ := ctx_inst ξ rl.(cr_env) in *)
+    let lhs := inst (liftn m (firstn n ξ)) rl.(cr_pat) in
+    let rhs := inst (liftn m (firstn n ξ)) rl.(cr_rep) in
+    scoped m rl.(cr_pat) = true ∧
+    iscope (skipn (length Ξ - n) Ξ) rl.(cr_pat) ∧
+    scoped m rl.(cr_rep) = true ∧
+    iscope (skipn (length Ξ - n) Ξ) rl.(cr_rep) ∧
+    conv lhs rhs
+  | _, _ => False
+  end.
+Proof.
+  intros H. unfold ictx_get.
+  apply inst_typing_length in H as hlen.
+  destruct (Nat.ltb_spec n (length ξ)).
+  - replace (firstn n ξ) with (firstn (length ξ - S (length ξ - S n)) ξ) by (f_equal; lia).
+    replace (skipn (Datatypes.length Ξ - n) Ξ) with (skipn (S (Datatypes.length ξ - S n)) Ξ) by (f_equal; lia).
+    replace (nth_error ξ n) with (nth_error (rev ξ) (length ξ - S n)).
+    1: replace (nth_error (rev Ξ) n) with (nth_error Ξ (length ξ - S n)).
+    1: now apply inst_typing_nth_error_gen with (n := length ξ - S n).
+    + rewrite hlen in H0. rewrite hlen.
+      rewrite nth_error_rev.
+      apply Nat.ltb_lt in H0 as ->. auto.
+    + rewrite nth_error_rev.
+      destruct (Nat.ltb_spec (length ξ - S n) (length ξ)).
+      * f_equal. lia.
+      * lia.
+  - apply nth_error_None in H0 as hnone. rewrite hnone.
+    rewrite hlen, <- length_rev in H0.
+    apply nth_error_None in H0 as hnone'. rewrite hnone'. auto.
+Qed.
+
+Lemma inst_typing_nth_error_assm conv typ ξ Ξ n t :
+  inst_typing_ conv typ ξ Ξ →
+  nth_error ξ n = Some (Some t) →
+  ∃ A, ictx_get Ξ n = Some (Assm A) ∧
+    closed A = true ∧
+    iscope (skipn (length Ξ - n) Ξ) A ∧
+    typ t (inst (firstn n ξ) A).
+Proof.
+  intro H.
+  pose proof (inst_typing_nth_error_gen' n H).
+  intros e; rewrite e in H0.
+  destruct (ictx_get Ξ n) as [[]|]; try easy.
+  exists A; split; auto.
+Qed.
+
+Lemma inst_typing_ictx_get_assm conv typ ξ Ξ n A :
+  inst_typing_ conv typ ξ Ξ →
+  ictx_get Ξ n = Some (Assm A) →
+  closed A = true ∧
+  iscope (skipn (length Ξ - n) Ξ) A ∧
+  ∃ t, nth_error ξ n = Some (Some t) ∧
+    typ t (inst (firstn n ξ) A).
+Proof.
+  intro H.
+  pose proof (inst_typing_nth_error_gen' n H).
+  intros e; rewrite e in H0.
+  destruct (nth_error ξ n) as [[]|]; try easy.
+  split; try apply H0.
+  split; try apply H0.
+  exists t; split; auto.
+  apply H0.
+Qed.
+
+Lemma inst_typing_nth_error_comp conv typ ξ Ξ n :
+  inst_typing_ conv typ ξ Ξ →
+  nth_error ξ n = Some None →
+  ∃ rl, ictx_get Ξ n = Some (Comp rl) ∧
+    let m := length rl.(cr_env) in
+    (* let Θ := ctx_inst ξ rl.(cr_env) in *)
+    let lhs := inst (liftn m (firstn n ξ)) rl.(cr_pat) in
+    let rhs := inst (liftn m (firstn n ξ)) rl.(cr_rep) in
+    scoped m rl.(cr_pat) = true ∧
+    iscope (skipn (Datatypes.length Ξ - n) Ξ) rl.(cr_pat) ∧
+    scoped m rl.(cr_rep) = true ∧
+    iscope (skipn (Datatypes.length Ξ - n) Ξ) rl.(cr_rep) ∧
+    conv lhs rhs.
+Proof.
+  intro H.
+  pose proof (inst_typing_nth_error_gen' n H).
+  intros e; rewrite e in H0.
+  destruct (ictx_get Ξ n) as [[]|]; try easy.
+  exists rl; split; auto.
+Qed.
+
+Lemma inst_typing_ictx_get_comp conv typ ξ Ξ n rl :
+  inst_typing_ conv typ ξ Ξ →
+  ictx_get Ξ n = Some (Comp rl) →
+  nth_error ξ n = Some None ∧
+  let m := length rl.(cr_env) in
+  (* let Θ := ctx_inst ξ rl.(cr_env) in *)
+  let lhs := inst (liftn m (firstn n ξ)) rl.(cr_pat) in
+  let rhs := inst (liftn m (firstn n ξ)) rl.(cr_rep) in
+  scoped m rl.(cr_pat) = true ∧
+  iscope (skipn (Datatypes.length Ξ - n) Ξ) rl.(cr_pat) ∧
+  scoped m rl.(cr_rep) = true ∧
+  iscope (skipn (Datatypes.length Ξ - n) Ξ) rl.(cr_rep) ∧
+  conv lhs rhs.
+Proof.
+  intro H.
+  pose proof (inst_typing_nth_error_gen' n H).
+  intros e; rewrite e in H0.
+  destruct (nth_error ξ n) as [[]|]; try easy.
+Qed.
+
 (** Reasoning principle on [inst_typing] *)
 
-Lemma inst_typing_prop_ih Σ Ξ Γ ξ Ξ' P :
-  inst_typing Σ Ξ Γ ξ Ξ' →
-  inst_typing_ Σ Ξ (λ _ t _, P t) Γ ξ Ξ' →
+Lemma inst_typing_prop_ih conv ξ Ξ' P :
+  inst_typing_ conv (λ t _, P t) ξ Ξ' →
   Forall (OnSome P) ξ.
 Proof.
-  intros h ih.
-  rewrite Forall_forall. intros o ho.
-  eapply In_nth_error in ho as [x hx].
-  destruct o as [u |]. 2: constructor.
-  constructor.
-  destruct ih as [heq [ih e]]. red in ih. specialize (ih x).
-  destruct (ictx_get Ξ' x) as [[] |] eqn:e'.
-  3:{
-    unfold ictx_get in e'. destruct (_ <=? _) eqn: e1.
-    - rewrite Nat.leb_le in e1. rewrite <- e in e1.
-      rewrite <- nth_error_None in e1. congruence.
-    - rewrite nth_error_None in e'.
-      rewrite Nat.leb_gt in e1. lia.
-    }
-    2:{
-      specialize (heq _ _ e'). cbn in heq. intuition congruence.
-    }
-    specialize ih with (1 := eq_refl).
-    unfold iget in ih. rewrite hx in ih.
-    apply ih.
+  induction 1.
+  1: constructor.
+  all: apply Forall_app; split; auto.
+  all: repeat constructor.
+  assumption.
 Qed.
 
 (** Typing implies scoping *)
@@ -268,21 +400,8 @@ Proof.
     eapply In_nth_error in hu as [n hn].
     destruct u. 2: reflexivity.
     cbn.
-    destruct H1 as [heq [ih e]]. red in ih. specialize (ih n).
-    destruct (ictx_get Ξ' n) as [[] |] eqn:e'.
-    3:{
-      unfold ictx_get in e'. destruct (_ <=? _) eqn: e1.
-      - rewrite Nat.leb_le in e1. rewrite <- e in e1.
-        rewrite <- nth_error_None in e1. congruence.
-      - rewrite nth_error_None in e'.
-        rewrite Nat.leb_gt in e1. lia.
-    }
-    2:{
-      specialize (heq _ _ e'). cbn in heq. intuition congruence.
-    }
-    specialize ih with (1 := eq_refl).
-    unfold iget in ih. rewrite hn in ih.
-    cbn. apply ih.
+    eapply inst_typing_nth_error_assm in hn as (A' & _ & _ & _ & hn); eauto.
+    cbn in hn. assumption.
 Qed.
 
 Lemma typing_closed Σ Ξ t A :
@@ -657,24 +776,54 @@ Proof.
   cbn in *. intuition eauto.
 Qed.
 
-Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
+Lemma inst_typing_impl conv conv' typ typ' ξ Ξ :
+  inst_typing_ conv typ ξ Ξ →
+  (∀ u v, conv u v → conv' u v) →
+  (∀ t A, typ t A → typ' t A) →
+  inst_typing_ conv' typ' ξ Ξ.
+Proof.
+  intros h Xconv Xtyp.
+  induction h; constructor; eauto.
+Qed.
+
+Lemma inst_typing_ren0 Σ Ξ Δ Γ ρ ξ Ξ' :
   rtyping Δ ρ Γ →
-  inst_typing Σ Ξ Γ ξ Ξ' →
-  inst_typing_ Σ Ξ (λ Γ t A,
+  inst_typing_ (λ u v, ∀ ρ, Σ ;; Ξ ⊢ ρ ⋅ u ≡ ρ ⋅ v) (λ t A,
     ∀ Δ ρ, rtyping Δ ρ Γ → Σ ;; Ξ | Δ ⊢ ρ ⋅ t : ρ ⋅ A
-  ) Γ ξ Ξ' →
+  ) ξ Ξ' →
   inst_typing Σ Ξ Δ (ren_instance ρ ξ) Ξ'.
 Proof.
-  intros hρ [h1 [h2 h3]] [ih1 [ih2 ih3]].
-  split. 2: split.
-  - eauto using inst_equations_ren_ih, inst_equations_prop, conv_ren.
-  - intros x A hx. specialize (ih2 _ _ hx) as [hc ih2]. cbn in ih2.
-    split. 1: assumption.
-    rewrite iget_ren. eapply meta_conv.
+  intros hρ ih.
+  induction ih as [|??? ihh iihh m lhs rhs hl hhl hr hhr ih |???? ihh iihh hA hhA ih ].
+  - constructor.
+  - rewrite map_app. cbn. constructor; auto.
+    rewrite liftn_ren_instance.
+    fold m in hl, hr, ih |- *.
+    specialize ih with (ρ := uprens m ρ).
+    unfold lhs, rhs in ih.
+    rewrite 2!ren_inst in ih.
+    rewrite 2!scoped_ren in ih. 2,3: eassumption.
+    intuition eauto.
+  - rewrite map_app. cbn. constructor; auto.
+    specialize (ih _ _ hρ).
+    eapply meta_conv.
     + eauto.
     + rewrite !ren_inst. f_equal.
       apply closed_ren. assumption.
-  - rewrite length_map. assumption.
+Qed.
+
+Lemma inst_typing_ren Σ Ξ Δ Γ ρ ξ Ξ' :
+  rtyping Δ ρ Γ →
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  inst_typing_ (conversion Σ Ξ) (λ t A,
+    ∀ Δ ρ, rtyping Δ ρ Γ → Σ ;; Ξ | Δ ⊢ ρ ⋅ t : ρ ⋅ A
+  ) ξ Ξ' →
+  inst_typing Σ Ξ Δ (ren_instance ρ ξ) Ξ'.
+Proof.
+  intros ? H IH.
+  eapply inst_typing_ren0; eauto.
+  eapply inst_typing_impl with (1 := IH); eauto.
+  intros. now apply conv_ren.
 Qed.
 
 Lemma typing_ren :
@@ -1282,23 +1431,42 @@ Proof.
   apply scoped_inst_closed. all: assumption.
 Qed.
 
+Lemma inst_typing_subst0 Σ Ξ Δ Γ σ ξ Ξ' :
+  styping Σ Ξ Δ σ Γ →
+  inst_typing_ (λ u v, ∀ σ, Σ ;; Ξ ⊢ u <[ σ ] ≡ v <[ σ ]) (λ t A,
+    ∀ Δ σ, styping Σ Ξ Δ σ Γ → Σ ;; Ξ | Δ ⊢ t <[ σ ] : A <[ σ ]
+  ) ξ Ξ' →
+  inst_typing Σ Ξ Δ (subst_instance σ ξ) Ξ'.
+Proof.
+  intros hρ ih.
+  induction ih as [|??? ihh iihh m lhs rhs hl hhl hr hhr ih |???? ihh iihh hA hhA ih].
+  - constructor.
+  - rewrite map_app. cbn. constructor; auto.
+    rewrite liftn_subst_instance.
+    fold m in hl, hr, ih |- *.
+    specialize ih with (σ := ups m σ).
+    unfold lhs, rhs in ih.
+    erewrite 2!subst_inst_ups in ih. 2,3: eassumption.
+    intuition eauto.
+  - rewrite map_app. cbn. constructor; auto.
+    specialize (ih _ _ hρ).
+    eapply meta_conv.
+    + eauto.
+    + apply subst_inst_closed. assumption.
+Qed.
+
 Lemma inst_typing_subst Σ Ξ Δ Γ σ ξ Ξ' :
   styping Σ Ξ Δ σ Γ →
   inst_typing Σ Ξ Γ ξ Ξ' →
-  inst_typing_ Σ Ξ (λ Γ t A,
+  inst_typing_ (conversion Σ Ξ) (λ t A,
     ∀ Δ σ, styping Σ Ξ Δ σ Γ → Σ ;; Ξ | Δ ⊢ t <[ σ ] : A <[ σ ]
-  ) Γ ξ Ξ' →
+  ) ξ Ξ' →
   inst_typing Σ Ξ Δ (subst_instance σ ξ) Ξ'.
 Proof.
-  intros hσ [h1 [h2 h3]] [ih1 [ih2 ih3]].
-  split. 2: split.
-  - eauto using inst_equations_subst_ih, inst_equations_prop, conv_subst.
-  - intros x A hx. specialize (ih2 _ _ hx) as [? ih2].
-    split. 1: assumption.
-    rewrite iget_subst. eapply meta_conv.
-    + eauto.
-    + apply subst_inst_closed. assumption.
-  - rewrite length_map. assumption.
+  intros ? H IH.
+  eapply inst_typing_subst0; eauto.
+  eapply inst_typing_impl with (1 := IH); eauto.
+  intros. now apply conv_subst.
 Qed.
 
 Lemma typing_subst Σ Ξ Γ Δ σ t A :
@@ -1328,6 +1496,76 @@ Proof.
 Qed.
 
 (** Instances preserve conversion and typing *)
+
+Lemma iscoped_inst_ext ξ ξ' Ξ n t :
+  iscope Ξ t →
+  (forall n a, ictx_get Ξ n = Some (Assm a) -> nth_error ξ n = nth_error ξ' n) →
+  inst (liftn n ξ) t = inst (liftn n ξ') t.
+Proof.
+  intros h hξ.
+  induction t using term_rect in n, h |- *.
+  all: try solve [ depelim h ; cbn ; eauto ].
+  all: try solve [ depelim h ; cbn ; f_equal; eauto ].
+  - depelim h. cbn. f_equal; eauto.
+    rewrite !lift_liftn. auto.
+  - depelim h. cbn. f_equal; eauto.
+    rewrite !lift_liftn. auto.
+  - depelim h. cbn. f_equal.
+    induction X; inversion H; subst.
+    + reflexivity.
+    + cbn. f_equal; auto. depelim H2; try reflexivity. cbn. f_equal. cbn in p. auto.
+  - cbn. depelim h.
+    specialize (hξ _ _ H).
+    unfold iget. rewrite !nth_error_map.
+    rewrite hξ. reflexivity.
+Qed.
+
+Lemma inst_typing_equations Σ Ξ P' ξ Ξ' :
+  inst_typing_ (conversion Σ Ξ) P' ξ Ξ' →
+  inst_equations_ (conversion Σ Ξ) ξ Ξ'.
+Proof.
+  intros H.
+  assert (Xa : ∀ x (n : aref) (a : term),
+    ictx_get (skipn (Datatypes.length Ξ' - x) Ξ') n = Some (Assm a)
+    → nth_error ξ n = nth_error (firstn x ξ) n).
+  { intros ??? H0.
+    assert (H1 : n < length (rev (skipn (length Ξ' - x) Ξ'))). { apply nth_error_Some. unfold ictx_get in H0. rewrite H0. now intro. }
+    clear H0.
+    rewrite nth_error_firstn.
+    destruct (Nat.ltb_spec n x); auto. rewrite length_rev, length_skipn in H1. lia.
+  }
+  intros x rl hx m lhs rhs.
+  eapply inst_typing_ictx_get_comp in hx as h; eauto.
+  destruct h as (?&?&?&?&?&?).
+  split; auto. split; auto. split; auto.
+  unfold lhs, rhs.
+  erewrite iscoped_inst_ext with (t := cr_pat rl), iscoped_inst_ext with (t := cr_rep rl); eauto.
+Qed.
+
+Lemma inst_typing_iget Σ Ξ Γ ξ Ξ' :
+  inst_typing Σ Ξ Γ ξ Ξ' →
+  inst_iget Σ Ξ Γ ξ Ξ'.
+Proof.
+  intros H n t hx.
+  assert (Xa : ∀ x (n' : aref) (a : term),
+    ictx_get (skipn (Datatypes.length Ξ' - x) Ξ') n' = Some (Assm a)
+    → nth_error (firstn x ξ) n' = nth_error ξ n').
+  { intros ??? H0.
+    assert (H1 : n' < length (rev (skipn (length Ξ' - x) Ξ'))). { apply nth_error_Some. unfold ictx_get in H0. rewrite H0. now intro. }
+    clear H0.
+    rewrite nth_error_firstn.
+    destruct (Nat.ltb_spec n' x); auto. rewrite length_rev, length_skipn in H1. lia.
+  }
+  eapply inst_typing_ictx_get_assm in hx as h; eauto.
+  destruct h as (?&?&?& e & h).
+  split; auto.
+  unfold iget. rewrite e.
+  replace (inst ξ t) with (inst (firstn n ξ) t); auto.
+  rewrite <- (ren_instance_id ξ). rewrite ren_instance_id at 1.
+  rewrite <- (ren_instance_id (firstn n ξ)).
+  eapply iscoped_inst_ext with (n := 0); eauto.
+Qed.
+
 
 Lemma nth_error_ctx_inst ξ Γ x :
   nth_error (ctx_inst ξ Γ) x =
@@ -1470,6 +1708,47 @@ Proof.
   assumption.
 Qed.
 
+Lemma inst_typing_inst0 Σ Ξ Γ ξ Ξ' Δ ξ' Ξ'' :
+  inst_typing Σ Ξ Δ ξ Ξ' →
+  let rξ := liftn (length Γ) ξ in
+  inst_typing_
+    (λ u v, ∀ p, Σ ;; Ξ ⊢ inst (liftn p ξ) u ≡ inst (liftn p ξ) v)
+    (λ t A, Σ ;; Ξ | Δ ,,, ctx_inst ξ Γ ⊢ inst rξ t : inst rξ A)
+    ξ' Ξ'' →
+  inst_typing Σ Ξ (Δ ,,, ctx_inst ξ Γ) (inst_instance rξ ξ') Ξ''.
+Proof.
+  intros hξ rξ ih. unfold rξ in *.
+  induction ih as [|??? ihh iihh m lhs rhs hl hhl hr hhr ih |???? ihh iihh hA hhA ih].
+  - constructor.
+  - rewrite map_app. cbn. constructor; auto.
+    fold m in hl, hr, ih |- *.
+    unfold lhs, rhs in ih.
+    specialize ih with (p := m + length Γ).
+    rewrite !inst_inst in ih.
+    rewrite liftn_inst_instance.
+    rewrite !liftn_liftn.
+    assumption.
+  - rewrite map_app. cbn. constructor; auto.
+    cbn in ih.
+    rewrite inst_inst in ih.
+    assumption.
+Qed.
+
+Lemma inst_typing_inst Σ Ξ Γ ξ Ξ' Δ ξ' Ξ'' :
+  inst_typing Σ Ξ Δ ξ Ξ' →
+  let rξ := liftn (length Γ) ξ in
+  inst_typing_
+    (conversion Σ Ξ')
+    (λ t A, Σ ;; Ξ | Δ ,,, ctx_inst ξ Γ ⊢ inst rξ t : inst rξ A)
+    ξ' Ξ'' →
+  inst_typing Σ Ξ (Δ ,,, ctx_inst ξ Γ) (inst_instance rξ ξ') Ξ''.
+Proof.
+  intros ? H IH.
+  eapply inst_typing_inst0; eauto.
+  eapply inst_typing_impl with (1 := IH); eauto.
+  intros. eapply conv_inst; eauto. eapply inst_typing_equations, H0; eauto.
+Qed.
+
 Lemma typing_inst Σ Ξ Ξ' Γ Δ t A ξ :
   inst_typing Σ Ξ Δ ξ Ξ' →
   Σ ;; Ξ' | Γ ⊢ t : A →
@@ -1506,27 +1785,20 @@ Proof.
       apply ext_term. intros []. all: reflexivity.
   - cbn. eapply meta_conv.
     + econstructor. 1,3: eassumption.
-      destruct H1 as [? [? ?]].
-      split. 2: split.
-      * destruct hξ as (? & ? & ?).
-        eauto using inst_equations_inst_ih, inst_equations_prop, conv_inst.
-      * rename H3 into ih2.
-        intros x B hx. specialize (ih2 _ _ hx) as [? ih2].
-        split. 1: assumption.
-        rewrite <- inst_get. rewrite <- inst_inst.
-        eauto.
-      * rewrite length_map. assumption.
+      eapply inst_typing_inst; eauto.
+      eapply inst_typing_impl; eauto.
     + rewrite inst_inst. reflexivity.
   - cbn. subst rξ. rewrite iget_ren.
     eapply meta_conv.
     + eapply typing_ren.
       1:{ erewrite <- length_ctx_inst. eapply rtyping_add. }
+      eapply inst_typing_iget in hξ.
       eapply hξ. eassumption.
     + rewrite ren_inst. f_equal.
       apply closed_ren. assumption.
   - econstructor. 1,3: eauto.
     eapply conv_inst. 2: eassumption.
-    apply hξ.
+    eapply inst_typing_equations, hξ; eauto.
 Qed.
 
 Corollary typing_inst_closed Σ Ξ Ξ' Γ t A ξ :
@@ -1535,7 +1807,7 @@ Corollary typing_inst_closed Σ Ξ Ξ' Γ t A ξ :
   Σ ;; Ξ | Γ ⊢ inst ξ t : inst ξ A.
 Proof.
   intros hξ h.
-  eapply typing_inst in h. 2: eassumption.
+  eapply typing_inst in h; eauto.
   cbn in h.
   rewrite ren_instance_id_ext in h. 2: auto.
   assumption.
@@ -1638,15 +1910,11 @@ Proof.
 Qed.
 
 Lemma inst_typing_eweak_ Σ Ξ d Γ ξ Ξ' :
-  inst_typing Σ Ξ Γ ξ Ξ' →
-  inst_typing_ Σ Ξ (λ Γ t A, Σ ;; d :: Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
+  inst_typing_ (conversion Σ Ξ) (λ t A, Σ ;; d :: Ξ | Γ ⊢ t : A) ξ Ξ' →
   inst_typing Σ (d :: Ξ) Γ ξ Ξ'.
 Proof.
-  intros [h1 [h2 h3]] [ih1 [ih2 ih3]].
-  split. 2: split.
-  - eapply inst_equations_eweak. all: eassumption.
-  - eapply inst_iget_eweak. all: eassumption.
-  - assumption.
+  induction 1; constructor; eauto.
+  now apply conv_eweak.
 Qed.
 
 Lemma typing_eweak Σ Ξ d Γ t A :
@@ -1668,13 +1936,9 @@ Lemma inst_typing_eweak Σ Ξ d Γ ξ Ξ' :
   inst_typing Σ (d :: Ξ) Γ ξ Ξ'.
 Proof.
   intros h.
-  eapply inst_typing_eweak_. 1: eassumption.
-  destruct h as [h1 [h2 h3]]. split. 2: split.
-  - assumption.
-  - intros x A hx. specialize (h2 _ _ hx) as [? ih].
-    split. 1: assumption.
-    eauto using typing_eweak.
-  - assumption.
+  eapply inst_typing_eweak_.
+  eapply inst_typing_impl; eauto.
+  apply typing_eweak.
 Qed.
 
 Lemma wf_eweak Σ Ξ d Γ :
@@ -1737,16 +2001,12 @@ Proof.
 Qed.
 
 Lemma inst_typing_gweak_ Σ Σ' Ξ Γ ξ Ξ' :
-  inst_typing Σ Ξ Γ ξ Ξ' →
-  inst_typing_ Σ Ξ (λ Γ t A, Σ' ;; Ξ | Γ ⊢ t : A) Γ ξ Ξ' →
+  inst_typing_ (conversion Σ Ξ) (λ t A, Σ' ;; Ξ | Γ ⊢ t : A) ξ Ξ' →
   Σ ⊑ Σ' →
   inst_typing Σ' Ξ Γ ξ Ξ'.
 Proof.
-  intros [h1 [h2 h3]] [ih1 [ih2 ih3]] hle.
-  split. 2: split.
-  - eapply inst_equations_gweak. all: eassumption.
-  - eapply inst_iget_gweak. 3: eassumption. all: eassumption.
-  - assumption.
+  induction 1; constructor; eauto.
+  eapply conv_gweak; eauto.
 Qed.
 
 Lemma typing_gweak Σ Σ' Ξ Γ t A :
@@ -1768,13 +2028,9 @@ Lemma inst_typing_gweak Σ Σ' Ξ Γ ξ Ξ' :
   inst_typing Σ' Ξ Γ ξ Ξ'.
 Proof.
   intros h hle.
-  eapply inst_typing_gweak_. 1,3: eassumption.
-  destruct h as [h1 [h2 h3]]. split. 2: split.
-  - assumption.
-  - intros x A hx. specialize (h2 _ _ hx) as [? h2].
-    split. 1: assumption.
-    eauto using typing_gweak.
-  - assumption.
+  eapply inst_typing_gweak_; eauto.
+  eapply inst_typing_impl; eauto.
+  intros; eapply typing_gweak; eauto.
 Qed.
 
 Lemma gscope_gweak Σ Σ' t :
@@ -1831,6 +2087,7 @@ Proof.
   - econstructor.
     + assumption.
     + eapply gscope_crule_gweak. all: eassumption.
+    + assumption.
     + eapply equation_typing_gweak. all: eassumption.
 Qed.
 
@@ -1894,17 +2151,18 @@ Lemma ictx_get_case d Ξ M i :
   (M = length Ξ ∧ d = i) ∨ (ictx_get Ξ M = Some i).
 Proof.
   intro h.
-  unfold ictx_get in h.
-  destruct (_ <=? _) eqn: e. 1: discriminate.
-  rewrite Nat.leb_gt in e. cbn in e.
+  unfold ictx_get in h. rewrite nth_error_rev in h.
+  destruct (_ <? _) eqn: e. 2: discriminate.
+  rewrite Nat.ltb_lt in e. cbn in e.
   cbn in h.
   destruct (length Ξ - M) eqn: e'.
   - left. cbn in h. inversion h.
     intuition lia.
   - right. cbn in h.
     unfold ictx_get.
-    destruct (_ <=? _) eqn: e2.
-    1:{ rewrite Nat.leb_le in e2. lia. }
+    rewrite nth_error_rev.
+    destruct (_ <? _) eqn: e2.
+    2:{ rewrite Nat.ltb_ge in e2. lia. }
     rewrite <- h. f_equal. lia.
 Qed.
 
@@ -2088,7 +2346,7 @@ Lemma typing_ind_wf :
       wf Σ Ξ Γ →
       Σ c = Some (Def Ξ' A t) →
       inst_typing Σ Ξ Γ ξ Ξ' →
-      inst_typing_ Σ Ξ (λ Γ t A, wf Σ Ξ Γ → P Γ t A) Γ ξ Ξ' →
+      inst_typing_ (conversion Σ Ξ) (λ t A, wf Σ Ξ Γ → P Γ t A) ξ Ξ' →
       closed A = true →
       P Γ (const c ξ) (inst ξ A)
     ) →
@@ -2186,15 +2444,11 @@ Qed.
 
 Lemma inst_typing_ctx_conv_ih Σ Ξ Ξ' (Γ Δ : ctx) ξ :
   wf_ctx_conv Σ Ξ Γ Δ →
-  inst_typing Σ Ξ Γ ξ Ξ' →
-  inst_typing_ Σ Ξ (λ Γ t A, ∀ Δ, wf_ctx_conv Σ Ξ Γ Δ → Σ ;; Ξ | Δ ⊢ t : A) Γ ξ Ξ' →
+  inst_typing_ (conversion Σ Ξ) (λ t A, ∀ Δ, wf_ctx_conv Σ Ξ Γ Δ → Σ ;; Ξ | Δ ⊢ t : A) ξ Ξ' →
   inst_typing Σ Ξ Δ ξ Ξ'.
 Proof.
-  intros hctx [h1 [h2 h3]] [ih1 [ih2 ih3]].
-  split. 2: split. 1,3: assumption.
-  intros x A hx. specialize (ih2 _ _ hx) as [? ih2].
-  split. 1: assumption.
-  eapply ih2. assumption.
+  intros hctx.
+  induction 1; constructor; eauto.
 Qed.
 
 Lemma typing_ctx_conv_gen Σ Ξ (Γ Δ : ctx) t A :
