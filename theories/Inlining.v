@@ -242,27 +242,30 @@ Section Inline.
   Qed.
 
   Lemma iscope_instance_inline_ih Ξ ξ :
-    Forall (OnSome (λ t : term, iscope Ξ ⟦ t ⟧)) ξ →
-    iscope_instance Ξ ξ →
-    iscope_instance Ξ ⟦ ξ ⟧×.
+    Forall (OnSome (λ t : term, iscope ⟦ Ξ ⟧e ⟦ t ⟧)) ξ →
+    iscope_instance ⟦ Ξ ⟧e ⟦ ξ ⟧×.
   Proof.
-    intros ih h.
-    induction h; inversion ih; subst; constructor; auto.
-    inversion H; subst; cbn; constructor.
-    inversion H2; subst; auto.
+    intros ih.
+    apply Forall_map. eapply Forall_impl. 2: eassumption.
+    setoid_rewrite OnSome_onSome.
+    intros ??.
+    apply onSome_map.
+    eapply onSome_impl. 2: eassumption.
+    auto.
   Qed.
 
-  (* Lemma iscope_inline Ξ t :
+  Lemma iscope_inline Ξ t :
     iscope Ξ t →
     iscope ⟦ Ξ ⟧e ⟦ t ⟧.
   Proof.
     intros h.
     induction h using iscope_ind_alt.
     all: try solve [ cbn ; constructor; eauto ].
-    - cbn.
-      eapply iscope_instance_inline_ih. all: assumption.
-    - apply hclosed.
-  Qed. *)
+    - cbn. eapply iscope_inst.
+      eauto using iscope_instance_inline_ih.
+    - cbn. econstructor.
+      eauto using ictx_get_assm_inline.
+  Qed.
 
   Lemma inline_ctx_inst ξ Γ :
     ⟦ ctx_inst ξ Γ ⟧* = ctx_inst ⟦ ξ ⟧× ⟦ Γ ⟧*.
@@ -346,19 +349,19 @@ Section Inline.
     - rewrite map_app; constructor; auto.
       + apply scoped_inline. cbn.
         now rewrite length_map.
-      + admit.
+      + eapply iscope_inline. eassumption.
       + apply scoped_inline. cbn.
         now rewrite length_map.
-      + admit.
+      + eapply iscope_inline. eassumption.
       + cbn. rewrite !length_map.
         rewrite <- !inline_ren_instance.
         rewrite <- !inline_inst.
         now apply conv_inline.
     - rewrite map_app; constructor; auto.
-      + admit.
+      + eapply iscope_inline. eassumption.
       + apply scoped_inline. assumption.
       + rewrite <- inline_inst. assumption.
-  Admitted.
+  Qed.
 
   Lemma typing_inline Ξ Γ t A :
     gwf Σ →
