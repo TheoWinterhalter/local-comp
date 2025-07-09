@@ -397,16 +397,6 @@ Proof.
     eauto using red1_conv_inst_ih.
 Qed.
 
-Lemma Forall_funct A (P Q : A → Prop) l :
-  Forall P l →
-  Forall (λ x, P x → Q x) l →
-  Forall Q l.
-Proof.
-  intros h hi.
-  rewrite Forall_forall in *.
-  eauto.
-Qed.
-
 Lemma const_eqs_ren Σ Ξ t ρ :
   const_eqs Σ Ξ t →
   const_eqs Σ Ξ (ρ ⋅ t).

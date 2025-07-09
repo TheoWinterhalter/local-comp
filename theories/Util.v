@@ -102,6 +102,18 @@ Proof.
   auto.
 Qed.
 
+(** [Forall] util *)
+
+Lemma Forall_funct A (P Q : A → Prop) l :
+  Forall P l →
+  Forall (λ x, P x → Q x) l →
+  Forall Q l.
+Proof.
+  intros h hi.
+  rewrite Forall_forall in *.
+  eauto.
+Qed.
+
 (** [All] predicate *)
 
 Inductive All {A} (P : A → Type) : list A → Type :=
