@@ -806,3 +806,8 @@ Proof.
   - reflexivity.
   - cbn. rewrite ih. rewrite h. reflexivity.
 Qed.
+
+(** Some Equations signatures *)
+
+Derive Signature for Forall2.
+Derive Signature for option_rel.
