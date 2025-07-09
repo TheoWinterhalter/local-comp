@@ -100,3 +100,62 @@ Proof.
   apply option_map_ext_onSomeT. eapply onSomeT_impl. 2: eassumption.
   cbn. auto.
 Qed.
+
+Lemma iscope_ren Ξ ρ t :
+  iscope Ξ t →
+  iscope Ξ (ρ ⋅ t).
+Proof.
+  intros h.
+  induction h in ρ |- * using iscope_ind_alt.
+  all: try solve [ cbn ; econstructor ; eauto ].
+  cbn. econstructor.
+  change @core.option_map with option_map.
+  apply Forall_map. eapply Forall_impl. 2: eassumption.
+  setoid_rewrite OnSome_onSome.
+  intros ??. apply onSome_map.
+  eapply onSome_impl. 2: eassumption.
+  auto.
+Qed.
+
+Lemma iscope_instance_lift Ξ ξ :
+  iscope_instance Ξ ξ →
+  iscope_instance Ξ (lift_instance ξ).
+Proof.
+  intros h.
+  apply Forall_map.
+  eapply Forall_impl. 2: exact h.
+  intros ??. rewrite OnSome_onSome in *.
+  apply onSome_map.
+  eapply onSome_impl. 2: eassumption.
+  auto using iscope_ren.
+Qed.
+
+Lemma iscope_instance_inst_ih Ξ ξ ξ' :
+  All (onSomeT (λ t, ∀ ξ, iscope_instance Ξ ξ → iscope Ξ (inst ξ t))) ξ' →
+  iscope_instance Ξ ξ →
+  iscope_instance Ξ (inst_instance ξ ξ').
+Proof.
+  intros h hξ.
+  apply Forall_map. apply All_Forall.
+  eapply All_impl. 2: eassumption.
+  intros ??. rewrite OnSome_onSome. apply onSomeT_onSome.
+  apply onSomeT_map. eapply onSomeT_impl. 2: eassumption.
+  cbn. auto.
+Qed.
+
+Lemma iscope_inst Ξ t ξ :
+  iscope_instance Ξ ξ →
+  iscope Ξ (inst ξ t).
+Proof.
+  intros h.
+  induction t in ξ, h |- * using term_rect.
+  all: try solve [ cbn ; econstructor ; eauto using iscope_instance_lift ].
+  - cbn. econstructor.
+    eauto using iscope_instance_inst_ih.
+  - cbn. unfold iget.
+    destruct nth_error as [[]|] eqn:e. 2,3: econstructor.
+    apply nth_error_In in e.
+    rewrite Forall_forall in h.
+    specialize h with (1 := e). rewrite OnSome_onSome in h. cbn in h.
+    assumption.
+Qed.

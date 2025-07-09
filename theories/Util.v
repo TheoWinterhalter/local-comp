@@ -548,6 +548,15 @@ Proof.
   destruct o. all: cbn in *. all: auto.
 Qed.
 
+Lemma onSome_impl A P Q o :
+  (∀ a, P a → Q a) →
+  @onSome A P o →
+  onSome Q o.
+Proof.
+  intros hPQ h.
+  destruct o. all: cbn in *. all: auto.
+Qed.
+
 Lemma onSomeT_prod A P Q o :
   @onSomeT A P o →
   onSomeT Q o →
