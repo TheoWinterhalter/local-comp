@@ -10,6 +10,8 @@ From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
 From LocalComp Require Import Util BasicAST Env Inst Typing BasicMetaTheory.
 From Stdlib Require Import Setoid Morphisms Relation_Definitions.
 
+Require Import Equations.Prop.DepElim.
+
 Import ListNotations.
 Import CombineNotations.
 
@@ -99,6 +101,29 @@ Proof.
   rewrite OnSome_onSome in ho. apply onSome_onSomeT in ho.
   apply option_map_ext_onSomeT. eapply onSomeT_impl. 2: eassumption.
   cbn. auto.
+Qed.
+
+Lemma iscoped_inst_ext ξ ξ' Ξ n t :
+  iscope Ξ t →
+  (forall n a, ictx_get Ξ n = Some (Assm a) -> nth_error ξ n = nth_error ξ' n) →
+  inst (liftn n ξ) t = inst (liftn n ξ') t.
+Proof.
+  intros h hξ.
+  induction t using term_rect in n, h |- *.
+  all: try solve [ depelim h ; cbn ; eauto ].
+  all: try solve [ depelim h ; cbn ; f_equal; eauto ].
+  - depelim h. cbn. f_equal; eauto.
+    rewrite !lift_liftn. auto.
+  - depelim h. cbn. f_equal; eauto.
+    rewrite !lift_liftn. auto.
+  - depelim h. cbn. f_equal.
+    induction X; inversion H; subst.
+    + reflexivity.
+    + cbn. f_equal; auto. depelim H2; try reflexivity. cbn. f_equal. cbn in p. auto.
+  - cbn. depelim h.
+    specialize (hξ _ _ H).
+    unfold iget. rewrite !nth_error_map.
+    rewrite hξ. reflexivity.
 Qed.
 
 Lemma iscope_ren Ξ ρ t :
