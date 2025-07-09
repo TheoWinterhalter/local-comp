@@ -843,17 +843,6 @@ Section Red.
     eapply pat_no_app. eassumption.
   Qed.
 
-  (* TODO MOVE *)
-  Lemma lvl_get_In [A] l n a :
-    lvl_get (A := A) l n = Some a →
-    In a l.
-  Proof.
-    intros e.
-    unfold lvl_get in e.
-    apply In_rev.
-    eapply nth_error_In. eassumption.
-  Qed.
-
   Lemma no_match_no_match_pat t n rl σ :
     no_match Ξ t →
     pctx_get Ξ n = Some (pComp rl) →
