@@ -23,52 +23,6 @@ Set Default Goal Selector "!".
 
 Require Import Equations.Prop.DepElim.
 
-(* TODO MOVE *)
-Lemma lvl_get_length A (l : list A) x a :
-  lvl_get l x = Some a →
-  x < length l.
-Proof.
-  intros h.
-  unfold lvl_get in h.
-  rewrite <- length_rev.
-  apply nth_error_Some.
-  rewrite h. intro. easy.
-Qed.
-
-(* TODO MOVE *)
-Inductive inst_iget_alt Σ Ξ Γ : instance → ictx → Prop :=
-| inst_iget_nil : inst_iget_alt Σ Ξ Γ [] []
-| inst_iget_comp Ξ' ξ rl :
-    inst_iget_alt Σ Ξ Γ ξ Ξ' →
-    inst_iget_alt Σ Ξ Γ (ξ ++ [ None ]) (Comp rl :: Ξ')
-| inst_iget_assm Ξ' ξ A u :
-    inst_iget_alt Σ Ξ Γ ξ Ξ' →
-    closed A = true →
-    Σ ;; Ξ | Γ ⊢ u : inst ξ A →
-    inst_iget_alt Σ Ξ Γ (ξ ++ [ Some u ]) (Assm A :: Ξ').
-
-Lemma inst_iget_alt_length Σ Ξ Γ ξ Ξ' :
-  inst_iget_alt Σ Ξ Γ ξ Ξ' →
-  length ξ = length Ξ'.
-Proof.
-  intros h. induction h as [| Ξ' ξ rl h ih | Ξ' ξ B u h ih hB hu ].
-  - reflexivity.
-  - rewrite length_app. cbn. lia.
-  - rewrite length_app. cbn. lia.
-Qed.
-
-Lemma eq_inst_on_cons Ξ ξ o :
-  length ξ = length Ξ →
-  eq_inst_on Ξ ξ (ξ ++ o).
-Proof.
-  intros e.
-  intros x A hx.
-  unfold iget.
-  eapply lvl_get_length in hx as hxl.
-  rewrite nth_error_app1. 2: lia.
-  reflexivity.
-Qed.
-
 Section Red.
 
   Reserved Notation "u ↦ v"

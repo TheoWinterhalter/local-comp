@@ -116,6 +116,17 @@ Proof.
   rewrite length_rev. auto.
 Qed.
 
+Lemma lvl_get_length A (l : list A) x a :
+  lvl_get l x = Some a →
+  x < length l.
+Proof.
+  intros h.
+  unfold lvl_get in h.
+  rewrite <- length_rev.
+  apply nth_error_Some.
+  rewrite h. intro. easy.
+Qed.
+
 (** Global declaration *)
 Inductive gdecl :=
 | Def (Ξ : ictx) (A : term) (t : term).

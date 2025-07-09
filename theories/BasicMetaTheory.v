@@ -752,19 +752,6 @@ Proof.
   - cbn. eauto.
 Qed.
 
-Lemma ren_ctx_inst ρ ξ Γ :
-  ren_ctx ρ (ctx_inst ξ Γ) = ctx_inst (ren_instance ρ ξ) Γ.
-Proof.
-  induction Γ as [| A Γ ih] in ρ, ξ |- *.
-  - reflexivity.
-  - cbn. rewrite ih. f_equal.
-    rewrite length_ctx_inst.
-    rewrite ren_inst.
-    rewrite <- liftn_ren_instance. f_equal.
-    apply scoped_ren.
-    (* Would need the context to be closed *)
-Abort.
-
 (* TODO MOVE *)
 Lemma inst_equations_prop Σ Ξ ξ Ξ' P :
   inst_equations Σ Ξ ξ Ξ' →

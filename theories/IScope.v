@@ -159,3 +159,15 @@ Proof.
     specialize h with (1 := e). rewrite OnSome_onSome in h. cbn in h.
     assumption.
 Qed.
+
+Lemma eq_inst_on_cons Ξ ξ o :
+  length ξ = length Ξ →
+  eq_inst_on Ξ ξ (ξ ++ o).
+Proof.
+  intros e.
+  intros x A hx.
+  unfold iget.
+  eapply lvl_get_length in hx as hxl.
+  rewrite nth_error_app1. 2: lia.
+  reflexivity.
+Qed.
