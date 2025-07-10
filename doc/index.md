@@ -34,16 +34,17 @@ syntax.
 
 ### Type Theory and its meta-theory
 
-| Module            | Description                                |
-| :---------------- | :----------------------------------------- |
-| [GScope]          | Notion of global scope                     |
-| [IScope]          | Interface scoping                          |
-| [Typing]          | Conversion and typing judgements           |
-| [BasicMetaTheory] | Meta-theory like substitution and validity |
-| [Inversion]       | Inversion of typing lemmas                 |
-| [Inlining]        | Inlining and conservativity results        |
-| [Confluence]      | Generic results about confluence           |
-| [Pattern]         | Proof-of-concept confluence proof          |
+| Module            | Description                                   |
+| :---------------- | :-------------------------------------------- |
+| [GScope]          | Notion of global scope                        |
+| [IScope]          | Interface scoping                             |
+| [Typing]          | Conversion and typing judgements              |
+| [BasicMetaTheory] | Meta-theory like substitution and validity    |
+| [Inversion]       | Inversion of typing lemmas                    |
+| [Inlining]        | Inlining and conservativity results           |
+| [Confluence]      | Generic results about confluence              |
+| [Reduction]       | Reduction, injectvity of Π, subject reduction |
+| [Pattern]         | Proof-of-concept confluence proof             |
 
 [GScope]: coqdoc/LocalComp.GScope.html
 [IScope]: coqdoc/LocalComp.IScope.html
@@ -52,4 +53,5 @@ syntax.
 [Inversion]: coqdoc/LocalComp.Inversion.html
 [Inlining]: coqdoc/LocalComp.Inlining.html
 [Confluence]: coqdoc/LocalComp.Confluence.html
+[Reduction]: coqdoc/LocalComp.Reduction.html
 [Pattern]: coqdoc/LocalComp.Pattern.html
