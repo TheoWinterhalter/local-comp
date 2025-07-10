@@ -4,7 +4,7 @@ maintainer: "theo.winterhalter@inria.fr"
 dev-repo: "https://github.com/TheoWinterhalter/local-comp.git"
 bug-reports: "https://github.com/TheoWinterhalter/local-comp/issues"
 authors: [
-  "Théo Winterhalter <theo.winterhalter@inria.fr>",
+  "Théo Winterhalter <theo.winterhalter@inria.fr>"
   "Yann Leray <yann.leray@inria.fr>"
 ]
 depends: [
