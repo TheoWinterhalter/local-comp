@@ -1089,7 +1089,7 @@ Notation "Σ ;; Ξ ⊢ u ⇒ v" :=
   (pred Σ Ξ u v)
   (at level 80, u, v at next level).
 
-(** ** Sandwishing reduction *)
+(** ** Sandwiching reduction *)
 
 Lemma ictx_get_pctx Ξ n rl :
   ictx_get (pctx_ictx Ξ) n = Some (Comp rl) →
@@ -1347,7 +1347,7 @@ Lemma red_confluence Σ Ξ :
   red_confluent Σ (pctx_ictx Ξ).
 Proof.
   intros hΞ h Γ.
-  eapply sandwish.
+  eapply sandwich.
   - intros ??. apply red1_pred.
   - intros ??. apply pred_red. assumption.
   - apply pred_confluence. assumption.

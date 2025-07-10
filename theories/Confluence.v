@@ -1,4 +1,4 @@
-(** * Generic results about confluence 
+(** * Generic results about confluence
 
   Heavily inspired from MetaRocq's proofs.
 
@@ -69,10 +69,10 @@ Proof.
     + assumption.
 Qed.
 
-Instance diamond_morphism A : 
+Instance diamond_morphism A :
   Proper (relation_equivalence ==> iff) (@diamond A).
 Proof.
-  intros R R' h. revert R R' h. wlog_iff. 
+  intros R R' h. revert R R' h. wlog_iff.
   intros R R' h hR.
   intros t u v hu hv.
   apply h in hu, hv.
@@ -98,7 +98,7 @@ Proof.
     apply rt_step. assumption.
 Qed.
 
-Instance confluent_morphism A : 
+Instance confluent_morphism A :
   Proper (relation_equivalence ==> iff) (@confluent A).
 Proof.
   intros R R' h.
@@ -115,7 +115,7 @@ Proof.
   intros. constructor. apply h. assumption.
 Qed.
 
-Lemma sandwish A (R P : relation A) :
+Lemma sandwich A (R P : relation A) :
   inclusion R P →
   inclusion P (clos_refl_trans R) →
   confluent P →
