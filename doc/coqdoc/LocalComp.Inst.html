@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>LocalComp.Inst</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">LocalComp.Inst</h1>
+
+<div class="code">
+</div>
+
+<div class="doc">
+<a id="lab7"></a><h1 class="section">Interface instantiation</h1>
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">Stdlib</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">Utf8</span> <span class="id" title="library">List</span>.<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">LocalComp.autosubst</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="LocalComp.autosubst.AST.html#"><span class="id" title="library">AST</span></a> <a class="idref" href="LocalComp.autosubst.SubstNotations.html#"><span class="id" title="library">SubstNotations</span></a> <a class="idref" href="LocalComp.autosubst.RAsimpl.html#"><span class="id" title="library">RAsimpl</span></a> <a class="idref" href="LocalComp.autosubst.AST_rasimpl.html#"><span class="id" title="library">AST_rasimpl</span></a>.<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">LocalComp</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="LocalComp.Util.html#"><span class="id" title="library">Util</span></a> <a class="idref" href="LocalComp.BasicAST.html#"><span class="id" title="library">BasicAST</span></a> <a class="idref" href="LocalComp.Env.html#"><span class="id" title="library">Env</span></a>.<br/>
+<span class="id" title="keyword">Import</span> <span class="id" title="module">ListNotations</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Set</span> <span class="id" title="var">Default</span> <span class="id" title="keyword">Goal</span> <span class="id" title="var">Selector</span> "!".<br/>
+
+<br/>
+<span class="id" title="keyword">Open</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">subst_scope</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a id="dummy" class="idref" href="#dummy"><span class="id" title="definition">dummy</span></a> := (<a class="idref" href="LocalComp.autosubst.AST.html#Core.Sort"><span class="id" title="constructor">Sort</span></a> 0).<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a id="iget" class="idref" href="#iget"><span class="id" title="definition">iget</span></a> (<a id="a29c1db93c993cc61d5c7cc99a992221" class="idref" href="#a29c1db93c993cc61d5c7cc99a992221"><span class="id" title="binder">ξ</span></a> : <a class="idref" href="LocalComp.Env.html#instance"><span class="id" title="definition">instance</span></a>) <a id="x:2" class="idref" href="#x:2"><span class="id" title="binder">x</span></a> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="definition">nth_error</span> <a class="idref" href="LocalComp.Inst.html#a29c1db93c993cc61d5c7cc99a992221"><span class="id" title="variable">ξ</span></a> <a class="idref" href="LocalComp.Inst.html#x:2"><span class="id" title="variable">x</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> (<a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <span class="id" title="var">t</span>) ⇒ <span class="id" title="var">t</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">_</span> ⇒ <a class="idref" href="LocalComp.Inst.html#dummy"><span class="id" title="definition">dummy</span></a><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="map_instance" class="idref" href="#map_instance"><span class="id" title="abbreviation">map_instance</span></a> <span class="id" title="var">f</span> <span class="id" title="var">ξ</span> :=<br/>
+&nbsp;&nbsp;(<a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Lists.ListDef.html#map"><span class="id" title="definition">map</span></a> (<a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Init.Datatypes.html#option_map"><span class="id" title="definition">option_map</span></a> <span class="id" title="var">f</span>) <span class="id" title="var">ξ</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="ren_instance" class="idref" href="#ren_instance"><span class="id" title="abbreviation">ren_instance</span></a> ρ <span class="id" title="var">ξ</span> :=<br/>
+&nbsp;&nbsp;(<a class="idref" href="LocalComp.Inst.html#map_instance"><span class="id" title="abbreviation">map_instance</span></a> (<a class="idref" href="LocalComp.autosubst.AST.html#Core.ren_term"><span class="id" title="definition">ren_term</span></a> ρ) <span class="id" title="var">ξ</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="lift_instance" class="idref" href="#lift_instance"><span class="id" title="abbreviation">lift_instance</span></a> <span class="id" title="var">ξ</span> := (<a class="idref" href="LocalComp.Inst.html#ren_instance"><span class="id" title="abbreviation">ren_instance</span></a> <a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Init.Datatypes.html#S"><span class="id" title="constructor">S</span></a> <span class="id" title="var">ξ</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="liftn" class="idref" href="#liftn"><span class="id" title="abbreviation">liftn</span></a> <span class="id" title="var">n</span> <span class="id" title="var">ξ</span> := (<a class="idref" href="LocalComp.Inst.html#ren_instance"><span class="id" title="abbreviation">ren_instance</span></a> (<a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Init.Peano.html#plus"><span class="id" title="abbreviation">plus</span></a> <span class="id" title="var">n</span>) <span class="id" title="var">ξ</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Fixpoint</span> <a id="inst" class="idref" href="#inst"><span class="id" title="definition">inst</span></a> (<a id="14f2e56000d09525f7867a7f33195341" class="idref" href="#14f2e56000d09525f7867a7f33195341"><span class="id" title="binder">ξ</span></a> : <a class="idref" href="LocalComp.Env.html#instance"><span class="id" title="definition">instance</span></a>) (<a id="t:4" class="idref" href="#t:4"><span class="id" title="binder">t</span></a> : <a class="idref" href="LocalComp.autosubst.AST.html#Core.term"><span class="id" title="inductive">term</span></a>) :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="LocalComp.Inst.html#t:4"><span class="id" title="variable">t</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="LocalComp.autosubst.AST.html#Core.var"><span class="id" title="constructor">var</span></a> <span class="id" title="var">n</span> ⇒ <a class="idref" href="LocalComp.autosubst.AST.html#Core.var"><span class="id" title="constructor">var</span></a> <span class="id" title="var">n</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="LocalComp.autosubst.AST.html#Core.Sort"><span class="id" title="constructor">Sort</span></a> <span class="id" title="var">i</span> ⇒ <a class="idref" href="LocalComp.autosubst.AST.html#Core.Sort"><span class="id" title="constructor">Sort</span></a> <span class="id" title="var">i</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="LocalComp.autosubst.AST.html#Core.Pi"><span class="id" title="constructor">Pi</span></a> <span class="id" title="var">A</span> <span class="id" title="var">B</span> ⇒ <a class="idref" href="LocalComp.autosubst.AST.html#Core.Pi"><span class="id" title="constructor">Pi</span></a> (<a class="idref" href="LocalComp.Inst.html#inst:5"><span class="id" title="definition">inst</span></a> <a class="idref" href="LocalComp.Inst.html#14f2e56000d09525f7867a7f33195341"><span class="id" title="variable">ξ</span></a> <span class="id" title="var">A</span>) (<a class="idref" href="LocalComp.Inst.html#inst:5"><span class="id" title="definition">inst</span></a> (<a class="idref" href="LocalComp.Inst.html#lift_instance"><span class="id" title="abbreviation">lift_instance</span></a> <a class="idref" href="LocalComp.Inst.html#14f2e56000d09525f7867a7f33195341"><span class="id" title="variable">ξ</span></a>) <span class="id" title="var">B</span>)<br/>
+&nbsp;&nbsp;| <a class="idref" href="LocalComp.autosubst.AST.html#Core.lam"><span class="id" title="constructor">lam</span></a> <span class="id" title="var">A</span> <span class="id" title="var">t</span> ⇒ <a class="idref" href="LocalComp.autosubst.AST.html#Core.lam"><span class="id" title="constructor">lam</span></a> (<a class="idref" href="LocalComp.Inst.html#inst:5"><span class="id" title="definition">inst</span></a> <a class="idref" href="LocalComp.Inst.html#14f2e56000d09525f7867a7f33195341"><span class="id" title="variable">ξ</span></a> <span class="id" title="var">A</span>) (<a class="idref" href="LocalComp.Inst.html#inst:5"><span class="id" title="definition">inst</span></a> (<a class="idref" href="LocalComp.Inst.html#lift_instance"><span class="id" title="abbreviation">lift_instance</span></a> <a class="idref" href="LocalComp.Inst.html#14f2e56000d09525f7867a7f33195341"><span class="id" title="variable">ξ</span></a>) <a class="idref" href="LocalComp.Inst.html#t:4"><span class="id" title="variable">t</span></a>)<br/>
+&nbsp;&nbsp;| <a class="idref" href="LocalComp.autosubst.AST.html#Core.app"><span class="id" title="constructor">app</span></a> <span class="id" title="var">u</span> <span class="id" title="var">v</span> ⇒ <a class="idref" href="LocalComp.autosubst.AST.html#Core.app"><span class="id" title="constructor">app</span></a> (<a class="idref" href="LocalComp.Inst.html#inst:5"><span class="id" title="definition">inst</span></a> <a class="idref" href="LocalComp.Inst.html#14f2e56000d09525f7867a7f33195341"><span class="id" title="variable">ξ</span></a> <span class="id" title="var">u</span>) (<a class="idref" href="LocalComp.Inst.html#inst:5"><span class="id" title="definition">inst</span></a> <a class="idref" href="LocalComp.Inst.html#14f2e56000d09525f7867a7f33195341"><span class="id" title="variable">ξ</span></a> <span class="id" title="var">v</span>)<br/>
+&nbsp;&nbsp;| <a class="idref" href="LocalComp.autosubst.AST.html#Core.const"><span class="id" title="constructor">const</span></a> <span class="id" title="var">c</span> <span class="id" title="var">ξ'</span> ⇒ <a class="idref" href="LocalComp.autosubst.AST.html#Core.const"><span class="id" title="constructor">const</span></a> <span class="id" title="var">c</span> (<a class="idref" href="LocalComp.Inst.html#map_instance"><span class="id" title="abbreviation">map_instance</span></a> (<a class="idref" href="LocalComp.Inst.html#inst:5"><span class="id" title="definition">inst</span></a> <a class="idref" href="LocalComp.Inst.html#14f2e56000d09525f7867a7f33195341"><span class="id" title="variable">ξ</span></a>) <span class="id" title="var">ξ'</span>)<br/>
+&nbsp;&nbsp;| <a class="idref" href="LocalComp.autosubst.AST.html#Core.assm"><span class="id" title="constructor">assm</span></a> <span class="id" title="var">x</span> ⇒ <a class="idref" href="LocalComp.Inst.html#iget"><span class="id" title="definition">iget</span></a> <a class="idref" href="LocalComp.Inst.html#14f2e56000d09525f7867a7f33195341"><span class="id" title="variable">ξ</span></a> <span class="id" title="var">x</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="inst_instance" class="idref" href="#inst_instance"><span class="id" title="abbreviation">inst_instance</span></a> <span class="id" title="var">ξ</span> <span class="id" title="var">ξ'</span> := (<a class="idref" href="LocalComp.Inst.html#map_instance"><span class="id" title="abbreviation">map_instance</span></a> (<a class="idref" href="LocalComp.Inst.html#inst"><span class="id" title="definition">inst</span></a> <span class="id" title="var">ξ</span>) <span class="id" title="var">ξ'</span>).<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Instance for a context 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Fixpoint</span> <a id="ctx_inst" class="idref" href="#ctx_inst"><span class="id" title="definition">ctx_inst</span></a> (<a id="bf5310713bddbc1fe783a429da2cb272" class="idref" href="#bf5310713bddbc1fe783a429da2cb272"><span class="id" title="binder">ξ</span></a> : <a class="idref" href="LocalComp.Env.html#instance"><span class="id" title="definition">instance</span></a>) (<a id="d5be501d00a8c9c4c28302f544699b7d" class="idref" href="#d5be501d00a8c9c4c28302f544699b7d"><span class="id" title="binder">Γ</span></a> : <a class="idref" href="LocalComp.Env.html#ctx"><span class="id" title="definition">ctx</span></a>) : <a class="idref" href="LocalComp.Env.html#ctx"><span class="id" title="definition">ctx</span></a> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="LocalComp.Inst.html#d5be501d00a8c9c4c28302f544699b7d"><span class="id" title="variable">Γ</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="notation">[]</span> ⇒ <span class="id" title="notation">[]</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">A</span> <a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Init.Datatypes.html#::list_scope:x_'::'_x"><span class="id" title="notation">::</span></a> <span class="id" title="var">Γ</span> ⇒ <a class="idref" href="LocalComp.Inst.html#ctx_inst:9"><span class="id" title="definition">ctx_inst</span></a> <a class="idref" href="LocalComp.Inst.html#bf5310713bddbc1fe783a429da2cb272"><span class="id" title="variable">ξ</span></a> <a class="idref" href="LocalComp.Inst.html#d5be501d00a8c9c4c28302f544699b7d"><span class="id" title="variable">Γ</span></a> <a class="idref" href="LocalComp.Env.html#b66601545ff7e22c5dcb7c86aa0cca21"><span class="id" title="notation">,,</span></a> <a class="idref" href="LocalComp.Inst.html#inst"><span class="id" title="definition">inst</span></a> (<a class="idref" href="LocalComp.Inst.html#liftn"><span class="id" title="abbreviation">liftn</span></a> (<a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Init.Datatypes.html#length"><span class="id" title="definition">length</span></a> <a class="idref" href="LocalComp.Inst.html#d5be501d00a8c9c4c28302f544699b7d"><span class="id" title="variable">Γ</span></a>) <a class="idref" href="LocalComp.Inst.html#bf5310713bddbc1fe783a429da2cb272"><span class="id" title="variable">ξ</span></a>) <span class="id" title="var">A</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a id="lab8"></a><h2 class="section">Unrelated utility</h2>
+
+
+<div class="paragraph"> </div>
+
+  TODO MOVE
+
+<div class="paragraph"> </div>
+
+
+<div class="paragraph"> </div>
+
+ n-ary application 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Fixpoint</span> <a id="apps" class="idref" href="#apps"><span class="id" title="definition">apps</span></a> (<a id="u:11" class="idref" href="#u:11"><span class="id" title="binder">u</span></a> : <a class="idref" href="LocalComp.autosubst.AST.html#Core.term"><span class="id" title="inductive">term</span></a>) (<a id="l:12" class="idref" href="#l:12"><span class="id" title="binder">l</span></a> : <a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="LocalComp.autosubst.AST.html#Core.term"><span class="id" title="inductive">term</span></a>) :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="LocalComp.Inst.html#l:12"><span class="id" title="variable">l</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="notation">[]</span> ⇒ <a class="idref" href="LocalComp.Inst.html#u:11"><span class="id" title="variable">u</span></a><br/>
+&nbsp;&nbsp;| <span class="id" title="var">v</span> <a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Init.Datatypes.html#::list_scope:x_'::'_x"><span class="id" title="notation">::</span></a> <span class="id" title="var">l</span> ⇒ <a class="idref" href="LocalComp.Inst.html#apps:13"><span class="id" title="definition">apps</span></a> (<a class="idref" href="LocalComp.autosubst.AST.html#Core.app"><span class="id" title="constructor">app</span></a> <a class="idref" href="LocalComp.Inst.html#u:11"><span class="id" title="variable">u</span></a> <span class="id" title="var">v</span>) <a class="idref" href="LocalComp.Inst.html#l:12"><span class="id" title="variable">l</span></a><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Substitution lifting 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Fixpoint</span> <a id="ups" class="idref" href="#ups"><span class="id" title="definition">ups</span></a> <a id="n:15" class="idref" href="#n:15"><span class="id" title="binder">n</span></a> <a id="dd0f8ee13b043696963f589a3a566f8e" class="idref" href="#dd0f8ee13b043696963f589a3a566f8e"><span class="id" title="binder">σ</span></a> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="LocalComp.Inst.html#n:15"><span class="id" title="variable">n</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| 0 ⇒ <a class="idref" href="LocalComp.Inst.html#dd0f8ee13b043696963f589a3a566f8e"><span class="id" title="variable">σ</span></a><br/>
+&nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Init.Datatypes.html#S"><span class="id" title="constructor">S</span></a> <span class="id" title="var">n</span> ⇒ <a class="idref" href="LocalComp.autosubst.AST.html#Core.up_term"><span class="id" title="definition">up_term</span></a> (<a class="idref" href="LocalComp.Inst.html#ups:17"><span class="id" title="definition">ups</span></a> <a class="idref" href="LocalComp.Inst.html#n:15"><span class="id" title="variable">n</span></a> <a class="idref" href="LocalComp.Inst.html#dd0f8ee13b043696963f589a3a566f8e"><span class="id" title="variable">σ</span></a>)<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="indexpage.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>LocalComp.GScope</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">LocalComp.GScope</h1>
+
+<div class="code">
+</div>
+
+<div class="doc">
+Global scoping
+
+<div class="paragraph"> </div>
+
+  It tracks whether <span class="inlinecode"><span class="id" title="var">c</span></span> in <span class="inlinecode"><span class="id" title="var">const</span></span> <span class="inlinecode"><span class="id" title="var">c</span></span> <span class="inlinecode"><span class="id" title="var">ξ</span></span> always points to <span class="inlinecode"><span class="id" title="var">Σ</span></span>.
+  It doesn't ensure anything about <span class="inlinecode"><span class="id" title="var">assm</span></span>.
+
+<div class="paragraph"> </div>
+
+  The definition is in <span class="inlinecode"><span class="id" title="var">Typing</span></span> for dependency reasons.
+
+<div class="paragraph"> </div>
+
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">Stdlib</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">Utf8</span> <span class="id" title="library">String</span> <span class="id" title="library">List</span> <span class="id" title="library">Arith</span> <span class="id" title="library">Lia</span>.<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">LocalComp.autosubst</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="LocalComp.autosubst.unscoped.html#"><span class="id" title="library">unscoped</span></a> <a class="idref" href="LocalComp.autosubst.AST.html#"><span class="id" title="library">AST</span></a> <a class="idref" href="LocalComp.autosubst.SubstNotations.html#"><span class="id" title="library">SubstNotations</span></a> <a class="idref" href="LocalComp.autosubst.RAsimpl.html#"><span class="id" title="library">RAsimpl</span></a><br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.autosubst.AST_rasimpl.html#"><span class="id" title="library">AST_rasimpl</span></a>.<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">LocalComp</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="LocalComp.Util.html#"><span class="id" title="library">Util</span></a> <a class="idref" href="LocalComp.BasicAST.html#"><span class="id" title="library">BasicAST</span></a> <a class="idref" href="LocalComp.Env.html#"><span class="id" title="library">Env</span></a> <a class="idref" href="LocalComp.Inst.html#"><span class="id" title="library">Inst</span></a> <a class="idref" href="LocalComp.Typing.html#"><span class="id" title="library">Typing</span></a> <a class="idref" href="LocalComp.BasicMetaTheory.html#"><span class="id" title="library">BasicMetaTheory</span></a>.<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">Stdlib</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">Setoid</span> <span class="id" title="library">Morphisms</span> <span class="id" title="library">Relation_Definitions</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Import</span> <span class="id" title="module">ListNotations</span>.<br/>
+<span class="id" title="keyword">Import</span> <a class="idref" href="LocalComp.autosubst.unscoped.html#CombineNotations"><span class="id" title="module">CombineNotations</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Set</span> <span class="id" title="var">Default</span> <span class="id" title="keyword">Goal</span> <span class="id" title="var">Selector</span> "!".<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a id="inst_typing_gscope_ih" class="idref" href="#inst_typing_gscope_ih"><span class="id" title="lemma">inst_typing_gscope_ih</span></a> <a id="0101b9beac487b383a5ba2a8f6922788" class="idref" href="#0101b9beac487b383a5ba2a8f6922788"><span class="id" title="binder">Σ</span></a> <a id="conv:2" class="idref" href="#conv:2"><span class="id" title="binder">conv</span></a> <a id="14f2e56000d09525f7867a7f33195341" class="idref" href="#14f2e56000d09525f7867a7f33195341"><span class="id" title="binder">ξ</span></a> <a id="9c0dd44ba42ad2d349f91e4a63e3aecd" class="idref" href="#9c0dd44ba42ad2d349f91e4a63e3aecd"><span class="id" title="binder">Ξ'</span></a> :<br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.Typing.html#inst_typing_"><span class="id" title="inductive">inst_typing_</span></a> <a class="idref" href="LocalComp.GScope.html#conv:2"><span class="id" title="variable">conv</span></a> (<span class="id" title="notation">λ</span> <a id="t:5" class="idref" href="#t:5"><span class="id" title="binder">t</span></a> <span class="id" title="var">_</span><span class="id" title="notation">,</span> <a class="idref" href="LocalComp.Typing.html#gscope"><span class="id" title="inductive">gscope</span></a> <a class="idref" href="LocalComp.GScope.html#0101b9beac487b383a5ba2a8f6922788"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.GScope.html#t:5"><span class="id" title="variable">t</span></a>) <a class="idref" href="LocalComp.GScope.html#14f2e56000d09525f7867a7f33195341"><span class="id" title="variable">ξ</span></a> <a class="idref" href="LocalComp.GScope.html#9c0dd44ba42ad2d349f91e4a63e3aecd"><span class="id" title="variable">Ξ'</span></a> <span class="id" title="notation">→</span><br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.Typing.html#gscope_instance"><span class="id" title="abbreviation">gscope_instance</span></a> <a class="idref" href="LocalComp.GScope.html#0101b9beac487b383a5ba2a8f6922788"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.GScope.html#14f2e56000d09525f7867a7f33195341"><span class="id" title="variable">ξ</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eauto</span> <span class="id" title="keyword">using</span> <a class="idref" href="LocalComp.BasicMetaTheory.html#inst_typing_prop_ih"><span class="id" title="lemma">inst_typing_prop_ih</span></a>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a id="typing_gscope" class="idref" href="#typing_gscope"><span class="id" title="lemma">typing_gscope</span></a> <a id="f525610baade8c1419220d275a93fff0" class="idref" href="#f525610baade8c1419220d275a93fff0"><span class="id" title="binder">Σ</span></a> <a id="94759ae4a8de54a165eace8816715041" class="idref" href="#94759ae4a8de54a165eace8816715041"><span class="id" title="binder">Ξ</span></a> <a id="d5be501d00a8c9c4c28302f544699b7d" class="idref" href="#d5be501d00a8c9c4c28302f544699b7d"><span class="id" title="binder">Γ</span></a> <a id="t:9" class="idref" href="#t:9"><span class="id" title="binder">t</span></a> <a id="A:10" class="idref" href="#A:10"><span class="id" title="binder">A</span></a> :<br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.GScope.html#f525610baade8c1419220d275a93fff0"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.Typing.html#4046116adafeb02591169bc9b5e694af"><span class="id" title="notation">;;</span></a> <a class="idref" href="LocalComp.GScope.html#94759ae4a8de54a165eace8816715041"><span class="id" title="variable">Ξ</span></a> <a class="idref" href="LocalComp.Typing.html#4046116adafeb02591169bc9b5e694af"><span class="id" title="notation">|</span></a> <a class="idref" href="LocalComp.GScope.html#d5be501d00a8c9c4c28302f544699b7d"><span class="id" title="variable">Γ</span></a> <a class="idref" href="LocalComp.Typing.html#4046116adafeb02591169bc9b5e694af"><span class="id" title="notation">⊢</span></a> <a class="idref" href="LocalComp.GScope.html#t:9"><span class="id" title="variable">t</span></a> <a class="idref" href="LocalComp.Typing.html#4046116adafeb02591169bc9b5e694af"><span class="id" title="notation">:</span></a> <a class="idref" href="LocalComp.GScope.html#A:10"><span class="id" title="variable">A</span></a> <span class="id" title="notation">→</span><br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.Typing.html#gscope"><span class="id" title="inductive">gscope</span></a> <a class="idref" href="LocalComp.GScope.html#f525610baade8c1419220d275a93fff0"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.GScope.html#t:9"><span class="id" title="variable">t</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intro</span> <span class="id" title="var">h</span>. <span class="id" title="tactic">induction</span> <span class="id" title="var">h</span> <span class="id" title="keyword">using</span> <a class="idref" href="LocalComp.BasicMetaTheory.html#typing_ind"><span class="id" title="lemma">typing_ind</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="var">all</span>: <span class="id" title="tactic">try</span> <span class="id" title="tactic">solve</span> [ <span class="id" title="tactic">econstructor</span> ; <span class="id" title="tactic">eauto</span> ].<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">econstructor</span>. 1: <span class="id" title="var">eassumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="LocalComp.GScope.html#inst_typing_gscope_ih"><span class="id" title="lemma">inst_typing_gscope_ih</span></a>. <span class="id" title="var">all</span>: <span class="id" title="var">eassumption</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">assumption</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a id="inst_typing_gscope" class="idref" href="#inst_typing_gscope"><span class="id" title="lemma">inst_typing_gscope</span></a> <a id="0628ce849eb43988c0c2962e2467d294" class="idref" href="#0628ce849eb43988c0c2962e2467d294"><span class="id" title="binder">Σ</span></a> <a id="c146837d132e50e8cf56475e85a2ef87" class="idref" href="#c146837d132e50e8cf56475e85a2ef87"><span class="id" title="binder">Ξ</span></a> <a id="a57704a48aaf9a67d8a3df75d6eea365" class="idref" href="#a57704a48aaf9a67d8a3df75d6eea365"><span class="id" title="binder">Γ</span></a> <a id="f87162c480d0763e1aa4e677eb56ebf0" class="idref" href="#f87162c480d0763e1aa4e677eb56ebf0"><span class="id" title="binder">ξ</span></a> <a id="f09c434414d76a9d2353a94b19d68e29" class="idref" href="#f09c434414d76a9d2353a94b19d68e29"><span class="id" title="binder">Ξ'</span></a> :<br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.Typing.html#inst_typing"><span class="id" title="abbreviation">inst_typing</span></a> <a class="idref" href="LocalComp.GScope.html#0628ce849eb43988c0c2962e2467d294"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.GScope.html#c146837d132e50e8cf56475e85a2ef87"><span class="id" title="variable">Ξ</span></a> <a class="idref" href="LocalComp.GScope.html#a57704a48aaf9a67d8a3df75d6eea365"><span class="id" title="variable">Γ</span></a> <a class="idref" href="LocalComp.GScope.html#f87162c480d0763e1aa4e677eb56ebf0"><span class="id" title="variable">ξ</span></a> <a class="idref" href="LocalComp.GScope.html#f09c434414d76a9d2353a94b19d68e29"><span class="id" title="variable">Ξ'</span></a> <span class="id" title="notation">→</span><br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.Typing.html#gscope_instance"><span class="id" title="abbreviation">gscope_instance</span></a> <a class="idref" href="LocalComp.GScope.html#0628ce849eb43988c0c2962e2467d294"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.GScope.html#f87162c480d0763e1aa4e677eb56ebf0"><span class="id" title="variable">ξ</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span> <span class="id" title="var">h</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="LocalComp.GScope.html#inst_typing_gscope_ih"><span class="id" title="lemma">inst_typing_gscope_ih</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="LocalComp.BasicMetaTheory.html#inst_typing_impl"><span class="id" title="lemma">inst_typing_impl</span></a>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="LocalComp.GScope.html#typing_gscope"><span class="id" title="lemma">typing_gscope</span></a>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a id="wf_gscope" class="idref" href="#wf_gscope"><span class="id" title="lemma">wf_gscope</span></a> <a id="b232edaf48a0ef1d98913dc1ee6186a9" class="idref" href="#b232edaf48a0ef1d98913dc1ee6186a9"><span class="id" title="binder">Σ</span></a> <a id="ec1f4ea86d8bd3a1c4eca7f681a00d30" class="idref" href="#ec1f4ea86d8bd3a1c4eca7f681a00d30"><span class="id" title="binder">Ξ</span></a> <a id="f0fc26962fbc1476a5f5245f565ffb72" class="idref" href="#f0fc26962fbc1476a5f5245f565ffb72"><span class="id" title="binder">Γ</span></a> :<br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.Typing.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="LocalComp.GScope.html#b232edaf48a0ef1d98913dc1ee6186a9"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.GScope.html#ec1f4ea86d8bd3a1c4eca7f681a00d30"><span class="id" title="variable">Ξ</span></a> <a class="idref" href="LocalComp.GScope.html#f0fc26962fbc1476a5f5245f565ffb72"><span class="id" title="variable">Γ</span></a> <span class="id" title="notation">→</span><br/>
+&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Lists.ListDef.html#Forall"><span class="id" title="inductive">Forall</span></a> (<a class="idref" href="LocalComp.Typing.html#gscope"><span class="id" title="inductive">gscope</span></a> <a class="idref" href="LocalComp.GScope.html#b232edaf48a0ef1d98913dc1ee6186a9"><span class="id" title="variable">Σ</span></a>) <a class="idref" href="LocalComp.GScope.html#f0fc26962fbc1476a5f5245f565ffb72"><span class="id" title="variable">Γ</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">induction</span> 1 <span class="id" title="keyword">as</span> [| <span class="id" title="var">Γ</span> <span class="id" title="var">i</span> <span class="id" title="var">A</span> <span class="id" title="var">hΓ</span> <span class="id" title="var">ih</span> <span class="id" title="var">hA</span>]. 1: <span class="id" title="tactic">constructor</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">econstructor</span>. 2: <span class="id" title="tactic">assumption</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="LocalComp.GScope.html#typing_gscope"><span class="id" title="lemma">typing_gscope</span></a>. <span class="id" title="var">eassumption</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a id="gscope_equation" class="idref" href="#gscope_equation"><span class="id" title="definition">gscope_equation</span></a> <a id="957e39afe9f7f3b3133a35f49f47db88" class="idref" href="#957e39afe9f7f3b3133a35f49f47db88"><span class="id" title="binder">Σ</span></a> <a id="f73ecbc8dfccf3b3d0faaa04ab7d2d79" class="idref" href="#f73ecbc8dfccf3b3d0faaa04ab7d2d79"><span class="id" title="binder">ε</span></a> :=<br/>
+&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Lists.ListDef.html#Forall"><span class="id" title="inductive">Forall</span></a> (<a class="idref" href="LocalComp.Typing.html#gscope"><span class="id" title="inductive">gscope</span></a> <a class="idref" href="LocalComp.GScope.html#957e39afe9f7f3b3133a35f49f47db88"><span class="id" title="variable">Σ</span></a>) <a class="idref" href="LocalComp.GScope.html#f73ecbc8dfccf3b3d0faaa04ab7d2d79"><span class="id" title="variable">ε</span></a>.(<a class="idref" href="LocalComp.Env.html#eq_env"><span class="id" title="projection">eq_env</span></a>) <span class="id" title="notation">∧</span><br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.Typing.html#gscope"><span class="id" title="inductive">gscope</span></a> <a class="idref" href="LocalComp.GScope.html#957e39afe9f7f3b3133a35f49f47db88"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.GScope.html#f73ecbc8dfccf3b3d0faaa04ab7d2d79"><span class="id" title="variable">ε</span></a>.(<a class="idref" href="LocalComp.Env.html#eq_lhs"><span class="id" title="projection">eq_lhs</span></a>) <span class="id" title="notation">∧</span><br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.Typing.html#gscope"><span class="id" title="inductive">gscope</span></a> <a class="idref" href="LocalComp.GScope.html#957e39afe9f7f3b3133a35f49f47db88"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.GScope.html#f73ecbc8dfccf3b3d0faaa04ab7d2d79"><span class="id" title="variable">ε</span></a>.(<a class="idref" href="LocalComp.Env.html#eq_rhs"><span class="id" title="projection">eq_rhs</span></a>) <span class="id" title="notation">∧</span><br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.Typing.html#gscope"><span class="id" title="inductive">gscope</span></a> <a class="idref" href="LocalComp.GScope.html#957e39afe9f7f3b3133a35f49f47db88"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.GScope.html#f73ecbc8dfccf3b3d0faaa04ab7d2d79"><span class="id" title="variable">ε</span></a>.(<a class="idref" href="LocalComp.Env.html#eq_typ"><span class="id" title="projection">eq_typ</span></a>).<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a id="gscope_apps_inv" class="idref" href="#gscope_apps_inv"><span class="id" title="lemma">gscope_apps_inv</span></a> <a id="c3655209f64c4a3ac42c320568dce6f3" class="idref" href="#c3655209f64c4a3ac42c320568dce6f3"><span class="id" title="binder">Σ</span></a> <a id="f:22" class="idref" href="#f:22"><span class="id" title="binder">f</span></a> <a id="l:23" class="idref" href="#l:23"><span class="id" title="binder">l</span></a> :<br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.Typing.html#gscope"><span class="id" title="inductive">gscope</span></a> <a class="idref" href="LocalComp.GScope.html#c3655209f64c4a3ac42c320568dce6f3"><span class="id" title="variable">Σ</span></a> (<a class="idref" href="LocalComp.Inst.html#apps"><span class="id" title="definition">apps</span></a> <a class="idref" href="LocalComp.GScope.html#f:22"><span class="id" title="variable">f</span></a> <a class="idref" href="LocalComp.GScope.html#l:23"><span class="id" title="variable">l</span></a>) <span class="id" title="notation">→</span><br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.Typing.html#gscope"><span class="id" title="inductive">gscope</span></a> <a class="idref" href="LocalComp.GScope.html#c3655209f64c4a3ac42c320568dce6f3"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.GScope.html#f:22"><span class="id" title="variable">f</span></a> <span class="id" title="notation">∧</span> <a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Lists.ListDef.html#Forall"><span class="id" title="inductive">Forall</span></a> (<a class="idref" href="LocalComp.Typing.html#gscope"><span class="id" title="inductive">gscope</span></a> <a class="idref" href="LocalComp.GScope.html#c3655209f64c4a3ac42c320568dce6f3"><span class="id" title="variable">Σ</span></a>) <a class="idref" href="LocalComp.GScope.html#l:23"><span class="id" title="variable">l</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span> <span class="id" title="var">h</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">induction</span> <span class="id" title="var">l</span> <span class="id" title="keyword">as</span> [| <span class="id" title="var">x</span> <span class="id" title="var">l</span> <span class="id" title="var">ih</span>] <span class="id" title="tactic">in</span> <span class="id" title="var">f</span>, <span class="id" title="var">h</span> |- ×.<br/>
+&nbsp;&nbsp;- <span class="id" title="var">cbn</span> <span class="id" title="tactic">in</span> <span class="id" title="var">h</span>. <span class="id" title="tactic">intuition</span> <span class="id" title="tactic">constructor</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="var">cbn</span> <span class="id" title="tactic">in</span> <span class="id" title="var">h</span>. <span class="id" title="tactic">eapply</span> <span class="id" title="var">ih</span> <span class="id" title="tactic">in</span> <span class="id" title="var">h</span> <span class="id" title="keyword">as</span> [<span class="id" title="var">happ</span> <span class="id" title="var">hl</span>].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">inversion</span> <span class="id" title="var">happ</span>. <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">assumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">constructor</span>. <span class="id" title="var">all</span>: <span class="id" title="tactic">assumption</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a id="equation_typing_gscope" class="idref" href="#equation_typing_gscope"><span class="id" title="lemma">equation_typing_gscope</span></a> <a id="0ff5eed445d72e1c5ccedcdae1755936" class="idref" href="#0ff5eed445d72e1c5ccedcdae1755936"><span class="id" title="binder">Σ</span></a> <a id="d0388c0535f0f3f01ed87225562e9ea0" class="idref" href="#d0388c0535f0f3f01ed87225562e9ea0"><span class="id" title="binder">Ξ</span></a> <a id="r:26" class="idref" href="#r:26"><span class="id" title="binder">r</span></a> :<br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.Typing.html#equation_typing"><span class="id" title="definition">equation_typing</span></a> <a class="idref" href="LocalComp.GScope.html#0ff5eed445d72e1c5ccedcdae1755936"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.GScope.html#d0388c0535f0f3f01ed87225562e9ea0"><span class="id" title="variable">Ξ</span></a> <a class="idref" href="LocalComp.GScope.html#r:26"><span class="id" title="variable">r</span></a> <span class="id" title="notation">→</span><br/>
+&nbsp;&nbsp;<a class="idref" href="LocalComp.GScope.html#gscope_equation"><span class="id" title="definition">gscope_equation</span></a> <a class="idref" href="LocalComp.GScope.html#0ff5eed445d72e1c5ccedcdae1755936"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.GScope.html#r:26"><span class="id" title="variable">r</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span> (<span class="id" title="var">hctx</span> &amp; [<span class="id" title="var">i</span> <span class="id" title="var">hty</span>] &amp; <span class="id" title="var">hl</span> &amp; <span class="id" title="var">hr</span>).<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="LocalComp.GScope.html#typing_gscope"><span class="id" title="lemma">typing_gscope</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">hl</span> <span class="id" title="keyword">as</span> <span class="id" title="var">gl</span>, <span class="id" title="var">hr</span> <span class="id" title="keyword">as</span> <span class="id" title="var">gr</span>, <span class="id" title="var">hty</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="LocalComp.GScope.html#wf_gscope"><span class="id" title="lemma">wf_gscope</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">hctx</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="LocalComp.GScope.html#gscope_equation"><span class="id" title="definition">gscope_equation</span></a>. <span class="id" title="tactic">intuition</span> <span class="id" title="tactic">eauto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a id="equations_typing_gscope" class="idref" href="#equations_typing_gscope"><span class="id" title="lemma">equations_typing_gscope</span></a> <a id="2ce23d418d95c371330ae00e4301f160" class="idref" href="#2ce23d418d95c371330ae00e4301f160"><span class="id" title="binder">Σ</span></a> <a id="732825fa129a8968bb49b533173afe48" class="idref" href="#732825fa129a8968bb49b533173afe48"><span class="id" title="binder">Ξ</span></a> <a id="R:29" class="idref" href="#R:29"><span class="id" title="binder">R</span></a> :<br/>
+&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Lists.ListDef.html#Forall"><span class="id" title="inductive">Forall</span></a> (<a class="idref" href="LocalComp.Typing.html#equation_typing"><span class="id" title="definition">equation_typing</span></a> <a class="idref" href="LocalComp.GScope.html#2ce23d418d95c371330ae00e4301f160"><span class="id" title="variable">Σ</span></a> <a class="idref" href="LocalComp.GScope.html#732825fa129a8968bb49b533173afe48"><span class="id" title="variable">Ξ</span></a>) <a class="idref" href="LocalComp.GScope.html#R:29"><span class="id" title="variable">R</span></a> <span class="id" title="notation">→</span><br/>
+&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/doc/V9.0.0/stdlib//Corelib.Lists.ListDef.html#Forall"><span class="id" title="inductive">Forall</span></a> (<a class="idref" href="LocalComp.GScope.html#gscope_equation"><span class="id" title="definition">gscope_equation</span></a> <a class="idref" href="LocalComp.GScope.html#2ce23d418d95c371330ae00e4301f160"><span class="id" title="variable">Σ</span></a>) <a class="idref" href="LocalComp.GScope.html#R:29"><span class="id" title="variable">R</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eauto</span> <span class="id" title="keyword">using</span> <span class="id" title="lemma">Forall_impl</span>, <a class="idref" href="LocalComp.GScope.html#equation_typing_gscope"><span class="id" title="lemma">equation_typing_gscope</span></a>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="indexpage.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

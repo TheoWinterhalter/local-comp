@@ -1,0 +1,90 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>LocalComp.autosubst.SubstNotations</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">LocalComp.autosubst.SubstNotations</h1>
+
+<div class="code">
+</div>
+
+<div class="doc">
+Notations for substitutions and renamings
+
+<div class="paragraph"> </div>
+
+  They replace those of Autosubst that are incompatible with list notation.
+
+<div class="paragraph"> </div>
+
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">Stdlib</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">Utf8</span> <span class="id" title="library">List</span>.<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">LocalComp.autosubst</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="LocalComp.autosubst.core.html#"><span class="id" title="library">core</span></a> <a class="idref" href="LocalComp.autosubst.unscoped.html#"><span class="id" title="library">unscoped</span></a> <a class="idref" href="LocalComp.autosubst.RAsimpl.html#"><span class="id" title="library">RAsimpl</span></a> <a class="idref" href="LocalComp.autosubst.AST.html#"><span class="id" title="library">AST</span></a>.<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">Stdlib</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">Setoid</span> <span class="id" title="library">Morphisms</span> <span class="id" title="library">Relation_Definitions</span>.<br/>
+
+<br/>
+#[<span class="id" title="var">global</span>] <span class="id" title="var">Disable</span> <span class="id" title="keyword">Notation</span> "s [ sigma_term ]" : <span class="id" title="var">subst_scope</span>.<br/>
+#[<span class="id" title="var">global</span>] <span class="id" title="var">Disable</span> <span class="id" title="keyword">Notation</span> "'var'" : <span class="id" title="var">subst_scope</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Import</span> <span class="id" title="module">ListNotations</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="b595f4b0a3ce66464de1c8cd4cb0f8f7" class="idref" href="#b595f4b0a3ce66464de1c8cd4cb0f8f7"><span class="id" title="notation">&quot;</span></a>a ⋅ x" :=<br/>
+&nbsp;&nbsp;(<a class="idref" href="LocalComp.autosubst.AST.html#Core.ren_term"><span class="id" title="definition">ren_term</span></a> <span class="id" title="var">a</span> <span class="id" title="var">x</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 20, <span class="id" title="tactic">right</span> <span class="id" title="keyword">associativity</span>) : <span class="id" title="var">subst_scope</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="e4ecc8ef7d5b9438b5b3ca0e2959d1f4" class="idref" href="#e4ecc8ef7d5b9438b5b3ca0e2959d1f4"><span class="id" title="notation">&quot;</span></a>t &lt;[ s ]" :=<br/>
+&nbsp;&nbsp;(<a class="idref" href="LocalComp.autosubst.AST.html#Core.subst_term"><span class="id" title="definition">subst_term</span></a> <span class="id" title="var">s</span> <span class="id" title="var">t</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 10, <span class="id" title="tactic">right</span> <span class="id" title="keyword">associativity</span>) : <span class="id" title="var">subst_scope</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="5b6daffeae860b695189789ad5dacc80" class="idref" href="#5b6daffeae860b695189789ad5dacc80"><span class="id" title="notation">&quot;</span></a>↑" := (<a class="idref" href="LocalComp.autosubst.unscoped.html#shift"><span class="id" title="definition">shift</span></a>) : <span class="id" title="var">subst_scope</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="::subst_scope:x_'..'" class="idref" href="#::subst_scope:x_'..'"><span class="id" title="notation">&quot;</span></a>s '..'" := (<a class="idref" href="LocalComp.autosubst.unscoped.html#scons"><span class="id" title="definition">scons</span></a> <span class="id" title="var">s</span> <a class="idref" href="LocalComp.autosubst.unscoped.html#ids"><span class="id" title="definition">ids</span></a>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 1, <span class="id" title="var">format</span> "s ..") : <span class="id" title="var">subst_scope</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">autosubst_unfold</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="LocalComp.autosubst.AST.html#Core.Ren_term"><span class="id" title="instance">Ren_term</span></a>, <a class="idref" href="LocalComp.autosubst.AST.html#Core.upRen_term_term"><span class="id" title="lemma">upRen_term_term</span></a>, <a class="idref" href="LocalComp.autosubst.AST.html#Core.Subst_term"><span class="id" title="instance">Subst_term</span></a>, <a class="idref" href="LocalComp.autosubst.AST.html#Core.VarInstance_term"><span class="id" title="instance">VarInstance_term</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">resubst</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> ?<a class="idref" href="LocalComp.autosubst.AST.html#Core.renRen_term"><span class="id" title="lemma">renRen_term</span></a>, ?<a class="idref" href="LocalComp.autosubst.AST.html#Core.renSubst_term"><span class="id" title="lemma">renSubst_term</span></a>, ?<a class="idref" href="LocalComp.autosubst.AST.html#Core.substRen_term"><span class="id" title="lemma">substRen_term</span></a>, ?<a class="idref" href="LocalComp.autosubst.AST.html#Core.substSubst_term"><span class="id" title="lemma">substSubst_term</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">ssimpl</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="var">asimpl</span> ;<br/>
+&nbsp;&nbsp;<span class="id" title="var">autosubst_unfold</span> ;<br/>
+&nbsp;&nbsp;<span class="id" title="var">asimpl</span> ;<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">repeat</span> <span class="id" title="var">unfold_funcomp</span> ;<br/>
+&nbsp;&nbsp;<span class="id" title="var">resubst</span> ;<br/>
+&nbsp;&nbsp;<span class="id" title="var">asimpl</span> ;<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">repeat</span> <span class="id" title="var">unfold_funcomp</span>.<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="indexpage.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

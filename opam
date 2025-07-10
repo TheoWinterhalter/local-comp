@@ -1,12 +1,5 @@
 opam-version: "2.0"
 version: "1.0"
-maintainer: "theo.winterhalter@inria.fr"
-dev-repo: "https://github.com/TheoWinterhalter/local-comp.git"
-bug-reports: "https://github.com/TheoWinterhalter/local-comp/issues"
-authors: [
-  "Théo Winterhalter <theo.winterhalter@inria.fr>"
-  "Yann Leray <yann.leray@inria.fr>"
-]
 depends: [
   "rocq-prover" { >= "8.19" & < "9.1~" }
   "rocq-equations" { >= "1.3" }
