@@ -14,10 +14,11 @@ We define a common syntax for both MLTT and its extension.
 [autosubst/core], [autosubst/unscoped] and [autosubst/SubstNotations] contain
 the Autosubst library and some notations.
 [autosubst/RAsimpl] contains implementation for the `rasimpl` tactic,
+a faster substitution simplification tactic,
 whereas [autosubst/AST_rasimpl] provide the corresponding instance for our
 syntax.
 
-[Env] defines global, extension, and local environments.
+[Env] defines global, interface, and local environments.
 
 [Inst] defines operations to instantiate an interface.
 
@@ -36,11 +37,19 @@ syntax.
 | Module            | Description                                |
 | :---------------- | :----------------------------------------- |
 | [GScope]          | Notion of global scope                     |
+| [IScope]          | Interface scoping                          |
 | [Typing]          | Conversion and typing judgements           |
 | [BasicMetaTheory] | Meta-theory like substitution and validity |
+| [Inversion]       | Inversion of typing lemmas                 |
 | [Inlining]        | Inlining and conservativity results        |
+| [Confluence]      | Generic results about confluence           |
+| [Pattern]         | Proof-of-concept confluence proof          |
 
 [GScope]: coqdoc/LocalComp.GScope.html
+[IScope]: coqdoc/LocalComp.IScope.html
 [Typing]: coqdoc/LocalComp.Typing.html
 [BasicMetaTheory]: coqdoc/LocalComp.BasicMetaTheory.html
+[Inversion]: coqdoc/LocalComp.Inversion.html
 [Inlining]: coqdoc/LocalComp.Inlining.html
+[Confluence]: coqdoc/LocalComp.Confluence.html
+[Pattern]: coqdoc/LocalComp.Pattern.html

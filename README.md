@@ -1,13 +1,10 @@
-# Local computation rules in type theory
+# Encode the Cake and Eat it Too
+## Controlling computation in type theory, *locally*
 
-In this repository I develop a type theory which supports prenex quantification
-over computation rules.
-For the moment it contains a proof of conservativity of it over MLTT, and more
-of the meta-theory.
+Repository containing the formalisation that goes with the POPL submission
+entitled "Encode the Cake and Eat it Too".
 
 [See the rendered Rocq code, with comments.](https://theowinterhalter.github.io/local-comp/)
-
-More to come…
 
 ## Building
 
