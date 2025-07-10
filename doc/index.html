@@ -22,7 +22,7 @@
     }
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
-  <link rel="stylesheet" href="github-pandoc.css" />
+  <link rel="stylesheet" href="doc/github-pandoc.css" />
 </head>
 <body>
 <header id="title-block-header">
@@ -32,27 +32,28 @@
 computation in type theory, <em>locally</em></h1>
 <h3 id="utility">Utility</h3>
 <p>General tactics, lemmas and notations are defined in <a
-href="coqdoc/LocalComp.Util.html">Util</a>.</p>
+href="doc/coqdoc/LocalComp.Util.html">Util</a>.</p>
 <h3 id="syntax">Syntax</h3>
 <p>We define a common syntax for both MLTT and its extension. <a
-href="coqdoc/LocalComp.BasicAST.html">BasicAST</a> contains the notion
-of references (for variables). <code>autosubst/AST.sig</code> is used to
-generate the <a
-href="coqdoc/LocalComp.autosubst.AST.html">autosubst/AST</a> module. <a
-href="coqdoc/LocalComp.autosubst.core.html">autosubst/core</a>, <a
-href="coqdoc/LocalComp.autosubst.unscoped.html">autosubst/unscoped</a>
+href="doc/coqdoc/LocalComp.BasicAST.html">BasicAST</a> contains the
+notion of references (for variables). <code>autosubst/AST.sig</code> is
+used to generate the <a
+href="doc/coqdoc/LocalComp.autosubst.AST.html">autosubst/AST</a> module.
+<a href="doc/coqdoc/LocalComp.autosubst.core.html">autosubst/core</a>,
+<a
+href="doc/coqdoc/LocalComp.autosubst.unscoped.html">autosubst/unscoped</a>
 and <a
-href="coqdoc/LocalComp.autosubst.SubstNotations.html">autosubst/SubstNotations</a>
+href="doc/coqdoc/LocalComp.autosubst.SubstNotations.html">autosubst/SubstNotations</a>
 contain the Autosubst library and some notations. <a
-href="coqdoc/LocalComp.autosubst.RAsimpl.html">autosubst/RAsimpl</a>
+href="doc/coqdoc/LocalComp.autosubst.RAsimpl.html">autosubst/RAsimpl</a>
 contains implementation for the <code>rasimpl</code> tactic, a faster
 substitution simplification tactic, whereas <a
-href="coqdoc/LocalComp.autosubst.AST_rasimpl.html">autosubst/AST_rasimpl</a>
+href="doc/coqdoc/LocalComp.autosubst.AST_rasimpl.html">autosubst/AST_rasimpl</a>
 provide the corresponding instance for our syntax.</p>
-<p><a href="coqdoc/LocalComp.Env.html">Env</a> defines global,
+<p><a href="doc/coqdoc/LocalComp.Env.html">Env</a> defines global,
 interface, and local environments.</p>
-<p><a href="coqdoc/LocalComp.Inst.html">Inst</a> defines operations to
-instantiate an interface.</p>
+<p><a href="doc/coqdoc/LocalComp.Inst.html">Inst</a> defines operations
+to instantiate an interface.</p>
 <h3 id="type-theory-and-its-meta-theory">Type Theory and its
 meta-theory</h3>
 <table>
@@ -65,49 +66,49 @@ meta-theory</h3>
 <tbody>
 <tr>
 <td style="text-align: left;"><a
-href="coqdoc/LocalComp.GScope.html">GScope</a></td>
+href="doc/coqdoc/LocalComp.GScope.html">GScope</a></td>
 <td style="text-align: left;">Notion of global scope</td>
 </tr>
 <tr>
 <td style="text-align: left;"><a
-href="coqdoc/LocalComp.IScope.html">IScope</a></td>
+href="doc/coqdoc/LocalComp.IScope.html">IScope</a></td>
 <td style="text-align: left;">Interface scoping</td>
 </tr>
 <tr>
 <td style="text-align: left;"><a
-href="coqdoc/LocalComp.Typing.html">Typing</a></td>
+href="doc/coqdoc/LocalComp.Typing.html">Typing</a></td>
 <td style="text-align: left;">Conversion and typing judgements</td>
 </tr>
 <tr>
 <td style="text-align: left;"><a
-href="coqdoc/LocalComp.BasicMetaTheory.html">BasicMetaTheory</a></td>
+href="doc/coqdoc/LocalComp.BasicMetaTheory.html">BasicMetaTheory</a></td>
 <td style="text-align: left;">Meta-theory like substitution and
 validity</td>
 </tr>
 <tr>
 <td style="text-align: left;"><a
-href="coqdoc/LocalComp.Inversion.html">Inversion</a></td>
+href="doc/coqdoc/LocalComp.Inversion.html">Inversion</a></td>
 <td style="text-align: left;">Inversion of typing lemmas</td>
 </tr>
 <tr>
 <td style="text-align: left;"><a
-href="coqdoc/LocalComp.Inlining.html">Inlining</a></td>
+href="doc/coqdoc/LocalComp.Inlining.html">Inlining</a></td>
 <td style="text-align: left;">Inlining and conservativity results</td>
 </tr>
 <tr>
 <td style="text-align: left;"><a
-href="coqdoc/LocalComp.Confluence.html">Confluence</a></td>
+href="doc/coqdoc/LocalComp.Confluence.html">Confluence</a></td>
 <td style="text-align: left;">Generic results about confluence</td>
 </tr>
 <tr>
 <td style="text-align: left;"><a
-href="coqdoc/LocalComp.Reduction.html">Reduction</a></td>
+href="doc/coqdoc/LocalComp.Reduction.html">Reduction</a></td>
 <td style="text-align: left;">Reduction, injectvity of Π, subject
 reduction</td>
 </tr>
 <tr>
 <td style="text-align: left;"><a
-href="coqdoc/LocalComp.Pattern.html">Pattern</a></td>
+href="doc/coqdoc/LocalComp.Pattern.html">Pattern</a></td>
 <td style="text-align: left;">Proof-of-concept confluence proof</td>
 </tr>
 </tbody>

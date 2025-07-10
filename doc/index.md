@@ -4,7 +4,7 @@ Controlling computation in type theory, *locally*
 ### Utility
 
 General tactics, lemmas and notations are defined in
-[Util](coqdoc/LocalComp.Util.html).
+[Util](doc/coqdoc/LocalComp.Util.html).
 
 ### Syntax
 
@@ -22,15 +22,15 @@ syntax.
 
 [Inst] defines operations to instantiate an interface.
 
-[BasicAST]: coqdoc/LocalComp.BasicAST.html
-[autosubst/AST]: coqdoc/LocalComp.autosubst.AST.html
-[autosubst/core]: coqdoc/LocalComp.autosubst.core.html
-[autosubst/unscoped]: coqdoc/LocalComp.autosubst.unscoped.html
-[autosubst/RAsimpl]: coqdoc/LocalComp.autosubst.RAsimpl.html
-[autosubst/AST_rasimpl]: coqdoc/LocalComp.autosubst.AST_rasimpl.html
-[autosubst/SubstNotations]: coqdoc/LocalComp.autosubst.SubstNotations.html
-[Env]: coqdoc/LocalComp.Env.html
-[Inst]: coqdoc/LocalComp.Inst.html
+[BasicAST]: doc/coqdoc/LocalComp.BasicAST.html
+[autosubst/AST]: doc/coqdoc/LocalComp.autosubst.AST.html
+[autosubst/core]: doc/coqdoc/LocalComp.autosubst.core.html
+[autosubst/unscoped]: doc/coqdoc/LocalComp.autosubst.unscoped.html
+[autosubst/RAsimpl]: doc/coqdoc/LocalComp.autosubst.RAsimpl.html
+[autosubst/AST_rasimpl]: doc/coqdoc/LocalComp.autosubst.AST_rasimpl.html
+[autosubst/SubstNotations]: doc/coqdoc/LocalComp.autosubst.SubstNotations.html
+[Env]: doc/coqdoc/LocalComp.Env.html
+[Inst]: doc/coqdoc/LocalComp.Inst.html
 
 ### Type Theory and its meta-theory
 
@@ -46,12 +46,12 @@ syntax.
 | [Reduction]       | Reduction, injectvity of Π, subject reduction |
 | [Pattern]         | Proof-of-concept confluence proof             |
 
-[GScope]: coqdoc/LocalComp.GScope.html
-[IScope]: coqdoc/LocalComp.IScope.html
-[Typing]: coqdoc/LocalComp.Typing.html
-[BasicMetaTheory]: coqdoc/LocalComp.BasicMetaTheory.html
-[Inversion]: coqdoc/LocalComp.Inversion.html
-[Inlining]: coqdoc/LocalComp.Inlining.html
-[Confluence]: coqdoc/LocalComp.Confluence.html
-[Reduction]: coqdoc/LocalComp.Reduction.html
-[Pattern]: coqdoc/LocalComp.Pattern.html
+[GScope]: doc/coqdoc/LocalComp.GScope.html
+[IScope]: doc/coqdoc/LocalComp.IScope.html
+[Typing]: doc/coqdoc/LocalComp.Typing.html
+[BasicMetaTheory]: doc/coqdoc/LocalComp.BasicMetaTheory.html
+[Inversion]: doc/coqdoc/LocalComp.Inversion.html
+[Inlining]: doc/coqdoc/LocalComp.Inlining.html
+[Confluence]: doc/coqdoc/LocalComp.Confluence.html
+[Reduction]: doc/coqdoc/LocalComp.Reduction.html
+[Pattern]: doc/coqdoc/LocalComp.Pattern.html

@@ -4,7 +4,7 @@
 Repository containing the formalisation that goes with the POPL submission
 entitled "Encode the Cake and Eat it Too".
 
-[See the rendered Rocq code, with comments.](https://theowinterhalter.github.io/local-comp/)
+[See the rendered Rocq code, with comments.](https://anonymous.4open.science/w/local-comp-popl-DE23/doc)
 
 ## Building
 

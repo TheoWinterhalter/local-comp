@@ -13,9 +13,8 @@ autosubst:
 
 force _CoqProject Makefile: ;
 
-doc:
-	$(MAKE) coqdoc
-	pandoc --standalone --output=doc/index.html --css=github-pandoc.css --metadata title="Local Comp Overview" doc/index.md
+doc: coqdoc
+	pandoc --standalone --output=doc/index.html --css=doc/github-pandoc.css --metadata title="Local Comp Overview" doc/index.md
 
 %: Makefile.coq force
 	@+$(MAKE) -f Makefile.coq $@
