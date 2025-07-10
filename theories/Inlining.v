@@ -174,15 +174,6 @@ Section Inline.
     intros. eapply conv_ren. eassumption.
   Qed.
 
-  Lemma ictx_get_map Ξ x f :
-    ictx_get (map f Ξ) x =
-    option_map f (ictx_get Ξ x).
-  Proof.
-    unfold ictx_get.
-    rewrite <- map_rev, nth_error_map.
-    reflexivity.
-  Qed.
-
   Lemma ictx_get_assm_inline Ξ x A :
     ictx_get Ξ x = Some (Assm A) →
     ictx_get ⟦ Ξ ⟧e x = Some (Assm ⟦ A ⟧).

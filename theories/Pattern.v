@@ -59,14 +59,6 @@ Definition pctx := list pdecl.
 
 Notation pctx_get Ξ x := (lvl_get (A := pdecl) Ξ x).
 
-Lemma lvl_get_map [A B] (f : A → B) l x :
-  lvl_get (map f l) x = option_map f (lvl_get l x).
-Proof.
-  unfold lvl_get.
-  rewrite <- map_rev, nth_error_map.
-  reflexivity.
-Qed.
-
 Definition pdecl_idecl (d : pdecl) : idecl :=
   match d with
   | pAssm A => Assm A
@@ -1361,3 +1353,23 @@ Proof.
   - apply pred_confluence. assumption.
 Qed.
 
+(** The [ws] condition is realistic *)
+
+Lemma pctx_get_ictx Ξ n rl :
+  pctx_get Ξ n = Some (pComp rl) →
+  ictx_get (pctx_ictx Ξ) n = Some (Comp (prule_crule rl)).
+Proof.
+  intros h.
+  unfold pctx_ictx. rewrite lvl_get_map, h. reflexivity.
+Qed.
+
+Lemma iwf_ws Σ Ξ :
+  iwf Σ (pctx_ictx Ξ) →
+  ws Ξ.
+Proof.
+  intros h. intros n rl e.
+  eapply pctx_get_ictx in e as e'.
+  eapply valid_comp in e' as h'. 2: eassumption.
+  destruct h' as (_ & ? & ? & hl & hr).
+  eapply typing_scoped in hl, hr. cbn in hl, hr.
+Abort.

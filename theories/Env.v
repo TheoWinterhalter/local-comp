@@ -137,6 +137,20 @@ Proof.
   eapply nth_error_In. eassumption.
 Qed.
 
+Lemma lvl_get_map [A B] (f : A → B) l x :
+  lvl_get (map f l) x = option_map f (lvl_get l x).
+Proof.
+  unfold lvl_get.
+  rewrite <- map_rev, nth_error_map.
+  reflexivity.
+Qed.
+
+Lemma ictx_get_map Ξ x f :
+  ictx_get (map f Ξ) x = option_map f (ictx_get Ξ x).
+Proof.
+  apply lvl_get_map.
+Qed.
+
 (** Global declaration *)
 Inductive gdecl :=
 | Def (Ξ : ictx) (A : term) (t : term).
