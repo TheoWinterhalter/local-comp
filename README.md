@@ -1,8 +1,8 @@
 # Encode the Cake and Eat it Too
 ## Controlling computation in type theory, *locally*
 
-Repository containing the formalisation that goes with the POPL submission
-entitled "Encode the Cake and Eat it Too".
+Repository containing the formalisation that goes with our draft
+entitled ["Encode the Cake and Eat it Too: Controlling computation in type theory, locally"](https://hal.science/view/index/docid/5160846).
 
 [See the rendered Rocq code, with comments.](https://theowinterhalter.github.io/local-comp/)
 
