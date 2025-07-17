@@ -13,30 +13,76 @@ From Stdlib Require Import Utf8 String List Arith Lia.
 From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst Typing BasicMetaTheory
-  GScope Inversion Confluence Reduction.
+  GScope Inversion Confluence Reduction Monad.
 From Stdlib Require Import Setoid Morphisms Relation_Definitions
   Relation_Operators.
 From Equations Require Import Equations.
 
 Import ListNotations.
 Import CombineNotations.
+Import MonadNotations.
 
 Set Default Goal Selector "!".
 
 Require Import Equations.Prop.DepElim.
 
-Inductive pat :=
-| passm (x : aref).
+(** * Patterns and their arguments
 
-Definition pat_to_term p :=
-  match p with
-  | passm x => assm x
+  An argument can either be a pattern itself, or a variable.
+  Variables are meant to be linear, therefore the constructor doesn't take
+  any argument.
+
+*)
+
+Inductive parg_ pat :=
+| argpat (p : pat)
+| argvar.
+
+Arguments argpat {pat}.
+Arguments argvar {pat}.
+
+Inductive pat :=
+| passm (x : aref)
+| papp (p : pat) (a : parg_ pat).
+
+Notation parg := (parg_ pat).
+
+(** * Term reconstruction from patterns
+
+  We use the state monad to count variables.
+
+*)
+
+(* Definition incr : St nat unit :=
+  λ s, (S s, tt). *)
+
+Definition incr : St nat unit :=
+  x ← getSt `; putSt (S x).
+
+Definition get_incr : St nat nat :=
+  x ← getSt `;
+  putSt (S x) `;
+  ret x.
+
+Definition parg_to_term_ {P} (f : P → St nat term) a : St nat term :=
+  match a with
+  | argpat p => f p
+  | argvar => var <*> get_incr
   end.
 
-(** TODO Have a proper environment (or scope), and ensure linearity *)
+Fixpoint st_pat_to_term p : St nat term :=
+  match p with
+  | passm x => ret (assm x)
+  | papp p a => app <*> (st_pat_to_term p) <@> (parg_to_term_ st_pat_to_term a)
+  end.
+
+Notation parg_to_term := (parg_to_term_ st_pat_to_term).
+
+Definition pat_to_term p : term :=
+  runSt 0 (st_pat_to_term p).
+
 Record prule := {
-  (* pr_env : ctx ; *)
-  pr_env : ctx := [] ;
+  pr_env : ctx ;
   pr_pat : pat ;
   pr_sub : nat → term ;
   pr_rep : term ;
@@ -70,10 +116,20 @@ Definition pctx_ictx (Ξ : pctx) : ictx :=
 
 (** ** Matching *)
 
-Definition match_pat (p : pat) (t : term) : option (list term) :=
+Definition match_arg {P} (m : P → _) a t : Exn (list term) :=
+  match a with
+  | argpat p => m p t
+  | argvar => ret [ t ]
+  end.
+
+Fixpoint match_pat (p : pat) (t : term) : Exn (list term) :=
   match p, t with
-  | passm x, assm y => if x =? y then Some [] else None
-  | _, _ => None
+  | passm x, assm y => if x =? y then ret [] else fail
+  | papp p a, app f u =>
+      σ ← match_pat p f `;
+      σ' ← match_arg match_pat a u `;
+      ret (σ' ++ σ)
+  | _, _ => fail
   end.
 
 Fixpoint find_match Ξ t :=
@@ -98,19 +154,24 @@ Fixpoint slist (l : list term) :=
   | u :: l => u .: slist l
   end.
 
-Lemma match_pat_sound p t σ :
+(* Let's try and do without? *)
+(* Lemma match_pat_sound p t σ :
   match_pat p t = Some σ →
   t = (pat_to_term p) <[ slist σ ].
 Proof.
   intros h.
-  induction p.
-  destruct t. all: try discriminate.
-  cbn in h. destruct (Nat.eqb_spec x a). 2: discriminate.
-  subst.
-  reflexivity.
-Qed.
+  induction p as [ x | p ih a ] in t, σ, h |- *.
+  - destruct t. all: try discriminate.
+    cbn in h. destruct (Nat.eqb_spec x a). 2: discriminate.
+    subst.
+    reflexivity.
+  - destruct t. all: try discriminate.
+    cbn in h. apply bindExn_Some in h as (σ1 & e1 & e2).
+    apply bindExn_Some in e2 as (σ2 & e2 & [= <-]).
+    eapply ih in e1. subst.
+Qed. *)
 
-Lemma find_match_sound Ξ t n rl σ :
+(* Lemma find_match_sound Ξ t n rl σ :
   find_match Ξ t = Some (n, rl, σ) →
   pctx_get Ξ n = Some (pComp rl) ∧
   match_pat rl.(pr_pat) t = Some σ.
@@ -123,7 +184,7 @@ Proof.
     + inversion h. subst.
       rewrite lvl_get_last. intuition eauto.
     + erewrite lvl_get_weak. all: intuition eauto.
-Qed.
+Qed. *)
 
 Definition triangle_citerion Ξ :=
   ∀ m n rl1 rl2,
@@ -320,11 +381,17 @@ Section Red.
     match_pat p (ρ ⋅ t) = Some (map (ren_term ρ) l).
   Proof.
     intro h.
-    destruct p, t. all: try discriminate.
-    cbn in *. destruct (_ =? _). 2: discriminate.
-    inversion h.
-    reflexivity.
-  Qed.
+    induction p as [ x | p ih a ] in t, ρ, h, l |- *.
+    - destruct t. all: try discriminate.
+      cbn in *. destruct (_ =? _). 2: discriminate.
+      inversion h.
+      reflexivity.
+    - destruct t. all: try discriminate.
+      cbn in h. apply bindExn_Some in h as (σ1 & e1 & e2).
+      apply bindExn_Some in e2 as (σ2 & e2 & [= <-]).
+      cbn.
+      eapply ih in e1. rewrite e1. cbn.
+  Abort.
 
   Lemma slist_ren l ρ :
     pointwise_relation _ eq
