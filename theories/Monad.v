@@ -3,6 +3,7 @@
 From Stdlib Require Import Utf8 List Bool Setoid Morphisms Relation_Definitions
   Setoid Morphisms Relation_Definitions Relation_Operators.
 From Equations Require Import Equations.
+From LocalComp Require Import Util.
 
 Import ListNotations.
 
@@ -108,3 +109,12 @@ Definition bindExn {A B} (a : Exn A) (f : A → Exn B) : Exn B :=
 
 Definition fail {A} : Exn A :=
   None.
+
+Lemma bindExn_Some A B c f x :
+  @bindExn A B c f = Some x →
+  ∃ a, c = Some a ∧ f a = Some x.
+Proof.
+  intros e.
+  destruct c. 2: discriminate.
+  cbn in e. eexists. intuition eauto.
+Qed.
