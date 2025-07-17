@@ -64,6 +64,8 @@ Module MonadNotations.
 
 End MonadNotations.
 
+(** * State monad *)
+
 Definition St state A := state → state * A.
 
 Definition retSt {st A} (a : A) : St st A :=
@@ -72,16 +74,37 @@ Definition retSt {st A} (a : A) : St st A :=
 Definition bindSt {st A B} (a : St st A) (f : A → St st B) : St st B :=
   λ s, let (s', x) := a s in f x s'.
 
-Definition runSt {st A} (s : st) (a : St st A) : A :=
-  snd (a s).
-
 #[export] Instance MonadSt st : Monad (St st) := {|
   ret A x := retSt x ;
   bind A B c f := bindSt c f
 |}.
+
+Definition runSt {st A} (s : st) (a : St st A) : A :=
+  snd (a s).
 
 Definition getSt {st} : St st st :=
   λ s, (s,s).
 
 Definition putSt {st} (s : st) : St st unit :=
   λ _, (s, tt).
+
+(** * Exception monad *)
+
+Definition Exn A := option A.
+
+Definition retExn {A} (a : A) : Exn A :=
+  Some a.
+
+Definition bindExn {A B} (a : Exn A) (f : A → Exn B) : Exn B :=
+  match a with
+  | Some x => f x
+  | None => None
+  end.
+
+#[export] Instance MonadExn : Monad Exn := {|
+  ret A x := retExn x ;
+  bind A B c f := bindExn c f
+|}.
+
+Definition fail {A} : Exn A :=
+  None.
