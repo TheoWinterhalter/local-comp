@@ -20,8 +20,11 @@ Class Monad (M : Type → Type) := {
 Arguments ret {M _ A}.
 Arguments bind {M _ A B}.
 
-Definition map {M} `{Monad M} {A B} (f : A → B) (m : M A) : M B :=
+Definition fmap {M} `{Monad M} {A B} (f : A → B) (m : M A) : M B :=
   bind m (λ x, ret (f x)).
+
+Definition ap {M} `{Monad M} {A B} (f : M (A → B)) (c : M A) : M B :=
+  bind f (λ g, bind c (λ x, ret (g x))).
 
 Module MonadNotations.
 
@@ -34,23 +37,28 @@ Module MonadNotations.
     (bind c f)
     (at level 50, left associativity) : monad_scope.
 
-  Notation "x ← e ;; f" :=
+  Notation "x ← e `; f" :=
     (bind e (λ x, f))
     (at level 100, e at next level, right associativity)
     : monad_scope.
 
-  Notation "' pat ← e ;; f" :=
+  Notation "' pat ← e `; f" :=
     (bind e (λ pat, f))
     (at level 100, e at next level, right associativity, pat pattern)
     : monad_scope.
 
-  Notation "e ;; f" :=
+  Notation "e `; f" :=
     (bind e (λ _, f))
     (at level 100, right associativity)
     : monad_scope.
 
   Notation "f '<*>' m" :=
-    (map f m)
+    (fmap f m)
+    (at level 50, left associativity)
+    : monad_scope.
+
+  Notation "f '<@>' m" :=
+    (ap f m)
     (at level 50, left associativity)
     : monad_scope.
 
@@ -71,3 +79,9 @@ Definition runSt {st A} (s : st) (a : St st A) : A :=
   ret A x := retSt x ;
   bind A B c f := bindSt c f
 |}.
+
+Definition getSt {st} : St st st :=
+  λ s, (s,s).
+
+Definition putSt {st} (s : st) : St st unit :=
+  λ _, (s, tt).
