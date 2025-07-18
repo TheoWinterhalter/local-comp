@@ -26,26 +26,19 @@ Set Default Goal Selector "!".
 
 Require Import Equations.Prop.DepElim.
 
-(** * Patterns and their arguments
+(** * Patterns
 
-  An argument can either be a pattern itself, or a variable.
-  Variables are meant to be linear, therefore the constructor doesn't take
-  any argument.
+  Variables are meant to be linear, therefore the variable constructor doesn't
+  take any argument (ie no de Bruijn index).
+  We a priori do not prevent patterns from being lone or applied variables
+  even though those are quite bad patterns (eg. not stable under substitution).
 
 *)
 
-Inductive parg_ pat :=
-| argpat (p : pat)
-| argvar.
-
-Arguments argpat {pat}.
-Arguments argvar {pat}.
-
 Inductive pat :=
 | passm (x : aref)
-| papp (p : pat) (a : parg_ pat).
-
-Notation parg := (parg_ pat).
+| papp (p q : pat)
+| pvar.
 
 (** * Term reconstruction from patterns
 
@@ -53,30 +46,17 @@ Notation parg := (parg_ pat).
 
 *)
 
-(* Definition incr : St nat unit :=
-  λ s, (S s, tt). *)
-
-Definition incr : St nat unit :=
-  x ← getSt `; putSt (S x).
-
 Definition get_incr : St nat nat :=
   x ← getSt `;
   putSt (S x) `;
   ret x.
 
-Definition parg_to_term_ {P} (f : P → St nat term) a : St nat term :=
-  match a with
-  | argpat p => f p
-  | argvar => var <*> get_incr
-  end.
-
 Fixpoint st_pat_to_term p : St nat term :=
   match p with
   | passm x => ret (assm x)
-  | papp p a => app <*> (st_pat_to_term p) <@> (parg_to_term_ st_pat_to_term a)
+  | papp p q => app <*> (st_pat_to_term p) <@> (st_pat_to_term q)
+  | pvar => var <*> get_incr
   end.
-
-Notation parg_to_term := (parg_to_term_ st_pat_to_term).
 
 Definition pat_to_term p : term :=
   runSt 0 (st_pat_to_term p).
@@ -116,19 +96,14 @@ Definition pctx_ictx (Ξ : pctx) : ictx :=
 
 (** ** Matching *)
 
-Definition match_arg {P} (m : P → _) a t : Exn (list term) :=
-  match a with
-  | argpat p => m p t
-  | argvar => ret [ t ]
-  end.
-
 Fixpoint match_pat (p : pat) (t : term) : Exn (list term) :=
   match p, t with
   | passm x, assm y => if x =? y then ret [] else fail
-  | papp p a, app f u =>
+  | papp p q, app f u =>
       σ ← match_pat p f `;
-      σ' ← match_arg match_pat a u `;
+      σ' ← match_pat q u `;
       ret (σ' ++ σ)
+  | pvar, _ => ret [ t ]
   | _, _ => fail
   end.
 
@@ -154,24 +129,44 @@ Fixpoint slist (l : list term) :=
   | u :: l => u .: slist l
   end.
 
-(* Let's try and do without? *)
-(* Lemma match_pat_sound p t σ :
+Lemma match_pat_sound p t σ :
   match_pat p t = Some σ →
   t = (pat_to_term p) <[ slist σ ].
 Proof.
   intros h.
-  induction p as [ x | p ih a ] in t, σ, h |- *.
+  induction p as [ x | p ihp q ihq | ] in t, σ, h |- *.
   - destruct t. all: try discriminate.
     cbn in h. destruct (Nat.eqb_spec x a). 2: discriminate.
     subst.
     reflexivity.
   - destruct t. all: try discriminate.
-    cbn in h. apply bindExn_Some in h as (σ1 & e1 & e2).
-    apply bindExn_Some in e2 as (σ2 & e2 & [= <-]).
-    eapply ih in e1. subst.
-Qed. *)
+    cbn in h. apply bindExn_Some in h as (σp & ep & eq).
+    apply bindExn_Some in eq as (σq & eq & [= <-]).
+    eapply ihp in ep. eapply ihq in eq. subst.
+    (* This is quite annoying
 
-(* Lemma find_match_sound Ξ t n rl σ :
+      - Maybe we could abstract what an instance is with a predicate?
+      - Or we could have something better than list for matching,
+        like a tree from which one can read the list when needed?
+        The problem is pat_to_term though, so this has to be fixed somehow.
+        But I guess it could move the problem a bit, we first get an easy
+        result that matching is sound by saying the term is equal to merging
+        the pattern with the tree substitution.
+        Then we can show that this will map well through st_pat_to_term?
+
+        Another option (maybe complementary) might be to forget about state
+        and instead have some linapp that uses a renaming on the left
+        branch, but it would have to compute the scope of the right one.
+        We can actually compute the number of variables of a pattern,
+        which is easier than scope of a term.
+
+    *)
+    admit.
+  - cbn in h. inversion h. subst.
+    reflexivity.
+Admitted.
+
+Lemma find_match_sound Ξ t n rl σ :
   find_match Ξ t = Some (n, rl, σ) →
   pctx_get Ξ n = Some (pComp rl) ∧
   match_pat rl.(pr_pat) t = Some σ.
@@ -184,7 +179,7 @@ Proof.
     + inversion h. subst.
       rewrite lvl_get_last. intuition eauto.
     + erewrite lvl_get_weak. all: intuition eauto.
-Qed. *)
+Qed.
 
 Definition triangle_citerion Ξ :=
   ∀ m n rl1 rl2,
