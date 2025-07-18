@@ -3,10 +3,6 @@
   We provide a notion of pattern as well as ways to verify the criteria
   imposed on reduction in the [Reduction] module.
 
-  For now, we'll start with a very very weak version which only accepts one
-  symbol as a left-hand side to a rule.
-  TODO: Improve
-
 *)
 
 From Stdlib Require Import Utf8 String List Arith Lia.
@@ -42,24 +38,27 @@ Inductive pat :=
 
 (** * Term reconstruction from patterns
 
-  We use the state monad to count variables.
+  We choose not to use a state monad, because we don't care about efficiency,
+  it is merely a tool to prove confluence.
+  We instead use a more compositional approach with lifting.
 
 *)
 
-Definition get_incr : St nat nat :=
-  x ← getSt `;
-  putSt (S x) `;
-  ret x.
-
-Fixpoint st_pat_to_term p : St nat term :=
+Fixpoint npvar p :=
   match p with
-  | passm x => ret (assm x)
-  | papp p q => app <*> (st_pat_to_term p) <@> (st_pat_to_term q)
-  | pvar => var <*> get_incr
+  | passm x => 0
+  | papp p q => npvar q + npvar p
+  | pvar => 1
   end.
 
-Definition pat_to_term p : term :=
-  runSt 0 (st_pat_to_term p).
+Fixpoint pat_to_term p : term :=
+  match p with
+  | passm x => assm x
+  | papp p q =>
+      let k := npvar q in
+      app (plus k ⋅ pat_to_term p) (pat_to_term q)
+  | pvar => var 0
+  end.
 
 Record prule := {
   pr_env : ctx ;
@@ -129,6 +128,78 @@ Fixpoint slist (l : list term) :=
   | u :: l => u .: slist l
   end.
 
+Lemma match_pat_npvar p t σ :
+  match_pat p t = Some σ →
+  length σ = npvar p.
+Proof.
+  intros h.
+  induction p as [ x | p ihp q ihq | ] in t, σ, h |- *.
+  - destruct t. all: try discriminate.
+    cbn in *. destruct (Nat.eqb_spec x a). 2: discriminate.
+    inversion h.
+    reflexivity.
+  - destruct t. all: try discriminate.
+    cbn in h. apply bindExn_Some in h as (σp & ep & eq).
+    apply bindExn_Some in eq as (σq & eq & [= <-]).
+    eapply ihp in ep. eapply ihq in eq.
+    rewrite length_app. cbn. lia.
+  - cbn in h. inversion h. subst.
+    reflexivity.
+Qed.
+
+Lemma npvar_scoped p :
+  scoped (npvar p) (pat_to_term p) = true.
+Proof.
+  induction p as [ x | p ihp q ihq | ].
+  - reflexivity.
+  - cbn. rewrite Bool.andb_true_iff. split.
+    + eapply scoped_lift. assumption.
+    + eapply scoped_upwards. 1: eassumption.
+      lia.
+  - reflexivity.
+Qed.
+
+#[export] Instance eq_subst_on_refl k : Reflexive (eq_subst_on k).
+Proof.
+  intros ?. intros n ?.
+  reflexivity.
+Qed.
+
+#[export] Instance eq_subst_on_sym k : Symmetric (eq_subst_on k).
+Proof.
+  intros ?? h. intros n ?. red in h.
+  symmetry. eauto.
+Qed.
+
+#[export] Instance eq_subst_on_trans k : Transitive (eq_subst_on k).
+Proof.
+  intros ??? h1 h2. intros n h. red in h1, h2.
+  etransitivity.
+  - eapply h1. assumption.
+  - eauto.
+Qed.
+
+(* Lemma slist_nth_error σ n :
+  nth_error
+
+Lemma eq_subst_on_slist k σ θ :
+  firstn k σ = firstn k θ →
+  eq_subst_on k (slist σ) (slist θ).
+Proof.
+  intros e. intros n hn. *)
+
+Lemma eq_subst_on_slist_firstn k σ :
+  eq_subst_on k (slist σ) (slist (firstn k σ)).
+Proof.
+  intros n hn.
+  induction σ as [| u σ ih] in n, k, hn |- *.
+  - cbn. rewrite firstn_nil. reflexivity.
+  - cbn. destruct k. 1: lia.
+    cbn. destruct n.
+    + cbn. reflexivity.
+    + cbn. eapply ih. lia.
+Qed.
+
 Lemma match_pat_sound p t σ :
   match_pat p t = Some σ →
   t = (pat_to_term p) <[ slist σ ].
@@ -142,26 +213,15 @@ Proof.
   - destruct t. all: try discriminate.
     cbn in h. apply bindExn_Some in h as (σp & ep & eq).
     apply bindExn_Some in eq as (σq & eq & [= <-]).
+    eapply match_pat_npvar in ep as e1, eq as e2.
     eapply ihp in ep. eapply ihq in eq. subst.
-    (* This is quite annoying
-
-      - Maybe we could abstract what an instance is with a predicate?
-      - Or we could have something better than list for matching,
-        like a tree from which one can read the list when needed?
-        The problem is pat_to_term though, so this has to be fixed somehow.
-        But I guess it could move the problem a bit, we first get an easy
-        result that matching is sound by saying the term is equal to merging
-        the pattern with the tree substitution.
-        Then we can show that this will map well through st_pat_to_term?
-
-        Another option (maybe complementary) might be to forget about state
-        and instead have some linapp that uses a renaming on the left
-        branch, but it would have to compute the scope of the right one.
-        We can actually compute the number of variables of a pattern,
-        which is easier than scope of a term.
-
-    *)
-    admit.
+    cbn. f_equal.
+    + admit.
+    + eapply ext_term_scoped. 1: eapply npvar_scoped.
+      etransitivity. 2: symmetry. 2: eapply eq_subst_on_slist_firstn.
+      rewrite firstn_app. rewrite firstn_all2. 2: lia.
+      replace (_ - _) with 0 by lia. rewrite firstn_O.
+      rewrite app_nil_r. reflexivity.
   - cbn in h. inversion h. subst.
     reflexivity.
 Admitted.
