@@ -1,9 +1,11 @@
 (** * Interface instantiation *)
 
 From Stdlib Require Import Utf8 List.
-From LocalComp.autosubst Require Import AST SubstNotations RAsimpl AST_rasimpl.
+From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
+  AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env.
 Import ListNotations.
+Import CombineNotations.
 
 Set Default Goal Selector "!".
 
@@ -25,7 +27,13 @@ Notation ren_instance ρ ξ :=
 
 Notation lift_instance ξ := (ren_instance S ξ).
 
-Notation liftn n ξ := (ren_instance (plus n) ξ).
+Fixpoint lift k : nat → nat :=
+  match k with
+  | 0 => id
+  | S k => lift k >> S
+  end.
+
+Notation liftn n ξ := (ren_instance (lift n) ξ).
 
 Fixpoint inst (ξ : instance) (t : term) :=
   match t with

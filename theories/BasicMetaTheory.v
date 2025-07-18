@@ -160,7 +160,7 @@ Qed.
 
 Lemma typing_ind :
   ∀ Σ Ξ (P : ctx → term → term → Prop),
-    (∀ Γ x A, nth_error Γ x = Some A → P Γ (var x) (Nat.add (S x) ⋅ A)) →
+    (∀ Γ x A, nth_error Γ x = Some A → P Γ (var x) (lift (S x) ⋅ A)) →
     (∀ Γ i, P Γ (Sort i) (Sort (S i))) →
     (∀ Γ i j A B,
       Σ ;; Ξ | Γ ⊢ A : Sort i →
@@ -420,7 +420,7 @@ Definition rtyping (Γ : ctx) (ρ : nat → nat) (Δ : ctx) : Prop :=
     nth_error Δ x = Some A →
     ∃ B,
       nth_error Γ (ρ x) = Some B ∧
-      (plus (S x) >> ρ) ⋅ A = (plus (S (ρ x))) ⋅ B.
+      (lift (S x) >> ρ) ⋅ A = (lift (S (ρ x))) ⋅ B.
 
 #[export] Instance rtyping_morphism :
   Proper (eq ==> pointwise_relation _ eq ==> eq ==> iff) rtyping.
@@ -491,14 +491,23 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma lift_apply k n :
+  lift k n = k + n.
+Proof.
+  induction k as [| k ih] in n |- *.
+  - reflexivity.
+  - cbn. unfold ">>". eauto.
+Qed.
+
 Lemma rtyping_add Γ Δ :
-  rtyping (Γ ,,, Δ) (plus (length Δ)) Γ.
+  rtyping (Γ ,,, Δ) (lift (length Δ)) Γ.
 Proof.
   intros x A e.
   exists A. split.
-  - rewrite nth_error_app2. 2: lia.
+  - rewrite lift_apply. rewrite nth_error_app2. 2: lia.
     rewrite <- e. f_equal. lia.
-  - apply extRen_term. intro. core.unfold_funcomp. lia.
+  - apply extRen_term. intro. core.unfold_funcomp.
+    rewrite !lift_apply. lia.
 Qed.
 
 Lemma ren_instance_comp :
@@ -536,7 +545,8 @@ Lemma liftn_liftn n m ξ :
   liftn n (liftn m ξ) = liftn (n + m) ξ.
 Proof.
   rewrite ren_instance_comp.
-  apply ren_instance_ext. unfold core.funcomp. intro. lia.
+  apply ren_instance_ext. unfold core.funcomp. intro.
+  rewrite !lift_apply. lia.
 Qed.
 
 Fixpoint uprens k (ρ : nat → nat) :=
@@ -736,7 +746,7 @@ Proof.
 Qed.
 
 Lemma ups_above k σ n :
-  ups k σ (k + n) = (plus k) ⋅ σ n.
+  ups k σ (k + n) = (lift k) ⋅ σ n.
 Proof.
   induction k as [| k ih] in n |- *.
   - cbn. rasimpl. reflexivity.
@@ -900,7 +910,7 @@ Fixpoint listify k (σ : nat → term) :=
 
 Fixpoint trunc k d (σ : nat → term) :=
   match k with
-  | 0 => plus d >> ids
+  | 0 => lift d >> ids
   | S k => σ 0 .: trunc k d (S >> σ)
   end.
 
@@ -918,7 +928,7 @@ Lemma trunc_bounds k d σ x :
   trunc k d σ (k + x) = var (d + x).
 Proof.
   induction k as [| k ih] in σ, x |- *.
-  - cbn. reflexivity.
+  - cbn. unfold ">>". rewrite lift_apply. reflexivity.
   - cbn. apply ih.
 Qed.
 
@@ -1037,7 +1047,7 @@ Proof.
   - cbn. rewrite !iget_ren. rasimpl.
     rewrite rinstInst'_term.
     apply ext_term. intro k.
-    unfold core.funcomp.
+    unfold core.funcomp. rewrite !lift_apply.
     rewrite hσ. cbn. reflexivity.
 Qed.
 
@@ -1314,7 +1324,7 @@ Qed.
 
 Lemma scoped_lift_gen k l t m :
   scoped (m + l) t = true →
-  scoped (m + k + l) (uprens m (plus k) ⋅ t) = true.
+  scoped (m + k + l) (uprens m (lift k) ⋅ t) = true.
 Proof.
   intros h.
   induction t using term_rect in m, k, l, h |- *.
@@ -1329,7 +1339,7 @@ Proof.
     + rewrite uprens_below. 2: assumption.
       lia.
     + pose (p := n - m). replace n with (m + p) by lia.
-      rewrite uprens_above. lia.
+      rewrite uprens_above. rewrite lift_apply. lia.
   - cbn in *. rewrite Bool.andb_true_iff in *.
     intuition eauto.
     change (upRen_term_term (uprens m ?ρ)) with (uprens (S m) ρ).
@@ -1354,7 +1364,7 @@ Qed.
 
 Lemma scoped_lift k l t :
   scoped l t = true →
-  scoped (k + l) (plus k ⋅ t) = true.
+  scoped (k + l) (lift k ⋅ t) = true.
 Proof.
   intros h.
   eapply scoped_lift_gen with (m := 0).
@@ -1556,7 +1566,7 @@ Qed.
 
 Lemma nth_error_ctx_inst ξ Γ x :
   nth_error (ctx_inst ξ Γ) x =
-  option_map (inst (ren_instance (plus (length Γ - S x)) ξ)) (nth_error Γ x).
+  option_map (inst (ren_instance (lift (length Γ - S x)) ξ)) (nth_error Γ x).
 Proof.
   induction Γ in ξ, x |- *.
   - cbn. rewrite nth_error_nil. reflexivity.
@@ -1756,7 +1766,7 @@ Proof.
       cbn. intro.
       pose proof (nth_error_Some Γ x) as e%proj1.
       forward e by congruence.
-      lia.
+      unfold ">>". rewrite !lift_apply. lia.
   - cbn. constructor. 1: eauto.
     subst rξ. rewrite ren_instance_comp. apply IHht2. assumption.
   - cbn. econstructor. 1: eauto.
@@ -2116,7 +2126,7 @@ Qed.
 Lemma valid_wf Σ Ξ Γ x A :
   wf Σ Ξ Γ →
   nth_error Γ x = Some A →
-  ∃ i, Σ ;; Ξ | Γ ⊢ (plus (S x)) ⋅ A : Sort i.
+  ∃ i, Σ ;; Ξ | Γ ⊢ (lift (S x)) ⋅ A : Sort i.
 Proof.
   intros hΓ h.
   induction hΓ as [| Γ i B hΓ ih hB] in x, h |- *.
@@ -2226,7 +2236,7 @@ Qed.
 Definition styping_alt Σ Ξ (Γ : ctx) (σ : nat → term) (Δ : ctx) :=
   ∀ x A,
     nth_error Δ x = Some A →
-    Σ ;; Ξ | Γ ⊢ σ x : ((plus (S x)) ⋅ A) <[ σ ].
+    Σ ;; Ξ | Γ ⊢ σ x : ((lift (S x)) ⋅ A) <[ σ ].
 
 Lemma styping_alt_equiv Σ Ξ Γ σ Δ :
   styping Σ Ξ Γ σ Δ ↔ styping_alt Σ Ξ Γ σ Δ.
@@ -2299,7 +2309,7 @@ Lemma typing_ind_wf :
     (∀ Γ x A,
       wf Σ Ξ Γ →
       nth_error Γ x = Some A →
-      P Γ (var x) (Nat.add (S x) ⋅ A)
+      P Γ (var x) (lift (S x) ⋅ A)
     ) →
     (∀ Γ i, wf Σ Ξ Γ → P Γ (Sort i) (Sort (S i))) →
     (∀ Γ i j A B,
@@ -2411,7 +2421,7 @@ Lemma wf_ctx_conv_nth_error_l Σ Ξ Γ Δ x A :
   ∃ i B,
     nth_error Δ x = Some B ∧
     Σ ;; Ξ ⊢ A ≡ B ∧
-    Σ ;; Ξ | Δ ⊢ (plus (S x)) ⋅ A : Sort i.
+    Σ ;; Ξ | Δ ⊢ (lift (S x)) ⋅ A : Sort i.
 Proof.
   intros hctx h.
   induction hctx as [| Γ Δ i B C hctx ih hB he] in x, h |- *.

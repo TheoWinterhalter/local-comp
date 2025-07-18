@@ -56,7 +56,7 @@ Fixpoint pat_to_term p : term :=
   | passm x => assm x
   | papp p q =>
       let k := npvar q in
-      app (plus k ⋅ pat_to_term p) (pat_to_term q)
+      app (lift k ⋅ pat_to_term p) (pat_to_term q)
   | pvar => var 0
   end.
 
@@ -216,7 +216,8 @@ Proof.
     eapply match_pat_npvar in ep as e1, eq as e2.
     eapply ihp in ep. eapply ihq in eq. subst.
     cbn. f_equal.
-    + admit.
+    + (* We probably should a proper lift instead of lift *)
+      admit.
     + eapply ext_term_scoped. 1: eapply npvar_scoped.
       etransitivity. 2: symmetry. 2: eapply eq_subst_on_slist_firstn.
       rewrite firstn_app. rewrite firstn_all2. 2: lia.

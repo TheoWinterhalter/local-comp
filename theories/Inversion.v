@@ -47,7 +47,7 @@ Lemma type_var_inv Σ Ξ Γ x A :
   Σ ;; Ξ | Γ ⊢ var x : A →
   ∃ B,
     nth_error Γ x = Some B ∧
-    Σ ;; Ξ ⊢ (plus (S x)) ⋅ B ≡ A.
+    Σ ;; Ξ ⊢ (lift (S x)) ⋅ B ≡ A.
 Proof.
   intros h. invtac h.
 Qed.

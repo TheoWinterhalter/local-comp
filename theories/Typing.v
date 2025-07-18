@@ -238,7 +238,7 @@ Inductive typing (Γ : ctx) : term → term → Prop :=
 | type_var :
     ∀ x A,
       nth_error Γ x = Some A →
-      Γ ⊢ var x : (plus (S x)) ⋅ A
+      Γ ⊢ var x : (lift (S x)) ⋅ A
 
 | type_sort :
     ∀ i,
