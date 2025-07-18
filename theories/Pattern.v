@@ -839,83 +839,102 @@ Section Red.
     all: eauto.
   Qed.
 
+  (** We need to carve out the patterns that behave well from [pat]. *)
+
+  Fixpoint good_pat p :=
+    match p with
+    | pvar => false
+    | papp p _ => good_pat p
+    | _ => true
+    end.
+
   Lemma pat_no_lam p σ A b :
+    good_pat p = true →
     lam A b ≠ (pat_to_term p) <[ σ ].
   Proof.
-    destruct p. all: try solve [ cbn ; discriminate ].
-    cbn.
-    (* TOOD Need extra condiiton *)
-  Admitted.
+    destruct p. all: solve [ cbn ; discriminate ].
+  Qed.
 
   Lemma pat_no_beta p σ A b u :
+    good_pat p = true →
     app (lam A b) u ≠ (pat_to_term p) <[ σ ].
   Proof.
     destruct p. all: try solve [ cbn ; discriminate ].
-    (* TODO Need extra condition, stronger than above *)
-  Admitted.
+    intros h.
+    cbn in *. intros [= e ->]. rasimpl in e.
+    eapply pat_no_lam. all: eassumption.
+  Qed.
 
   Lemma pat_no_Pi p σ A B :
+    good_pat p = true →
     Pi A B ≠ (pat_to_term p) <[ σ ].
   Proof.
-    (* destruct p. cbn. discriminate. *)
-  Admitted.
+    destruct p. all: solve [ cbn ; discriminate ].
+  Qed.
 
   Lemma pat_no_const p σ c ξ :
+    good_pat p = true →
     const c ξ ≠ (pat_to_term p) <[ σ ].
   Proof.
-    (* destruct p. cbn. discriminate. *)
-  Admitted.
+    destruct p. all: solve [ cbn ; discriminate ].
+  Qed.
 
   Lemma pat_no_var p σ x :
+    good_pat p = true →
     var x ≠ (pat_to_term p) <[ σ ].
   Proof.
-    (* destruct p. cbn. discriminate. *)
-  Admitted.
+    destruct p. all: solve [ cbn ; discriminate ].
+  Qed.
 
   Lemma pat_no_sort p σ s :
+    good_pat p = true →
     Sort s ≠ (pat_to_term p) <[ σ ].
   Proof.
-    (* destruct p. cbn. discriminate. *)
-  Admitted.
+    destruct p. all: solve [ cbn ; discriminate ].
+  Qed.
 
   Lemma pat_no_app p σ u v :
     (app u v) ≠ (pat_to_term p) <[ σ ].
   Admitted. (* TODO this one is wrong so remove *)
 
   Lemma match_pat_not_lam p A b σ :
+    good_pat p = true →
     match_pat p (lam A b) = Some σ →
     False.
   Proof.
-    intros h%match_pat_sound.
-    eapply pat_no_lam. eassumption.
+    intros hg h%match_pat_sound.
+    eapply pat_no_lam. all: eassumption.
   Qed.
 
   Lemma match_pat_not_beta p A b u σ :
+    good_pat p = true →
     match_pat p (app (lam A b) u) = Some σ →
     False.
   Proof.
-    intros h%match_pat_sound.
-    eapply pat_no_beta. eassumption.
+    intros hg h%match_pat_sound.
+    eapply pat_no_beta. all: eassumption.
   Qed.
 
   Lemma match_pat_not_Pi p A B σ :
+    good_pat p = true →
     match_pat p (Pi A B) = Some σ →
     False.
   Proof.
-    intros h%match_pat_sound.
-    eapply pat_no_Pi. eassumption.
+    intros hg h%match_pat_sound.
+    eapply pat_no_Pi. all: eassumption.
   Qed.
 
   Lemma prove_no_match t :
-    (∀ p σ, match_pat p t = Some σ → False) →
+    (∀ p σ, good_pat p = true → match_pat p t = Some σ → False) →
     no_match Ξ t.
   Proof.
     intros h.
     unfold no_match.
     destruct find_match as [[[]]|] eqn: e. 2: reflexivity.
     exfalso. eapply find_match_sound in e.
-    eapply h. intuition eauto.
-  Qed.
+    eapply h. 2: intuition eauto.
+    (* TODO Add a global constraint on Ξ *)
+  Admitted.
 
   Lemma no_match_lam A t :
     no_match Ξ (lam A t).
@@ -936,11 +955,12 @@ Section Red.
   Qed.
 
   Lemma match_pat_not_const p c ξ σ :
+    good_pat p = true →
     match_pat p (const c ξ) = Some σ →
     False.
   Proof.
-    intros h%match_pat_sound.
-    eapply pat_no_const. eassumption.
+    intros hg h%match_pat_sound.
+    eapply pat_no_const. all: eassumption.
   Qed.
 
   Lemma no_match_const c ξ :
@@ -950,11 +970,12 @@ Section Red.
   Qed.
 
   Lemma match_pat_not_var p x σ :
+    good_pat p = true →
     match_pat p (var x) = Some σ →
     False.
   Proof.
-    intros h%match_pat_sound.
-    eapply pat_no_var. eassumption.
+    intros hg h%match_pat_sound.
+    eapply pat_no_var. all: eassumption.
   Qed.
 
   Lemma no_match_var x :
@@ -964,11 +985,12 @@ Section Red.
   Qed.
 
   Lemma match_pat_not_sort p s σ :
+    good_pat p = true →
     match_pat p (Sort s) = Some σ →
     False.
   Proof.
-    intros h%match_pat_sound.
-    eapply pat_no_sort. eassumption.
+    intros hg h%match_pat_sound.
+    eapply pat_no_sort. all: eassumption.
   Qed.
 
   Lemma no_match_sort s :
@@ -1092,16 +1114,16 @@ Section Red.
       destruct (is_lam u) eqn: eu.
       + eapply is_lam_inv in eu as (A & b & ->).
         inversion hu1.
-        2:{ exfalso. subst. eapply match_pat_not_lam. eassumption. }
+        2:{ exfalso. subst. eapply match_pat_not_lam. all: try eassumption. admit. }
         subst.
         eexists. split.
         * econstructor. 2-3: eassumption.
           apply no_match_beta.
         * inversion hu.
-          1:{ exfalso. subst. eapply match_pat_not_lam. eassumption. }
+          1:{ exfalso. subst. eapply match_pat_not_lam. all: try eassumption. admit. }
           subst. econstructor. 2: assumption.
           inversion hu2.
-          1:{ exfalso. subst. eapply match_pat_not_lam. eassumption. }
+          1:{ exfalso. subst. eapply match_pat_not_lam. all: try eassumption. admit. }
           subst. assumption.
       + destruct (find_match Ξ (app u v)) as [[[] ?]|] eqn:e.
         * (* For now we conclude by contradiction, later have some match_pat
@@ -1148,7 +1170,7 @@ Section Red.
       + eexists. split.
         * econstructor. assumption.
         * constructor.
-  Qed.
+  Admitted.
 
   Lemma pred_max_functional t u v :
     t ⇒ᵨ u →
@@ -1163,7 +1185,7 @@ Section Red.
       2: discriminate.
       subst. f_equal. 1: f_equal. all: eauto.
     - inversion hv.
-      3:{ exfalso. subst. eapply match_pat_not_const. eassumption. }
+      3:{ exfalso. subst. eapply match_pat_not_const. all: try eassumption. admit. }
       2: congruence.
       subst. f_equal.
       + eapply Forall2_eq.
@@ -1194,10 +1216,10 @@ Section Red.
       + inversion h2. reflexivity.
       + inversion h2. subst. f_equal. eauto.
     - inversion hv.
-      2:{ exfalso. eapply match_pat_not_var. eassumption. }
+      2:{ exfalso. eapply match_pat_not_var. all: try eassumption. admit. }
       reflexivity.
     - inversion hv.
-      2:{ exfalso. eapply match_pat_not_sort. eassumption. }
+      2:{ exfalso. eapply match_pat_not_sort. all: try eassumption. admit. }
       reflexivity.
     - inversion hv.
       2:{ exfalso. subst. eauto using no_match_no_match_pat. }
@@ -1211,7 +1233,7 @@ Section Red.
       apply Forall2_eq.
       eapply Forall2_impl, Forall2_trans. 2,3: eassumption.
       cbn. intros ?? (? & h1 & h2). eauto.
-  Qed.
+  Admitted.
 
   Lemma pred_diamond :
     diamond pred.
