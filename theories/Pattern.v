@@ -10,6 +10,7 @@ From LocalComp.autosubst Require Import unscoped AST SubstNotations RAsimpl
   AST_rasimpl.
 From LocalComp Require Import Util BasicAST Env Inst Typing BasicMetaTheory
   GScope Inversion Confluence Reduction Monad.
+
 From Stdlib Require Import Setoid Morphisms Relation_Definitions
   Relation_Operators.
 From Equations Require Import Equations.
@@ -179,15 +180,6 @@ Proof.
   - eauto.
 Qed.
 
-(* Lemma slist_nth_error σ n :
-  nth_error
-
-Lemma eq_subst_on_slist k σ θ :
-  firstn k σ = firstn k θ →
-  eq_subst_on k (slist σ) (slist θ).
-Proof.
-  intros e. intros n hn. *)
-
 Lemma eq_subst_on_slist_firstn k σ :
   eq_subst_on k (slist σ) (slist (firstn k σ)).
 Proof.
@@ -198,6 +190,26 @@ Proof.
     cbn. destruct n.
     + cbn. reflexivity.
     + cbn. eapply ih. lia.
+Qed.
+
+Lemma lift_slist_le σ k :
+  k ≤ length σ →
+  pointwise_relation _ eq (lift k >> slist σ) (slist (skipn k σ)).
+Proof.
+  intros h. intros n. unfold ">>".
+  induction k as [| k ih] in σ, h, n |- *.
+  - cbn. reflexivity.
+  - cbn - [skipn]. unfold ">>".
+    destruct σ. 1:{ cbn in h. lia. }
+    cbn. apply ih. cbn in h. lia.
+Qed.
+
+#[export] Instance eq_subst_on_morphism :
+  Proper (eq ==> pointwise_relation _ eq ==> pointwise_relation _ eq ==> iff) eq_subst_on.
+Proof.
+  intros k ? <- σ1 σ2 e σ3 σ4 e'.
+  revert σ1 σ2 σ3 σ4 e e'. wlog_iff. intros σ1 σ2 σ3 σ4 e e' h.
+  intros n hn. rewrite <- e, <- e'. apply h. assumption.
 Qed.
 
 Lemma match_pat_sound p t σ :
@@ -216,8 +228,13 @@ Proof.
     eapply match_pat_npvar in ep as e1, eq as e2.
     eapply ihp in ep. eapply ihq in eq. subst.
     cbn. f_equal.
-    + (* We probably should a proper lift instead of lift *)
-      admit.
+    + rasimpl. eapply ext_term_scoped. 1: eapply npvar_scoped.
+      rewrite lift_slist_le.
+      2:{ rewrite length_app. lia. }
+      rewrite skipn_app.
+      replace (_ - _) with 0 by lia. rewrite skipn_O.
+      rewrite skipn_all2. 2: lia.
+      reflexivity.
     + eapply ext_term_scoped. 1: eapply npvar_scoped.
       etransitivity. 2: symmetry. 2: eapply eq_subst_on_slist_firstn.
       rewrite firstn_app. rewrite firstn_all2. 2: lia.
@@ -225,7 +242,7 @@ Proof.
       rewrite app_nil_r. reflexivity.
   - cbn in h. inversion h. subst.
     reflexivity.
-Admitted.
+Qed.
 
 Lemma find_match_sound Ξ t n rl σ :
   find_match Ξ t = Some (n, rl, σ) →

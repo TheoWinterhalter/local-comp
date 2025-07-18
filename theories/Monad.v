@@ -11,7 +11,8 @@ Set Default Goal Selector "!".
 Set Universe Polymorphism.
 Set Polymorphic Inductive Cumulativity.
 Set Typeclasses Default Mode "!".
-Hint Constants Opaque : typeclass_instances.
+(* Break [rasimpl] *)
+(* Hint Constants Opaque : typeclass_instances. *)
 
 Class Monad (M : Type → Type) := {
   ret : ∀ A, A → M A ;
