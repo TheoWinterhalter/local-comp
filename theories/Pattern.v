@@ -454,17 +454,19 @@ Section Red.
     match_pat p (ρ ⋅ t) = Some (map (ren_term ρ) l).
   Proof.
     intro h.
-    induction p as [ x | p ih a ] in t, ρ, h, l |- *.
+    induction p as [ x | p ihp q ihq | ] in t, ρ, h, l |- *.
     - destruct t. all: try discriminate.
       cbn in *. destruct (_ =? _). 2: discriminate.
       inversion h.
       reflexivity.
     - destruct t. all: try discriminate.
-      cbn in h. apply bindExn_Some in h as (σ1 & e1 & e2).
-      apply bindExn_Some in e2 as (σ2 & e2 & [= <-]).
+      cbn in h. apply bindExn_Some in h as (σp & ep & eq).
+      apply bindExn_Some in eq as (σq & eq & [= <-]).
       cbn.
-      eapply ih in e1. rewrite e1. cbn.
-  Abort.
+      eapply ihp in ep. eapply ihq in eq. rewrite ep, eq. cbn.
+      rewrite map_app. reflexivity.
+    - cbn in *. inversion h. reflexivity.
+  Qed.
 
   Lemma slist_ren l ρ :
     pointwise_relation _ eq
@@ -529,10 +531,18 @@ Section Red.
     match_pat p (t <[ σ ]) = Some (map (subst_term σ) l).
   Proof.
     intro h.
-    destruct p, t. all: try discriminate.
-    cbn in *. destruct (_ =? _). 2: discriminate.
-    inversion h.
-    reflexivity.
+    induction p as [ x | p ihp q ihq | ] in t, σ, h, l |- *.
+    - destruct t. all: try discriminate.
+      cbn in *. destruct (_ =? _). 2: discriminate.
+      inversion h.
+      reflexivity.
+    - destruct t. all: try discriminate.
+      cbn in h. apply bindExn_Some in h as (σp & ep & eq).
+      apply bindExn_Some in eq as (σq & eq & [= <-]).
+      cbn.
+      eapply ihp in ep. eapply ihq in eq. rewrite ep, eq. cbn.
+      rewrite map_app. reflexivity.
+    - cbn in *. inversion h. reflexivity.
   Qed.
 
   Lemma slist_subst l σ :
@@ -832,44 +842,45 @@ Section Red.
   Lemma pat_no_lam p σ A b :
     lam A b ≠ (pat_to_term p) <[ σ ].
   Proof.
-    destruct p. cbn. discriminate.
-  Qed.
+    destruct p. all: try solve [ cbn ; discriminate ].
+    cbn.
+    (* TOOD Need extra condiiton *)
+  Admitted.
 
   Lemma pat_no_beta p σ A b u :
     app (lam A b) u ≠ (pat_to_term p) <[ σ ].
   Proof.
-    destruct p. cbn. discriminate.
-  Qed.
+    destruct p. all: try solve [ cbn ; discriminate ].
+    (* TODO Need extra condition, stronger than above *)
+  Admitted.
 
   Lemma pat_no_Pi p σ A B :
     Pi A B ≠ (pat_to_term p) <[ σ ].
   Proof.
-    destruct p. cbn. discriminate.
-  Qed.
+    (* destruct p. cbn. discriminate. *)
+  Admitted.
 
   Lemma pat_no_const p σ c ξ :
     const c ξ ≠ (pat_to_term p) <[ σ ].
   Proof.
-    destruct p. cbn. discriminate.
-  Qed.
+    (* destruct p. cbn. discriminate. *)
+  Admitted.
 
   Lemma pat_no_var p σ x :
     var x ≠ (pat_to_term p) <[ σ ].
   Proof.
-    destruct p. cbn. discriminate.
-  Qed.
+    (* destruct p. cbn. discriminate. *)
+  Admitted.
 
   Lemma pat_no_sort p σ s :
     Sort s ≠ (pat_to_term p) <[ σ ].
   Proof.
-    destruct p. cbn. discriminate.
-  Qed.
+    (* destruct p. cbn. discriminate. *)
+  Admitted.
 
   Lemma pat_no_app p σ u v :
     (app u v) ≠ (pat_to_term p) <[ σ ].
-  Proof.
-    destruct p. cbn. discriminate.
-  Qed.
+  Admitted. (* TODO this one is wrong so remove *)
 
   Lemma match_pat_not_lam p A b σ :
     match_pat p (lam A b) = Some σ →
@@ -994,11 +1005,12 @@ Section Red.
     match_pat p (assm x) = Some σ →
     p = passm x ∧ σ = [].
   Proof.
-    intros h.
+    (* intros h.
     destruct p. cbn in h.
     destruct (_ =? _) eqn: e. 2: discriminate.
     rewrite Nat.eqb_eq in e. inversion h. intuition congruence.
-  Qed.
+  Qed. *)
+  Admitted.
 
   Context (htri : triangle_citerion Ξ).
 
@@ -1012,13 +1024,14 @@ Section Red.
     intros hn h hm h'.
     eapply htri in hn as e. specialize (e hm).
     eapply match_pat_sound in h as e1, h' as e2.
-    destruct rl.(pr_pat). cbn in e1. subst.
+    (* destruct rl.(pr_pat). cbn in e1. subst.
     destruct rl'.(pr_pat). cbn in e2. inversion e2. subst.
     specialize (e eq_refl). subst.
     eqtwice. subst.
     eqtwice. subst.
     intuition reflexivity.
-  Qed.
+  Qed. *)
+  Admitted.
 
   Lemma triangle t u :
     t ⇒ u →
@@ -1258,10 +1271,11 @@ Lemma match_pat_lhs rl σ :
   match_pat rl.(pr_pat) (lhs <[ σ ]) = Some [].
 Proof.
   intros lhs Θ k.
-  cbn in lhs. destruct rl.(pr_pat).
+  cbn in lhs. (* destruct rl.(pr_pat).
   subst lhs. cbn.
   rewrite Nat.eqb_refl. reflexivity.
-Qed.
+Qed. *)
+Admitted.
 
 Lemma eq_subst_listify k σ :
   eq_subst_on k (slist (listify k σ)) σ.
@@ -1295,12 +1309,13 @@ Proof.
     + eapply ext_term_scoped. 1: eassumption.
       subst Θ k. cbn.
       (* apply eq_subst_listify. *)
-      intros ??. lia.
+      (* intros ??. lia. *)
+      admit.
   - econstructor.
     eapply OnOne2_refl_Forall2. 1: exact _.
     eapply OnOne2_impl. 2: eassumption.
     intros ??. apply some_rel_option_rel.
-Qed.
+Admitted.
 
 Lemma red_const Σ Ξ c ξ ξ' :
   Forall2 (option_rel (red Σ Ξ)) ξ ξ' →
