@@ -8,7 +8,7 @@ entitled ["Encode the Cake and Eat it Too: Controlling computation in type theor
 
 ## Building
 
-You need the Rocq prover 9.0, Equations and Autosubst 2 OCaml. You can install
+You need the Rocq prover 9.0, Equations and Autosubst 2 OCaml (needs ocaml<5, recommended 4.14.2). You can install
 them using
 ```sh
 opam repo add rocq-released https://rocq-prover.org/opam/released
