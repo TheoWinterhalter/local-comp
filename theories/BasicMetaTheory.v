@@ -2104,8 +2104,8 @@ Proof.
 Qed.
 
 Lemma styping_one Σ Ξ Γ A u :
-    Σ ;; Ξ | Γ ⊢ u : A →
-    styping Σ Ξ Γ u.. (Γ ,, A).
+  Σ ;; Ξ | Γ ⊢ u : A →
+  styping Σ Ξ Γ u.. (Γ ,, A).
 Proof.
   intros h.
   constructor. all: rasimpl. 2: auto.
